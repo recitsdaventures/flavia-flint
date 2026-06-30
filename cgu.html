@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CGU — Les Aventures de la Jeune Flavia Flint</title>
+<style>
+  :root {
+    --green-dark: #2D4A2D;
+    --green-mid:  #3D6B3D;
+    --beige:      #F5EDD8;
+    --beige-mid:  #EDE0C4;
+    --terra:      #C4622D;
+    --amber:      #E8A020;
+    --text:       #F0E8D0;
+    --text-muted: rgba(240,232,208,0.60);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--green-dark); color: var(--text);
+  }
+  .page {
+    max-width: 680px; margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+  /* ── HEADER ── */
+  .top-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--green-dark);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 0 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .btn-back {
+    background: rgba(255,255,255,0.10); border: none; border-radius: 8px;
+    padding: 8px 14px; color: var(--text); font-size: 14px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-back:hover { background: rgba(255,255,255,0.16); }
+  .top-title { font-size: 15px; font-weight: 700; color: var(--amber); }
+
+  /* ── CONTENU ── */
+  .doc-header { padding: 32px 0 24px; border-bottom: 1px solid rgba(255,255,255,0.10); margin-bottom: 32px; }
+  .doc-app  { font-size: 12px; color: var(--terra); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .doc-title { font-size: 26px; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  .doc-meta  { font-size: 13px; color: var(--text-muted); }
+
+  h2 {
+    font-size: 16px; font-weight: 700; color: var(--amber);
+    margin: 32px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(232,160,32,0.20);
+  }
+  p { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 12px; }
+  ul { padding-left: 18px; margin-bottom: 12px; }
+  li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+  a { color: var(--terra); }
+
+  .highlight-box {
+    background: rgba(196,98,45,0.12); border: 1px solid rgba(196,98,45,0.30);
+    border-radius: 10px; padding: 14px 16px; margin: 16px 0;
+    font-size: 13px; line-height: 1.6; color: var(--text);
+  }
+  .highlight-box strong { color: var(--terra); }
+
+  .footer-doc { margin-top: 48px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-bar">
+    <button class="btn-back" onclick="history.back()">← Retour</button>
+    <span class="top-title">Flavia Flint</span>
+  </div>
+
+  <div class="doc-header">
+    <div class="doc-app">Récits d'Aventures</div>
+    <div class="doc-title">Conditions Générales d'Utilisation</div>
+    <div class="doc-meta">Les Aventures de la Jeune Flavia Flint · En vigueur depuis juin 2026</div>
+  </div>
+
+  <h2>1. Objet</h2>
+  <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de l'application <strong>Les Aventures de la Jeune Flavia Flint</strong>, éditée par <strong>Récits d'Aventures</strong>.</p>
+  <p>L'application est une chasse au trésor géolocalisée destinée aux enfants de 5 à 12 ans, utilisée sous la responsabilité d'un parent ou tuteur légal.</p>
+
+  <h2>2. Accès au service</h2>
+  <p>L'accès à l'application nécessite la création d'un compte avec une adresse e-mail et un mot de passe. L'utilisation est réservée aux personnes physiques agissant pour le compte d'un enfant mineur, sous autorisation parentale.</p>
+  <p>L'éditeur se réserve le droit de suspendre ou supprimer tout compte en cas d'utilisation contraire aux présentes CGU ou aux lois en vigueur.</p>
+
+  <h2>3. Données personnelles et protection des mineurs</h2>
+  <div class="highlight-box">
+    <strong>Consentement parental obligatoire.</strong> Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi Informatique et Libertés, le traitement des données personnelles d'un enfant de moins de 15 ans requiert le consentement du titulaire de la responsabilité parentale. En cochant la case correspondante lors de l'inscription, le parent ou tuteur légal atteste expressément de son autorisation.
+  </div>
+  <p>Les données collectées (e-mail, pseudo, avatar, progression de jeu) sont utilisées exclusivement pour le fonctionnement de l'application. Aucune donnée n'est transmise à des tiers ni utilisée à des fins publicitaires ou commerciales.</p>
+  <p>Pour toute demande d'accès, de rectification ou de suppression des données, contactez-nous via <a href="https://recitsdaventures.com">recitsdaventures.com</a>.</p>
+
+  <h2>4. Propriété intellectuelle</h2>
+  <p>L'ensemble des contenus de l'application (textes, images, sons, graphismes, personnages, scénarios) est la propriété exclusive de Récits d'Aventures et est protégé par le droit d'auteur.</p>
+  <p>Toute reproduction, représentation ou exploitation non autorisée est strictement interdite.</p>
+
+  <h2>5. Responsabilité</h2>
+  <p>L'éditeur s'engage à fournir le service avec le soin raisonnable attendu, mais ne saurait être tenu responsable des interruptions de service, des erreurs techniques ou des dommages indirects liés à l'utilisation de l'application.</p>
+  <p>L'utilisation de l'application implique des déplacements physiques dans l'espace public. Les parents ou tuteurs légaux sont responsables de la sécurité des enfants pendant la pratique de l'activité.</p>
+
+  <h2>6. Modification des CGU</h2>
+  <p>Récits d'Aventures se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés de toute modification substantielle. La poursuite de l'utilisation de l'application après modification vaut acceptation des nouvelles conditions.</p>
+
+  <h2>7. Contact</h2>
+  <p>Pour toute question relative aux présentes CGU : <a href="https://recitsdaventures.com">recitsdaventures.com</a></p>
+
+  <div class="footer-doc">© 2026 Récits d'Aventures · Tous droits réservés</div>
+</div>
+</body>
+</html>

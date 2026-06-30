@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Politique de confidentialité — Les Aventures de la Jeune Flavia Flint</title>
+<style>
+  :root {
+    --green-dark: #2D4A2D;
+    --green-mid:  #3D6B3D;
+    --beige:      #F5EDD8;
+    --beige-mid:  #EDE0C4;
+    --terra:      #C4622D;
+    --amber:      #E8A020;
+    --text:       #F0E8D0;
+    --text-muted: rgba(240,232,208,0.60);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--green-dark); color: var(--text);
+  }
+  .page {
+    max-width: 680px; margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+  /* ── HEADER ── */
+  .top-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--green-dark);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 0 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .btn-back {
+    background: rgba(255,255,255,0.10); border: none; border-radius: 8px;
+    padding: 8px 14px; color: var(--text); font-size: 14px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-back:hover { background: rgba(255,255,255,0.16); }
+  .top-title { font-size: 15px; font-weight: 700; color: var(--amber); }
+
+  /* ── CONTENU ── */
+  .doc-header { padding: 32px 0 24px; border-bottom: 1px solid rgba(255,255,255,0.10); margin-bottom: 32px; }
+  .doc-app  { font-size: 12px; color: var(--terra); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .doc-title { font-size: 26px; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  .doc-meta  { font-size: 13px; color: var(--text-muted); }
+
+  h2 {
+    font-size: 16px; font-weight: 700; color: var(--amber);
+    margin: 32px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(232,160,32,0.20);
+  }
+  p { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 12px; }
+  ul { padding-left: 18px; margin-bottom: 12px; }
+  li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+  a { color: var(--terra); }
+
+  .highlight-box {
+    background: rgba(196,98,45,0.12); border: 1px solid rgba(196,98,45,0.30);
+    border-radius: 10px; padding: 14px 16px; margin: 16px 0;
+    font-size: 13px; line-height: 1.6; color: var(--text);
+  }
+  .highlight-box strong { color: var(--terra); }
+
+  .data-table {
+    width: 100%; border-collapse: collapse; margin: 16px 0 20px; font-size: 13px;
+  }
+  .data-table th {
+    background: rgba(255,255,255,0.07); text-align: left;
+    padding: 10px 12px; color: var(--amber); font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .data-table td {
+    padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: top; line-height: 1.5;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  .footer-doc { margin-top: 48px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-bar">
+    <button class="btn-back" onclick="history.back()">← Retour</button>
+    <span class="top-title">Flavia Flint</span>
+  </div>
+
+  <div class="doc-header">
+    <div class="doc-app">Récits d'Aventures</div>
+    <div class="doc-title">Politique de Confidentialité</div>
+    <div class="doc-meta">Les Aventures de la Jeune Flavia Flint · En vigueur depuis juin 2026</div>
+  </div>
+
+  <h2>1. Responsable du traitement</h2>
+  <p>Le responsable du traitement des données personnelles est <strong>Récits d'Aventures</strong>, éditeur de l'application Les Aventures de la Jeune Flavia Flint. Contact : <a href="https://recitsdaventures.com">recitsdaventures.com</a>.</p>
+
+  <h2>2. Données collectées</h2>
+  <p>Lors de l'utilisation de l'application, nous collectons uniquement les données strictement nécessaires à son fonctionnement :</p>
+  <table class="data-table">
+    <thead>
+      <tr><th>Donnée</th><th>Finalité</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Adresse e-mail</td><td>Identification du compte, réinitialisation du mot de passe</td></tr>
+      <tr><td>Pseudo</td><td>Affichage dans l'application et le classement</td></tr>
+      <tr><td>Avatar (emoji)</td><td>Personnalisation du profil</td></tr>
+      <tr><td>Progression de jeu</td><td>Suivi des étapes complétées, XP accumulé, aventures terminées</td></tr>
+      <tr><td>Données de géolocalisation</td><td>Vérification de la proximité des étapes (traitement en temps réel, non stocké)</td></tr>
+    </tbody>
+  </table>
+  <p>Aucune donnée de navigation, publicité comportementale, ni information sensible n'est collectée.</p>
+
+  <h2>3. Finalité du traitement</h2>
+  <p>Les données sont utilisées <strong>exclusivement</strong> pour :</p>
+  <ul>
+    <li>Permettre l'authentification et l'accès au service</li>
+    <li>Sauvegarder et afficher la progression de jeu</li>
+    <li>Afficher le classement des joueurs</li>
+    <li>Envoyer des e-mails transactionnels (réinitialisation de mot de passe uniquement)</li>
+  </ul>
+  <p>Les données ne sont jamais transmises à des tiers, vendues, ni utilisées à des fins commerciales ou publicitaires.</p>
+
+  <h2>4. Durée de conservation</h2>
+  <p>Les données du compte sont conservées tant que le compte est actif. En cas d'inactivité de plus de 3 ans, les données peuvent être supprimées après notification par e-mail. À la suppression du compte, l'ensemble des données personnelles est effacé dans un délai de 30 jours.</p>
+
+  <h2>5. Droits des utilisateurs</h2>
+  <p>Conformément au RGPD, tout utilisateur (ou son représentant légal pour un mineur) dispose des droits suivants :</p>
+  <ul>
+    <li><strong>Droit d'accès</strong> — obtenir une copie des données détenues</li>
+    <li><strong>Droit de rectification</strong> — corriger des données inexactes</li>
+    <li><strong>Droit à l'effacement</strong> — demander la suppression du compte et des données associées</li>
+    <li><strong>Droit à la portabilité</strong> — recevoir les données dans un format structuré</li>
+    <li><strong>Droit d'opposition</strong> — s'opposer à certains traitements</li>
+  </ul>
+  <p>Pour exercer ces droits : <a href="https://recitsdaventures.com">recitsdaventures.com</a>. Nous nous engageons à répondre dans un délai de 30 jours.</p>
+  <p>Vous pouvez également introduire une réclamation auprès de la <a href="https://www.cnil.fr" target="_blank" style="color:var(--terra);">CNIL</a>.</p>
+
+  <h2>6. Données des mineurs</h2>
+  <div class="highlight-box">
+    <strong>Protection renforcée des mineurs.</strong> L'application étant destinée aux enfants de 5 à 12 ans, nous appliquons des règles strictes : le consentement parental est obligatoire pour tout compte, aucune donnée n'est utilisée à des fins marketing ou publicitaires, aucun profilage comportemental n'est effectué, et les données de géolocalisation ne sont jamais stockées de façon permanente.
+  </div>
+  <p>Conformément à l'article 8 du RGPD et à la loi Informatique et Libertés, le traitement des données d'un enfant de moins de 15 ans requiert le consentement du titulaire de l'autorité parentale, qui est recueilli lors de l'inscription.</p>
+
+  <h2>7. Sécurité</h2>
+  <p>Les données sont hébergées sur <strong>Supabase</strong> (infrastructure sécurisée, chiffrement en transit via HTTPS/TLS, chiffrement au repos). Les mots de passe sont hachés et ne sont jamais stockés en clair. Des mesures de sécurité techniques et organisationnelles appropriées sont mises en œuvre.</p>
+
+  <h2>8. Contact & DPO</h2>
+  <p>Pour toute question relative à la protection de vos données ou pour exercer vos droits, contactez notre délégué à la protection des données via : <a href="https://recitsdaventures.com">recitsdaventures.com</a>.</p>
+
+  <div class="footer-doc">© 2026 Récits d'Aventures · Tous droits réservés</div>
+</div>
+</body>
+</html>

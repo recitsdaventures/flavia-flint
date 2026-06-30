@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Les Aventures de la Jeune Flavia Flint</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --green-dark:   #2D4A2D;
+    --green-mid:    #3D6B3D;
+    --green-light:  #4A7C4A;
+    --beige-light:  #F5EDD8;
+    --beige-mid:    #EDE0C4;
+    --beige-dark:   #D4C5A9;
+    --terra:        #C4622D;
+    --terra-dark:   #A34E22;
+    --amber:        #E8A020;
+    --text-dark:    #1A2A1A;
+    --text-mid:     #4A5A4A;
+    --text-light:   #7A8A7A;
+    --white:        #FFFFFF;
+    --radius-sm:    8px;
+    --radius-md:    14px;
+    --radius-lg:    20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%; width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1A2A1A;
+    overflow: hidden;
+  }
+
+  /* ── PHONE SHELL ── */
+  #app {
+    width: 100%; max-width: 430px;
+    height: 100%; max-height: 932px;
+    margin: 0 auto;
+    background: var(--beige-light);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── AUTH MODE : cache header/nav ── */
+  #app.auth-mode .status-bar,
+  #app.auth-mode .app-header,
+  #app.auth-mode .bottom-nav { display: none !important; }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    background: var(--green-dark);
+    padding: 10px 18px 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .status-bar span { color: rgba(255,255,255,0.85); font-size: 12px; font-weight: 500; }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--green-dark);
+    padding: 10px 16px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .app-header .logo { display: flex; align-items: center; gap: 8px; }
+  .app-header .logo-icon {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--terra);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .app-header .logo-text { color: var(--white); font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .app-header .logo-text span { color: var(--amber); }
+  .header-icons { display: flex; gap: 12px; }
+  .header-icons button {
+    background: rgba(255,255,255,0.12); border: none; border-radius: 50%;
+    width: 34px; height: 34px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    background: var(--green-dark);
+    display: flex; flex-shrink: 0;
+    padding: 8px 0 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .nav-btn {
+    flex: 1; border: none; background: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 4px 0;
+    color: rgba(255,255,255,0.45);
+    font-size: 10px; font-weight: 500;
+    transition: color 0.15s;
+  }
+  .nav-btn.active { color: var(--amber); }
+  .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+
+  /* ══════════════════════════════
+     ÉCRAN AUTH
+  ══════════════════════════════ */
+  #screen-auth { background: var(--green-dark); overflow-y: auto; }
+
+  .auth-wrap {
+    padding: 52px 20px 36px;
+    display: flex; flex-direction: column; gap: 18px;
+    min-height: 100%;
+  }
+  .auth-logo { text-align: center; margin-bottom: 6px; }
+  .auth-logo-icon { font-size: 56px; line-height: 1; margin-bottom: 10px; }
+  .auth-logo-title { font-size: 24px; font-weight: 800; color: white; line-height: 1.25; letter-spacing: 0.3px; }
+  .auth-logo-title span { color: var(--amber); }
+  .auth-logo-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+
+  .auth-tabs {
+    display: flex; background: rgba(0,0,0,0.2);
+    border-radius: var(--radius-md); padding: 4px; gap: 4px;
+  }
+  .auth-tab {
+    flex: 1; padding: 10px 8px; border: none; border-radius: var(--radius-sm);
+    background: none; color: rgba(255,255,255,0.5);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .auth-tab.active { background: white; color: var(--green-dark); }
+
+  .auth-card {
+    background: var(--beige-light); border-radius: var(--radius-lg);
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .auth-field { display: flex; flex-direction: column; gap: 6px; }
+  .auth-field label { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+  .auth-field input {
+    border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    font-size: 15px; color: var(--text-dark);
+    background: white; outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none; width: 100%; box-sizing: border-box;
+  }
+  .auth-field input:focus { border-color: var(--green-mid); }
+
+  /* ── MOT DE PASSE TOGGLE ── */
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 42px; width: 100%; box-sizing: border-box; }
+  .pw-toggle {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; padding: 2px; cursor: pointer;
+    font-size: 17px; line-height: 1; color: rgba(0,0,0,0.3); transition: color 0.15s;
+  }
+  .pw-toggle:hover { color: rgba(0,0,0,0.6); }
+
+  /* ── SE SOUVENIR DE MOI ── */
+  .remember-row { display: flex; align-items: center; gap: 8px; margin: -2px 0 2px; }
+  .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--terra); cursor: pointer; flex-shrink: 0; }
+  .remember-row label { font-size: 13px; color: var(--text-mid); cursor: pointer; font-weight: 500; }
+
+  .avatar-picker { display: flex; gap: 12px; justify-content: center; padding: 4px 0; }
+  .avatar-opt {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--beige-mid); border: 3px solid transparent;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; cursor: pointer; transition: all 0.15s;
+  }
+  .avatar-opt.selected {
+    border-color: var(--terra); background: white; transform: scale(1.12);
+    box-shadow: 0 2px 8px rgba(196,98,45,0.3);
+  }
+
+  .auth-error { font-size: 13px; color: #EF4444; text-align: center; min-height: 18px; font-weight: 500; }
+  .auth-error.success { color: #059669; }
+
+  .auth-link {
+    background: none; border: none; color: rgba(255,255,255,0.55);
+    font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; text-align: center;
+  }
+
+  /* ══════════════════════════════
+     ÉCRAN CARTE
+  ══════════════════════════════ */
+  #screen-map { position: relative; }
+
+  #leaflet-map { flex: 1; width: 100%; z-index: 1; }
+
+  .map-filters {
+    position: absolute; top: 10px; left: 10px; right: 10px;
+    display: flex; gap: 6px; z-index: 400;
+  }
+  .filter-pill {
+    background: var(--white); border: 1px solid var(--beige-dark);
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 12px; font-weight: 500; color: var(--text-dark);
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+    white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  .filter-pill.active { background: var(--green-dark); color: white; border-color: var(--green-dark); }
+
+  .map-fab {
+    position: absolute; bottom: 20px; right: 14px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--terra); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: white;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25); z-index: 400;
+  }
+
+  .adventure-popup {
+    position: absolute; bottom: 80px; left: 10px; right: 10px;
+    background: var(--white); border-radius: var(--radius-lg);
+    padding: 14px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 500; display: none; animation: slideUp 0.2s ease;
+  }
+  .adventure-popup.show { display: block; }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .popup-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .popup-title  { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+  .popup-close  { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-light); padding: 0; }
+  .popup-tags   { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .tag-diff   { background: #FEF3C7; color: #92400E; }
+  .tag-type   { background: #D1FAE5; color: #065F46; }
+  .tag-family { background: #EDE9FE; color: #4C1D95; }
+  .popup-meta { display: flex; gap: 14px; font-size: 12px; color: var(--text-mid); margin-bottom: 14px; }
+  .popup-btn {
+    width: 100%; background: var(--terra); color: white; border: none;
+    border-radius: var(--radius-md); padding: 12px;
+    font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
+  }
+  .popup-btn:active { background: var(--terra-dark); }
+
+  /* ══════════════════════════════
+     ÉCRAN AVENTURE EN COURS
+  ══════════════════════════════ */
+  #screen-adventure { background: var(--beige-light); }
+
+  .adv-header { background: var(--green-dark); padding: 12px 16px 16px; flex-shrink: 0; }
+  .adv-header-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .adv-back {
+    background: rgba(255,255,255,0.12); border: none; border-radius: var(--radius-sm);
+    color: white; padding: 6px 12px; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .adv-title { color: white; font-size: 13px; font-weight: 600; max-width: 160px; text-align: center; }
+
+  .progress-bar-wrap { margin-top: 4px; }
+  .progress-label { font-size: 11px; color: rgba(255,255,255,0.65); margin-bottom: 5px; }
+  .progress-track { height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; }
+  .progress-fill { height: 100%; background: var(--amber); border-radius: 3px; transition: width 0.4s ease; }
+
+  .step-dots { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+  .step-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5);
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.2s;
+  }
+  .step-dot.done    { background: var(--amber); color: var(--green-dark); border-color: var(--amber); }
+  .step-dot.current { background: white; color: var(--green-dark); border-color: white; }
+
+  .adv-scroll { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Bulles */
+  .bubble-row { display: flex; gap: 10px; align-items: flex-end; }
+  .bubble-row.player { flex-direction: row-reverse; }
+  .bubble-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--green-mid); border: 2px solid var(--beige-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .bubble {
+    max-width: 72%; padding: 10px 14px;
+    font-size: 14px; line-height: 1.5; color: var(--text-dark);
+    border-radius: 18px 18px 18px 4px;
+  }
+  .bubble.flavia     { background: var(--green-dark); color: white; border-radius: 18px 18px 18px 4px; }
+  .bubble.player-msg { background: var(--terra);      color: white; border-radius: 18px 18px 4px 18px; }
+
+  /* Boussole card */
+  .compass-card {
+    background: var(--white); border-radius: var(--radius-lg);
+    border: 1.5px solid var(--beige-dark);
+    padding: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .compass-card h3 { font-size: 12px; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+  .compass-info   { text-align: center; }
+  .compass-dir    { font-size: 22px; font-weight: 800; color: var(--text-dark); }
+  .compass-dist   { font-size: 13px; color: var(--terra); font-weight: 600; margin-top: 2px; }
+  .compass-hint   { font-size: 12px; color: var(--text-mid); line-height: 1.4; text-align: center; background: var(--beige-light); padding: 8px 12px; border-radius: var(--radius-sm); }
+
+  /* Énigme card */
+  .enigme-card { background: var(--white); border-radius: var(--radius-lg); border: 1.5px solid var(--beige-dark); padding: 16px; }
+  .enigme-label {
+    font-size: 11px; font-weight: 700; color: var(--terra);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .enigme-text { font-size: 14px; color: var(--text-dark); line-height: 1.55; margin-bottom: 14px; font-style: italic; }
+
+  .answer-input {
+    width: 100%; border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-sm); padding: 11px 14px;
+    font-size: 14px; color: var(--text-dark);
+    background: var(--beige-light); outline: none;
+    margin-bottom: 10px; transition: border-color 0.15s;
+  }
+  .answer-input:focus { border-color: var(--green-mid); }
+  .answer-input.error { border-color: #EF4444; }
+
+  .btn-primary {
+    width: 100%; background: var(--terra); color: white; border: none;
+    border-radius: var(--radius-md); padding: 13px;
+    font-size: 15px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
+    transition: all 0.2s ease;
+  }
+  .btn-primary:active { background: var(--terra-dark); transform: scale(0.98); }
+  .btn-hint {
+    width: 100%; background: none; color: var(--green-dark);
+    border: 1.5px solid var(--green-mid); border-radius: var(--radius-md);
+    padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer;
+    margin-top: 8px; transition: background 0.15s;
+  }
+  .btn-hint:hover { background: var(--beige-light); }
+
+  .hint-box {
+    display: none; background: #FFFBEB;
+    border: 1px solid #FDE68A; border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 13px; color: #92400E;
+    line-height: 1.5; margin-top: 10px;
+  }
+  .hint-box.show { display: block; }
+  .error-msg { font-size: 13px; color: #EF4444; text-align: center; margin-top: 6px; display: none; }
+
+  /* Récompense */
+  .reward-burst { font-size: 64px; margin-bottom: 4px; }
+  .reward-title { font-size: 24px; font-weight: 800; color: var(--text-dark); }
+  .xp-pill {
+    background: var(--amber); color: var(--green-dark);
+    font-size: 16px; font-weight: 800;
+    padding: 8px 22px; border-radius: 30px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .badge-hex {
+    width: 80px; height: 80px;
+    background: var(--green-dark);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin: 8px 0;
+  }
+  .badge-name { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+
+  /* ══════════════════════════════
+     ÉCRAN PROFIL
+  ══════════════════════════════ */
+  #screen-profile { background: var(--beige-light); overflow-y: auto; }
+
+  .profile-hero {
+    background: var(--green-dark);
+    padding: 20px 16px 30px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .profile-avatar {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--terra); border: 3px solid var(--amber);
+    display: flex; align-items: center; justify-content: center; font-size: 38px;
+  }
+  .profile-name   { color: white; font-size: 20px; font-weight: 800; }
+  .profile-pseudo { color: var(--amber); font-size: 14px; }
+  .btn-logout {
+    margin-top: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; color: rgba(255,255,255,0.65);
+    padding: 5px 16px; font-size: 12px; cursor: pointer;
+  }
+  .btn-logout:active { background: rgba(255,255,255,0.2); }
+
+  .profile-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    margin: -18px 16px 0; gap: 10px; position: relative; z-index: 2;
+  }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius-md);
+    padding: 12px 8px; text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 1px solid var(--beige-dark);
+  }
+  .stat-num   { font-size: 22px; font-weight: 800; color: var(--green-dark); }
+  .stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+  .profile-section { padding: 20px 16px 0; }
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--text-mid);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+
+  .badges-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .badge-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .badge-hex-sm {
+    width: 56px; height: 56px; background: var(--green-dark);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .badge-hex-sm.locked { background: var(--beige-dark); filter: grayscale(1); }
+  .badge-label { font-size: 10px; color: var(--text-light); text-align: center; line-height: 1.2; }
+
+  /* ══════════════════════════════
+     ÉCRAN CLASSEMENT
+  ══════════════════════════════ */
+  #screen-ranking { background: var(--beige-light); }
+
+  .ranking-tabs {
+    display: flex; background: var(--green-dark);
+    padding: 0 16px 12px; gap: 8px;
+  }
+  .ranking-tab {
+    flex: 1; padding: 8px 6px;
+    background: rgba(255,255,255,0.1); border: none; border-radius: var(--radius-sm);
+    color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .ranking-tab.active { background: var(--amber); color: var(--green-dark); }
+  .ranking-list { flex: 1; overflow-y: auto; padding: 12px 14px; }
+
+  .rank-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--white); border-radius: var(--radius-md);
+    padding: 10px 14px; margin-bottom: 8px;
+    border: 1px solid var(--beige-dark);
+  }
+  .rank-item.me     { border-color: var(--terra); background: #FFF7F4; }
+  .rank-item.gold   .rank-num { color: #F59E0B; }
+  .rank-item.silver .rank-num { color: #9CA3AF; }
+  .rank-item.bronze .rank-num { color: #B45309; }
+
+  .rank-num    { font-size: 16px; font-weight: 800; color: var(--text-mid); min-width: 28px; text-align: center; }
+  .rank-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--green-mid); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .rank-info   { flex: 1; }
+  .rank-name   { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+  .rank-pseudo { font-size: 12px; color: var(--text-light); }
+  .rank-right  { text-align: right; }
+  .rank-pts    { font-size: 14px; font-weight: 800; color: var(--green-dark); }
+
+  /* ══════════════════════════════
+     ÉCRAN ACCUEIL
+  ══════════════════════════════ */
+  #screen-home { background: var(--beige-light); overflow-y: auto; }
+  .home-hero { background: var(--green-dark); padding: 20px 16px 28px; text-align: center; }
+  .home-hero-title { color: white; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .home-hero-sub   { color: rgba(255,255,255,0.65); font-size: 13px; }
+  .home-flavia {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: var(--terra); border: 3px solid var(--amber);
+    margin: -35px auto 0; position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+  }
+  .home-section { padding: 16px 16px 0; }
+  .home-section-title {
+    font-size: 11px; font-weight: 700; color: var(--terra);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .adv-card {
+    background: white; border-radius: var(--radius-lg);
+    border: 1px solid var(--beige-dark);
+    margin-bottom: 12px; overflow: hidden; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .adv-card:active { transform: scale(0.98); }
+  .adv-card-banner {
+    height: 90px; display: flex; align-items: center; justify-content: center;
+    font-size: 36px; position: relative; background: var(--beige-mid);
+  }
+  .adv-card-banner img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+  .adv-card-banner span { position: relative; z-index: 1; }
+  .adv-card-diff {
+    position: absolute; top: 8px; right: 10px; z-index: 2;
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  }
+  .diff-facile { background: #ECFDF5; color: #065F46; }
+  .diff-inter  { background: #FEF3C7; color: #92400E; }
+  .diff-expert { background: #FEE2E2; color: #991B1B; }
+  .adv-card-body  { padding: 12px 14px 14px; }
+  .adv-card-title { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 3px; }
+  .adv-card-desc  { font-size: 12px; color: var(--text-light); line-height: 1.4; margin-bottom: 8px; }
+  .adv-card-meta  { display: flex; gap: 12px; font-size: 11px; color: var(--text-light); }
+  .adv-card-empty { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 14px; }
+
+  /* GPS ALERT */
+  @keyframes pulse-gps { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  /* ── BOUSSOLE SVG ANIMÉE ── */
+  .compass-needle {
+    transform-origin: 0px 0px;
+    animation: compass-oscillate 1.5s ease-in-out infinite;
+  }
+  @keyframes compass-oscillate {
+    0%, 100% { transform: rotate(-20deg); }
+    50%       { transform: rotate(20deg); }
+  }
+
+  /* ══════════════════════════════
+     SPLASH SCREEN
+  ══════════════════════════════ */
+  #splash {
+    position: absolute; inset: 0; z-index: 9999;
+    background: var(--green-dark);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 24px;
+    transition: opacity 0.4s ease;
+  }
+  #splash.fade-out { opacity: 0; pointer-events: none; }
+  #splash.hidden   { display: none; }
+
+  .splash-title      { color: white; font-size: 22px; font-weight: 800; text-align: center; line-height: 1.2; }
+  .splash-title span { color: var(--amber); }
+  .splash-sub        { color: rgba(255,255,255,0.45); font-size: 13px; text-align: center; margin-top: 6px; display: block; }
+  .splash-progress-wrap  { width: 180px; }
+  .splash-progress-track { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden; }
+  .splash-progress-fill  {
+    height: 100%; width: 0%; background: var(--terra); border-radius: 2px;
+    animation: fill-splash 2.3s ease-out forwards;
+  }
+  @keyframes fill-splash { from { width: 0%; } to { width: 100%; } }
+  .splash-loading { color: var(--beige-light); font-size: 12px; text-align: center; opacity: 0.65; letter-spacing: 0.3px; }
+
+  /* ══════════════════════════════
+     LANDING PAGE
+  ══════════════════════════════ */
+  #screen-landing { background: var(--green-dark); overflow-y: auto; position: relative; }
+  #screen-landing::before {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .landing-wrap {
+    position: relative; z-index: 1;
+    padding: 54px 22px 40px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 24px; min-height: 100%; text-align: center;
+  }
+  .landing-compass { font-size: 80px; line-height: 1; animation: land-float 3s ease-in-out infinite; }
+  @keyframes land-float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-12px); } }
+  .landing-title      { font-size: 36px; font-weight: 800; color: white; line-height: 1.1; }
+  .landing-title span { color: var(--amber); }
+  .landing-sub { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.5; margin-top: -8px; }
+  .landing-features { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .landing-feature {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius-md); padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px; text-align: left;
+  }
+  .landing-feature-icon  { font-size: 26px; flex-shrink: 0; }
+  .landing-feature-title { color: white; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .landing-feature-desc  { color: rgba(255,255,255,0.5); font-size: 12px; }
+  .landing-ctas { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .btn-outline {
+    width: 100%; background: none; color: white;
+    border: 1.5px solid rgba(255,255,255,0.35); border-radius: var(--radius-md);
+    padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-outline:active { background: rgba(255,255,255,0.1); }
+  .landing-footer { color: rgba(255,255,255,0.25); font-size: 11px; }
+
+  /* ── INDICES PROGRESSIFS ── */
+  .hint-reveal {
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 13px; color: #92400E; line-height: 1.5; margin-top: 8px;
+    animation: fadeHint 0.3s ease;
+  }
+  @keyframes fadeHint { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+  .hint-level-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--terra); margin-bottom: 3px; }
+
+  /* ── CASES RGPD ── */
+  .checkbox-label-wrap { padding: 2px 0; }
+  .checkbox-label {
+    display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+    font-size: 12px; color: var(--text-mid); line-height: 1.45;
+  }
+  .checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px;
+    accent-color: var(--terra); cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="app" class="auth-mode">
+
+  <!-- ═══════════════════════════════════
+       SPLASH SCREEN
+  ═══════════════════════════════════ -->
+  <div id="splash">
+    <img src="logo.png" style="height:50px;object-fit:contain;display:block;margin:0 auto;margin-bottom:20px;background:transparent;filter:brightness(0) invert(1);mix-blend-mode:screen;">
+
+    <svg width="80" height="80" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="30" r="28" fill="#F5EDD8" stroke="#2D4A2D" stroke-width="2.5"/>
+      <text x="30" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="#2D4A2D" font-family="sans-serif">N</text>
+      <text x="30" y="53" text-anchor="middle" font-size="7" font-weight="700" fill="#2D4A2D" font-family="sans-serif">S</text>
+      <g transform="translate(30,30)">
+        <g class="compass-needle">
+          <polygon points="0,-19 3.5,0 0,3 -3.5,0" fill="#C4622D"/>
+          <polygon points="0,19 3.5,0 0,-3 -3.5,0" fill="#D4C5A9"/>
+        </g>
+        <circle r="3.5" fill="#2D4A2D"/>
+      </g>
+    </svg>
+
+    <div style="text-align:center;">
+      <div class="splash-title">Les Aventures de la<br>Jeune <span>Flavia Flint</span></div>
+      <div class="splash-sub">Chasse au trésor géolocalisée</div>
+    </div>
+
+    <div class="splash-progress-wrap">
+      <div class="splash-progress-track"><div class="splash-progress-fill"></div></div>
+    </div>
+    <div class="splash-loading">Chargement de l'aventure…</div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>📶 🔋</span>
+  </div>
+
+  <!-- APP HEADER -->
+  <div class="app-header">
+    <div class="logo">
+      <img src="logo.png" style="height:32px;object-fit:contain;display:block;">
+      <div class="logo-text">Flavia<span>Flint</span></div>
+    </div>
+    <div class="header-icons">
+      <button>🔔</button>
+      <button>⚙️</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       LANDING PAGE (première visite)
+  ═══════════════════════════════════ -->
+  <div id="screen-landing" class="screen">
+    <div class="landing-wrap">
+      <img src="logo.png" style="height:100px;object-fit:contain;">
+      <div>
+        <div class="landing-title" style="font-size:28px;line-height:1.2;">Les Aventures de la<br>Jeune <span>Flavia Flint</span></div>
+        <div class="landing-sub">La chasse au trésor géolocalisée<br/>pour toute la famille</div>
+      </div>
+      <div class="landing-features">
+        <div class="landing-feature">
+          <div class="landing-feature-icon">📍</div>
+          <div>
+            <div class="landing-feature-title">Aventures géolocalisées</div>
+            <div class="landing-feature-desc">Explorez votre ville comme jamais</div>
+          </div>
+        </div>
+        <div class="landing-feature">
+          <div class="landing-feature-icon">🔍</div>
+          <div>
+            <div class="landing-feature-title">Énigmes et mystères</div>
+            <div class="landing-feature-desc">Des défis pour petits et grands</div>
+          </div>
+        </div>
+        <div class="landing-feature">
+          <div class="landing-feature-icon">🏆</div>
+          <div>
+            <div class="landing-feature-title">Badges et récompenses</div>
+            <div class="landing-feature-desc">Collectionnez vos victoires</div>
+          </div>
+        </div>
+      </div>
+      <div class="landing-ctas">
+        <button class="btn-primary" onclick="goFromLanding('signup')">Commencer l'aventure →</button>
+        <button class="btn-outline" onclick="goFromLanding('login')">J'ai déjà un compte</button>
+      </div>
+      <div class="landing-footer">Version bêta · Pour enfants de 5 à 12 ans</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN AUTH
+  ═══════════════════════════════════ -->
+  <div id="screen-auth" class="screen active">
+    <div class="auth-wrap">
+
+      <div class="auth-logo" style="margin-bottom:24px;">
+        <img src="logo.png" style="height:50px;object-fit:contain;display:block;margin:0 auto;margin-bottom:20px;background:transparent;filter:brightness(0) invert(1);mix-blend-mode:screen;">
+        <div class="auth-logo-title">Les Aventures de la Jeune<br><span>Flavia Flint</span></div>
+        <div class="auth-logo-sub">Chasse au trésor géolocalisée</div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="showAuthTab('login')">Connexion</button>
+        <button class="auth-tab"        onclick="showAuthTab('signup')">Inscription</button>
+      </div>
+
+      <!-- Connexion -->
+      <div class="auth-card" id="auth-login">
+        <div class="auth-field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="ton@email.com" autocomplete="email"
+                 onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()"/>
+        </div>
+        <div class="auth-field">
+          <label for="login-password">Mot de passe</label>
+          <div class="pw-wrap">
+            <input type="password" id="login-password" placeholder="••••••••"
+                   autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter') handleLogin()"/>
+            <button class="pw-toggle" type="button" onclick="togglePw('login-password',this)" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="remember-row">
+          <input type="checkbox" id="login-remember" checked/>
+          <label for="login-remember">Se souvenir de moi</label>
+        </div>
+        <div class="auth-error" id="login-error"></div>
+        <button class="btn-primary" id="btn-login" onclick="handleLogin()">Se connecter →</button>
+      </div>
+      <button class="auth-link" onclick="forgotPassword()">Mot de passe oublié ?</button>
+
+      <!-- Inscription -->
+      <div class="auth-card" id="auth-signup" style="display:none;">
+        <div class="auth-field">
+          <label for="signup-pseudo">Ton pseudo d'aventurier</label>
+          <input type="text" id="signup-pseudo" placeholder="Le Renard" autocomplete="nickname"/>
+        </div>
+        <div class="auth-field">
+          <label>Choisis ton avatar</label>
+          <div class="avatar-picker" id="avatar-picker">
+            <div class="avatar-opt selected" data-emoji="🧒" onclick="selectAvatar(this)">🧒</div>
+            <div class="avatar-opt"          data-emoji="👦" onclick="selectAvatar(this)">👦</div>
+            <div class="avatar-opt"          data-emoji="👧" onclick="selectAvatar(this)">👧</div>
+            <div class="avatar-opt"          data-emoji="🧑" onclick="selectAvatar(this)">🧑</div>
+          </div>
+        </div>
+        <div class="auth-field">
+          <label for="signup-email">Email</label>
+          <input type="email" id="signup-email" placeholder="ton@email.com" autocomplete="email"/>
+        </div>
+        <div class="auth-field">
+          <label for="signup-password">Mot de passe</label>
+          <div class="pw-wrap">
+            <input type="password" id="signup-password" placeholder="6 caractères minimum"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter') handleSignup()"/>
+            <button class="pw-toggle" type="button" onclick="togglePw('signup-password',this)" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="checkbox-label-wrap">
+          <label class="checkbox-label">
+            <input type="checkbox" id="signup-parental"/>
+            <span>Je suis le parent ou tuteur légal et j'autorise la création de ce compte pour mon enfant, conformément au RGPD</span>
+          </label>
+        </div>
+        <div class="checkbox-label-wrap">
+          <label class="checkbox-label">
+            <input type="checkbox" id="signup-cgu"/>
+            <span>J'accepte les <a href="cgu.html" target="_blank" style="color:var(--terra);">Conditions Générales d'Utilisation</a> et la <a href="confidentialite.html" target="_blank" style="color:var(--terra);">Politique de confidentialité</a></span>
+          </label>
+        </div>
+        <div class="auth-error" id="signup-error"></div>
+        <button class="btn-primary" id="btn-signup" onclick="handleSignup()">Créer mon compte →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN ACCUEIL
+  ═══════════════════════════════════ -->
+  <div id="screen-home" class="screen">
+    <div class="home-hero">
+      <div class="home-hero-title" id="home-greeting">Bonjour, aventurier !</div>
+      <div class="home-hero-sub">Quelle aventure choisiras-tu aujourd'hui ?</div>
+    </div>
+    <div class="home-flavia" id="home-player-avatar">🧭</div>
+
+    <div class="home-section" style="margin-top:24px;">
+      <div class="home-section-title">Aventures disponibles</div>
+      <div id="adventure-cards-list">
+        <div class="adv-card-empty">⏳ Chargement des aventures…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN CARTE
+  ═══════════════════════════════════ -->
+  <div id="screen-map" class="screen">
+    <div id="leaflet-map" style="flex:1;"></div>
+
+    <div class="map-filters">
+      <div class="filter-pill active">Tous</div>
+      <div class="filter-pill">Famille</div>
+      <div class="filter-pill">Facile</div>
+      <div class="filter-pill">Près de moi</div>
+    </div>
+
+    <div class="adventure-popup" id="adventure-popup">
+      <div class="popup-header">
+        <div class="popup-title" id="popup-title">Le Mystère de la Tour</div>
+        <button class="popup-close" onclick="closePopup()">✕</button>
+      </div>
+      <div class="popup-tags">
+        <span class="tag tag-diff"   id="popup-diff">Facile</span>
+        <span class="tag tag-type"   id="popup-type">Famille</span>
+        <span class="tag tag-family">5–12 ans</span>
+      </div>
+      <div class="popup-meta">
+        <span>⏱ <span id="popup-dur">75 min</span></span>
+        <span>📍 <span id="popup-loc">Draguignan</span></span>
+        <span>⭐ 4.8</span>
+      </div>
+      <button class="popup-btn" onclick="startAdventure()">Commencer l'aventure →</button>
+    </div>
+
+    <button class="map-fab" onclick="locateMe()">📍</button>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN AVENTURE EN COURS
+  ═══════════════════════════════════ -->
+  <div id="screen-adventure" class="screen">
+    <div class="adv-header">
+      <div class="adv-header-top">
+        <button class="adv-back" onclick="goBack()">← Carte</button>
+        <div class="adv-title" id="adv-title">Aventure</div>
+        <div style="width:70px;"></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-label">Progression : étape <span id="step-current">1</span> sur <span id="step-total">5</span></div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:20%"></div></div>
+      </div>
+      <div class="step-dots" id="step-dots"></div>
+    </div>
+
+    <div class="adv-scroll" id="adv-scroll">
+      <div id="mode-story"></div>
+      <div id="mode-compass" style="display:none;"></div>
+      <div id="mode-enigme"  style="display:none;"></div>
+      <div id="mode-reward"  style="display:none; flex-direction:column; align-items:center; text-align:center; gap:12px; padding-bottom:20px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN PROFIL
+  ═══════════════════════════════════ -->
+  <div id="screen-profile" class="screen">
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profile-avatar-el">🧒</div>
+      <div class="profile-name"   id="profile-name-el">Chargement…</div>
+      <div class="profile-pseudo" id="profile-email-el"></div>
+      <button class="btn-logout" onclick="signOut()">Se déconnecter</button>
+    </div>
+
+    <div class="profile-stats">
+      <div class="stat-card">
+        <div class="stat-num" id="profile-stat-scenarios">–</div>
+        <div class="stat-label">Scénarios</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="profile-stat-xp">–</div>
+        <div class="stat-label">Points XP</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="profile-stat-badges">–</div>
+        <div class="stat-label">Badges</div>
+      </div>
+    </div>
+
+    <div class="profile-section" style="margin-top:20px;">
+      <div class="section-title">Collection de badges</div>
+      <div class="badges-grid" id="profile-badges-grid">
+        <div style="grid-column:1/-1; color:var(--text-light); font-size:13px; padding:10px 0;">Chargement…</div>
+      </div>
+
+      <div class="section-title" style="margin-top:4px;">Statistiques</div>
+      <div style="background:var(--white); border-radius:var(--radius-md); border:1px solid var(--beige-dark); padding:14px; margin-bottom:24px;">
+        <table style="width:100%; font-size:14px; border-collapse:collapse;">
+          <tr>
+            <td style="padding:6px 0; color:var(--text-mid);">Scénarios terminés</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-scenarios">–</td>
+          </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Points XP totaux</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-xp">–</td>
+          </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Rang mondial</td>
+            <td style="text-align:right; font-weight:700; color:var(--terra);" id="profile-tbl-rank">–</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN CLASSEMENT
+  ═══════════════════════════════════ -->
+  <div id="screen-ranking" class="screen">
+    <div class="ranking-tabs">
+      <button class="ranking-tab active" onclick="setTab(this,'general')">Général</button>
+      <button class="ranking-tab"        onclick="setTab(this,'friends')">Amis</button>
+      <button class="ranking-tab"        onclick="setTab(this,'week')">Cette semaine</button>
+    </div>
+    <div class="ranking-list">
+      <div id="ranking-list-content">
+        <div class="adv-card-empty">⏳ Chargement…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       BOTTOM NAV
+  ═══════════════════════════════════ -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="goToScreen('home',this)"    id="nav-home">
+      <span class="nav-icon">🏠</span>Accueil
+    </button>
+    <button class="nav-btn"        onclick="goToScreen('map',this)"     id="nav-map">
+      <span class="nav-icon">🗺️</span>Carte
+    </button>
+    <button class="nav-btn"        onclick="goToScreen('profile',this)" id="nav-profile">
+      <span class="nav-icon">👤</span>Profil
+    </button>
+    <button class="nav-btn"        onclick="goToScreen('ranking',this)" id="nav-ranking">
+      <span class="nav-icon">🏆</span>Classement
+    </button>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE REST — SANS SDK
+// ══════════════════════════════════════════
+const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('ff_access_token');
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + (token || SUPA_KEY)
+  };
+}
+
+async function supaFetch(endpoint, { method = 'GET', body, prefer } = {}) {
+  const headers = getAuthHeaders();
+  if (body === undefined) delete headers['Content-Type'];
+  if (prefer) headers['Prefer'] = prefer;
+  const res = await fetch(`${SUPA_URL}/rest/v1/${endpoint}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function checkExistingSession() {
+  const token = localStorage.getItem('ff_access_token');
+  const userRaw = localStorage.getItem('ff_user');
+  if (token && userRaw) {
+    try {
+      const user = JSON.parse(userRaw);
+      loadCurrentPlayer(user);
+      document.getElementById('app').classList.remove('auth-mode');
+      goToScreen('home', document.getElementById('nav-home'));
+      loadAdventures();
+      startGlobalGPS();
+      return true;
+    } catch (e) {
+      localStorage.removeItem('ff_access_token');
+      localStorage.removeItem('ff_user');
+    }
+  }
+  document.getElementById('app').classList.add('auth-mode');
+  if (!localStorage.getItem('ff_visited')) {
+    goToScreen('landing', null);
+  } else {
+    goToScreen('auth', null);
+  }
+  return false;
+}
+
+// ── STATE ──
+let adventures       = [];
+let currentAdv       = null;
+let currentStepIndex = 0;
+let currentPlayer    = null;
+let currentRankingTab = 'general';
+let map              = null;
+let playerMarker     = null;
+let playerPos        = null;
+let geoWatcher       = null;
+let gpsAutoUnlocked  = false;
+let currentHintLevel = 0;   // 0=aucun, 1/2/3=niveaux révélés
+let hintXpPenalty    = 0;   // XP déduit par les indices demandés
+let _audioCtx        = null;
+
+const DIFF_COLORS = { 'Facile': '#3D6B3D', 'Intermédiaire': '#C4622D', 'Expert': '#7C3AED' };
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+// Routing initial — appelé après définition de toutes les fonctions
+window.addEventListener('DOMContentLoaded', () => checkExistingSession());
+
+async function loadCurrentPlayer(user) {
+  try {
+    const rows = await supaFetch(`players?id=eq.${user.id}`);
+    currentPlayer = rows[0] || {
+      id:           user.id,
+      email:        user.email,
+      pseudo:       user.user_metadata?.pseudo || user.email?.split('@')[0] || 'Aventurier',
+      avatar_emoji: user.user_metadata?.avatar_emoji || '🧒',
+      total_xp:     0
+    };
+  } catch (e) {
+    console.error('Erreur chargement joueur:', e);
+    currentPlayer = {
+      id:           user.id,
+      email:        user.email,
+      pseudo:       user.user_metadata?.pseudo || 'Aventurier',
+      avatar_emoji: user.user_metadata?.avatar_emoji || '🧒',
+      total_xp:     0
+    };
+  }
+  const greetEl  = document.getElementById('home-greeting');
+  const avatarEl = document.getElementById('home-player-avatar');
+  if (greetEl)  greetEl.textContent  = `Bonjour, ${currentPlayer.pseudo} !`;
+  if (avatarEl) avatarEl.textContent = currentPlayer.avatar_emoji || '🧭';
+}
+
+function showAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-tab')[tab === 'login' ? 0 : 1].classList.add('active');
+  document.getElementById('auth-login').style.display  = tab === 'login'  ? 'flex' : 'none';
+  document.getElementById('auth-signup').style.display = tab === 'signup' ? 'flex' : 'none';
+  document.getElementById('login-error').textContent  = '';
+  document.getElementById('signup-error').textContent = '';
+}
+
+function selectAvatar(el) {
+  document.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function translateAuthError(err) {
+  const msg = (err.message || '').toLowerCase();
+  if (msg.includes('invalid login'))         return 'Email ou mot de passe incorrect.';
+  if (msg.includes('email not confirmed'))   return 'Confirme ton email avant de te connecter.';
+  if (msg.includes('user already registered') || msg.includes('already exists')) return 'Un compte existe déjà avec cet email.';
+  if (msg.includes('password should be at least')) return 'Le mot de passe doit faire au moins 6 caractères.';
+  if (msg.includes('unable to validate email') || msg.includes('invalid email')) return 'Email invalide.';
+  return err.message || 'Une erreur est survenue.';
+}
+
+async function handleSignup() {
+  const pseudo      = document.getElementById('signup-pseudo').value.trim();
+  const email       = document.getElementById('signup-email').value.trim();
+  const password    = document.getElementById('signup-password').value;
+  const avatarEmoji = document.querySelector('.avatar-opt.selected')?.dataset.emoji || '🧒';
+  const errEl       = document.getElementById('signup-error');
+  const btn         = document.getElementById('btn-signup');
+
+  errEl.className   = 'auth-error';
+  errEl.textContent = '';
+  errEl.style.display = 'none';
+
+  if (!pseudo)             { errEl.textContent = 'Entre ton pseudo !';  errEl.style.display='block'; return; }
+  if (!email)              { errEl.textContent = 'Entre ton email !';   errEl.style.display='block'; return; }
+  if (password.length < 6) { errEl.textContent = 'Mot de passe trop court (6 min).'; errEl.style.display='block'; return; }
+  if (!document.getElementById('signup-parental').checked) {
+    errEl.textContent = 'Le consentement parental est obligatoire.'; errEl.style.display='block'; return;
+  }
+  if (!document.getElementById('signup-cgu').checked) {
+    errEl.textContent = 'Tu dois accepter les CGU pour continuer.'; errEl.style.display='block'; return;
+  }
+
+  btn.textContent      = 'Création en cours…';
+  btn.style.background = '#A34E22';
+  btn.disabled         = true;
+
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ email, password, data: { pseudo, avatar_emoji: avatarEmoji } })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || 'Erreur inscription');
+
+    btn.textContent      = '✓ Compte créé !';
+    btn.style.background = '#2D4A2D';
+    btn.disabled         = false;
+    errEl.className      = 'auth-error success';
+    errEl.textContent    = '✓ Compte créé ! Connecte-toi maintenant.';
+    errEl.style.display  = 'block';
+    setTimeout(() => showAuthTab('login'), 1800);
+  } catch (e) {
+    btn.textContent      = 'Créer mon compte →';
+    btn.style.background = '#C4622D';
+    btn.disabled         = false;
+    errEl.textContent    = translateAuthError(e);
+    errEl.style.display  = 'block';
+  }
+}
+const signUp = handleSignup;
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember')?.checked ?? true;
+  const btn      = document.getElementById('btn-login');
+  const errEl    = document.getElementById('login-error');
+
+  errEl.textContent   = '';
+  errEl.style.display = 'none';
+  if (!email || !password) {
+    errEl.textContent   = 'Remplis tous les champs !';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent      = 'Connexion en cours…';
+  btn.style.background = '#A34E22';
+  btn.disabled         = true;
+
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.msg || 'Erreur de connexion');
+
+    localStorage.setItem('ff_access_token', data.access_token);
+    localStorage.setItem('ff_refresh_token', data.refresh_token);
+    localStorage.setItem('ff_user', JSON.stringify(data.user));
+    if (!remember) localStorage.setItem('ff_no_persist', '1');
+    else           localStorage.removeItem('ff_no_persist');
+
+    btn.textContent      = '✓ Connecté !';
+    btn.style.background = '#2D4A2D';
+
+    await loadCurrentPlayer(data.user);
+    document.getElementById('app').classList.remove('auth-mode');
+    setTimeout(() => { goToScreen('home', document.getElementById('nav-home')); loadAdventures(); startGlobalGPS(); }, 400);
+
+  } catch (e) {
+    btn.textContent      = 'Se connecter →';
+    btn.style.background = '#C4622D';
+    btn.disabled         = false;
+    errEl.textContent    = translateAuthError(e);
+    errEl.style.display  = 'block';
+  }
+}
+const signIn = handleLogin;
+
+async function signOut() {
+  if (!confirm('Veux-tu vraiment te déconnecter ?')) return;
+  const token = localStorage.getItem('ff_access_token');
+  if (token) {
+    await fetch(`${SUPA_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+    }).catch(() => {});
+  }
+  localStorage.removeItem('ff_access_token');
+  localStorage.removeItem('ff_refresh_token');
+  localStorage.removeItem('ff_user');
+  localStorage.removeItem('ff_no_persist');
+  currentPlayer = null;
+  document.getElementById('app').classList.add('auth-mode');
+  goToScreen('auth', null);
+}
+
+async function forgotPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.className = 'auth-error';
+  if (!email) { errEl.textContent = "Entre ton email d'abord."; errEl.style.display='block'; return; }
+  const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+    body: JSON.stringify({ email })
+  });
+  if (res.ok || res.status === 200) {
+    errEl.className   = 'auth-error success';
+    errEl.textContent = '✓ Email envoyé ! Vérifie ta boîte.';
+  } else {
+    errEl.textContent = "Erreur lors de l'envoi.";
+  }
+  errEl.style.display = 'block';
+}
+
+// ══════════════════════════════════════════
+// CHARGEMENT DES AVENTURES
+// ══════════════════════════════════════════
+async function loadAdventures() {
+  try {
+    const data = await supaFetch('adventures?select=*,steps(*)&status=eq.published&order=created_at.asc');
+    adventures = data.map(a => ({
+      ...a,
+      steps: (a.steps || []).sort((x, y) => x.order_num - y.order_num)
+    }));
+    renderAdventureCards();
+    renderMapMarkers();
+  } catch (e) {
+    console.error('Erreur chargement :', e);
+    document.getElementById('adventure-cards-list').innerHTML =
+      '<div class="adv-card-empty">Impossible de charger les aventures.</div>';
+  }
+}
+
+// ══════════════════════════════════════════
+// ÉCRAN ACCUEIL — CARDS
+// ══════════════════════════════════════════
+function renderAdventureCards() {
+  const container = document.getElementById('adventure-cards-list');
+  if (!adventures.length) {
+    container.innerHTML = '<div class="adv-card-empty">Aucune aventure disponible pour le moment.</div>';
+    return;
+  }
+  container.innerHTML = adventures.map(adv => {
+    const firstStep = adv.steps?.[0];
+    const imgHtml   = firstStep?.image_url ? `<img src="${firstStep.image_url}" alt=""/>` : '';
+    const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
+    return `
+      <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')">
+        <div class="adv-card-banner">
+          ${imgHtml}
+          <span>${adv.emoji || '🗺️'}</span>
+          <div class="adv-card-diff ${diffClass}">${adv.difficulty || ''}</div>
+        </div>
+        <div class="adv-card-body">
+          <div class="adv-card-title">${adv.title}</div>
+          <div class="adv-card-desc">${adv.description || ''}</div>
+          <div class="adv-card-meta">
+            <span>⏱ ${adv.duration || ''}</span>
+            <span>📍 ${adv.location || ''}</span>
+            <span>👶 ${adv.age_range || ''}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectAdventureFromCard(id) {
+  const adv = adventures.find(a => a.id === id);
+  if (!adv) return;
+  currentAdv = adv;
+  document.getElementById('popup-title').textContent = adv.title;
+  document.getElementById('popup-diff').textContent  = adv.difficulty || '';
+  document.getElementById('popup-type').textContent  = adv.age_range  || '';
+  document.getElementById('popup-dur').textContent   = adv.duration   || '';
+  document.getElementById('popup-loc').textContent   = adv.location   || '';
+  goToScreen('map', document.getElementById('nav-map'));
+  setTimeout(() => document.getElementById('adventure-popup').classList.add('show'), 200);
+}
+
+// ══════════════════════════════════════════
+// CARTE
+// ══════════════════════════════════════════
+function initMap() {
+  if (map) { renderMapMarkers(); return; }
+  map = L.map('leaflet-map', { zoomControl: false }).setView([43.52, 6.43], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  renderMapMarkers();
+  if (playerPos) { map.setView([playerPos.lat, playerPos.lng], 13); updatePlayerMarker(playerPos.lat, playerPos.lng); }
+}
+
+function updatePlayerMarker(lat, lng) {
+  if (!map) return;
+  if (playerMarker) map.removeLayer(playerMarker);
+  playerMarker = L.layerGroup([
+    L.circleMarker([lat, lng], { radius: 18, fillColor: '#3B82F6', color: 'white', weight: 3, fillOpacity: 0.25 }),
+    L.circleMarker([lat, lng], { radius: 7,  fillColor: '#3B82F6', color: 'white', weight: 2, fillOpacity: 1   })
+  ]).addTo(map);
+}
+
+function renderMapMarkers() {
+  if (!map) return;
+  map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
+  if (playerPos) updatePlayerMarker(playerPos.lat, playerPos.lng);
+  adventures.forEach(adv => {
+    const firstStep = adv.steps?.[0];
+    if (!firstStep?.lat) return;
+    const color = DIFF_COLORS[adv.difficulty] || '#C4622D';
+    const marker = L.circleMarker([firstStep.lat, firstStep.lng], {
+      radius: 14, fillColor: color, color: 'white', weight: 2.5, fillOpacity: 0.9
+    }).addTo(map);
+    marker.on('click', () => showPopup(adv));
+  });
+}
+
+function showPopup(adv) {
+  document.getElementById('popup-title').textContent = adv.title      || '';
+  document.getElementById('popup-diff').textContent  = adv.difficulty || '';
+  document.getElementById('popup-type').textContent  = adv.age_range  || '';
+  document.getElementById('popup-dur').textContent   = adv.duration   || '';
+  document.getElementById('popup-loc').textContent   = adv.location   || '';
+  document.getElementById('adventure-popup').classList.add('show');
+  currentAdv = adv;
+}
+function closePopup()  { document.getElementById('adventure-popup').classList.remove('show'); }
+function locateMe()    { if (map && playerPos) map.setView([playerPos.lat, playerPos.lng], 14); }
+
+// ══════════════════════════════════════════
+// GPS GLOBAL
+// ══════════════════════════════════════════
+function startGlobalGPS() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (map) { map.setView([playerPos.lat, playerPos.lng], 13); updatePlayerMarker(playerPos.lat, playerPos.lng); }
+    },
+    () => {},
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+  navigator.geolocation.watchPosition(
+    pos => {
+      playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (map) updatePlayerMarker(playerPos.lat, playerPos.lng);
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+
+// ══════════════════════════════════════════
+// LANCER L'AVENTURE (avec reprise de progression)
+// ══════════════════════════════════════════
+async function startAdventure() {
+  closePopup();
+  if (!currentAdv) return;
+
+  currentStepIndex = 0;
+  gpsAutoUnlocked  = false;
+  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+
+  // Reprise à la dernière étape non complétée
+  if (currentPlayer && currentAdv.steps?.length) {
+    try {
+      const progress = await supaFetch(
+        `player_progress?player_id=eq.${currentPlayer.id}&adventure_id=eq.${currentAdv.id}&completed=eq.true&select=step_id`
+      );
+      const doneIds  = new Set(progress.map(p => p.step_id));
+      const resumeIdx = currentAdv.steps.findIndex(s => !doneIds.has(s.id));
+      currentStepIndex = resumeIdx >= 0 ? resumeIdx : 0;
+    } catch (e) {
+      console.error('Erreur reprise:', e);
+    }
+  }
+
+  ['story','compass','enigme','reward'].forEach(m => {
+    const el = document.getElementById('mode-' + m);
+    if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+  });
+
+  document.getElementById('adv-title').textContent = currentAdv.title;
+  buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
+  renderStoryMode();
+  goToScreen('adventure', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ══════════════════════════════════════════
+// ÉTAPES
+// ══════════════════════════════════════════
+function buildStepDots(total, current) {
+  const container = document.getElementById('step-dots');
+  container.innerHTML = '';
+  document.getElementById('step-current').textContent        = current;
+  document.getElementById('step-total').textContent          = total;
+  document.getElementById('progress-fill').style.width      = (current / total * 100) + '%';
+  for (let i = 1; i <= total; i++) {
+    const d = document.createElement('div');
+    d.className  = 'step-dot' + (i < current ? ' done' : i === current ? ' current' : '');
+    d.textContent = i;
+    container.appendChild(d);
+  }
+}
+
+function currentStep() { return currentAdv?.steps[currentStepIndex] || null; }
+
+// ── STORY ──
+function renderStoryMode() {
+  const step    = currentStep();
+  const isFirst = currentStepIndex === 0;
+
+  const introText = (isFirst && currentAdv.intro_text)
+    ? `<div class="bubble-row" style="margin-bottom:12px;">
+         <div class="bubble-avatar">${compassSVG(26)}</div>
+         <div class="bubble flavia">${currentAdv.intro_text}</div>
+       </div>` : '';
+
+  const introImg = (isFirst && currentAdv.intro_image_url)
+    ? `<img src="${currentAdv.intro_image_url}" style="width:100%;border-radius:12px;margin-bottom:12px;object-fit:cover;max-height:180px;" alt=""/>`
+    : '';
+
+  const stepText = step?.story_text
+    ? `<div class="bubble-row" style="margin-bottom:12px;">
+         <div class="bubble-avatar">${compassSVG(26)}</div>
+         <div class="bubble flavia">${step.story_text}</div>
+       </div>`
+    : `<div class="bubble-row" style="margin-bottom:12px;">
+         <div class="bubble-avatar">${compassSVG(26)}</div>
+         <div class="bubble flavia">Direction : ${step?.title || 'le prochain lieu'} !</div>
+       </div>`;
+
+  const stepImg = step?.image_url
+    ? `<img src="${step.image_url}" style="width:100%;border-radius:12px;margin-bottom:12px;object-fit:cover;max-height:180px;" alt=""/>`
+    : '';
+
+  document.getElementById('mode-story').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${introText}${introImg}${stepImg}${stepText}
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn-primary" onclick="renderCompassMode()">Aller au prochain lieu →</button>
+    </div>`;
+  showMode('story');
+}
+
+// ── BOUSSOLE ──
+function renderCompassMode() {
+  const step = currentStep();
+  if (!step) return;
+  gpsAutoUnlocked = false;
+
+  document.getElementById('mode-compass').innerHTML = `
+    <div class="bubble-row" style="margin-bottom:12px;">
+      <div class="bubble-avatar">${compassSVG(26)}</div>
+      <div class="bubble flavia">Rends-toi à : <strong>${step.title || 'le prochain lieu'}</strong>. Je te guide !</div>
+    </div>
+    <div class="compass-card">
+      <h3>🧭 Direction</h3>
+      <svg width="110" height="110" viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r="52" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="1.5"/>
+        <text x="55" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#2D4A2D">N</text>
+        <text x="55" y="101" text-anchor="middle" font-size="13" fill="#9CA3AF">S</text>
+        <text x="100" y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">E</text>
+        <text x="10"  y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">O</text>
+        <polygon points="55,18 51,55 55,50 59,55" fill="#C4622D"/>
+        <polygon points="55,92 51,55 55,60 59,55" fill="#D4C5A9"/>
+        <circle cx="55" cy="55" r="5" fill="#1A2A1A"/>
+      </svg>
+      <div class="compass-info">
+        <div class="compass-dir" id="compass-dir-live">Activation GPS…</div>
+        <div class="compass-dist" id="compass-dist-live">📍 ${step.title || ''}</div>
+      </div>
+    </div>
+    <div id="gps-arrival-alert" style="display:none; background:var(--green-dark); color:white; border-radius:var(--radius-md); padding:12px 16px; margin-top:12px; font-size:13px; font-weight:600; text-align:center; animation:pulse-gps 1s ease-in-out infinite;">
+      🎯 Tu es arrivé ! L'énigme se débloque…
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn-primary" onclick="renderEnigmeMode()">Je suis arrivé ! ✓</button>
+    </div>`;
+  showMode('compass');
+  startGeolocation(step.lat, step.lng, step.radius_meters || 20);
+}
+
+// ── GÉOLOCALISATION ──
+function startGeolocation(targetLat, targetLng, radiusMeters) {
+  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (!navigator.geolocation) return;
+
+  const update = (lat, lng) => {
+    const dist    = getDistance(lat, lng, targetLat, targetLng);
+    const bearing = getBearing(lat, lng, targetLat, targetLng);
+    const dirEl   = document.getElementById('compass-dir-live');
+    const distEl  = document.getElementById('compass-dist-live');
+    if (dirEl)  dirEl.textContent  = bearingToLabel(bearing);
+    if (distEl) distEl.textContent = `📍 ${Math.round(dist)} m · ${bearingToLabel(bearing)}`;
+
+    if (dist <= radiusMeters && !gpsAutoUnlocked) {
+      gpsAutoUnlocked = true;
+      vibrateFeedback(50);
+      soundArrival();
+      const alertEl = document.getElementById('gps-arrival-alert');
+      if (alertEl) alertEl.style.display = 'block';
+      navigator.geolocation.clearWatch(geoWatcher);
+      geoWatcher = null;
+      setTimeout(() => renderEnigmeMode(), 1500);
+    }
+  };
+
+  if (playerPos) update(playerPos.lat, playerPos.lng);
+
+  geoWatcher = navigator.geolocation.watchPosition(
+    pos => {
+      playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      update(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      const dirEl = document.getElementById('compass-dir-live');
+      if (dirEl) dirEl.textContent = 'GPS indisponible';
+    },
+    { enableHighAccuracy: true, maximumAge: 3000 }
+  );
+}
+
+// ── MATHS GPS ──
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R    = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function getBearing(lat1, lng1, lat2, lng2) {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const y    = Math.sin(dLng) * Math.cos(lat2 * Math.PI / 180);
+  const x    = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos(dLng);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+function bearingToLabel(b) {
+  return ['Nord','Nord-Est','Est','Sud-Est','Sud','Sud-Ouest','Ouest','Nord-Ouest'][Math.round(b / 45) % 8];
+}
+
+// ── ÉNIGME ──
+function renderEnigmeMode() {
+  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  currentHintLevel = 0;
+  hintXpPenalty    = 0;
+  const step = currentStep();
+  if (!step) return;
+
+  document.getElementById('mode-enigme').innerHTML = `
+    <div class="bubble-row" style="margin-bottom:12px;">
+      <div class="bubble-avatar">${compassSVG(26)}</div>
+      <div class="bubble flavia">Excellent ! Tu es arrivé à ${step.title || 'destination'}. Résous cette énigme !</div>
+    </div>
+    <div class="enigme-card">
+      <div class="enigme-label">🔍 Énigme du lieu</div>
+      <div class="enigme-text">"${step.enigme || ''}"</div>
+      <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
+             onkeydown="if(event.key==='Enter') checkAnswer()"/>
+      <div class="error-msg" id="error-msg">Pas tout à fait… réessaie ou prends un indice !</div>
+      <button class="btn-primary" onclick="checkAnswer()">Valider ma réponse</button>
+      <div id="hint-section"></div>
+    </div>`;
+  showMode('enigme');
+  renderHintSection();
+}
+
+// ── INDICES PROGRESSIFS ──
+function renderHintSection() {
+  const step      = currentStep();
+  const container = document.getElementById('hint-section');
+  if (!container) return;
+  const hints    = (step?.hint || '').split('|').map(h => h.trim()).filter(Boolean);
+  if (!hints.length) { container.innerHTML = ''; return; }
+
+  const penalties = [10, 20, 30];
+  let html = '';
+  for (let i = 0; i < currentHintLevel; i++) {
+    html += `<div class="hint-reveal">
+      <div class="hint-level-lbl">Indice ${i + 1}</div>
+      ${hints[i]}
+    </div>`;
+  }
+  if (currentHintLevel < hints.length) {
+    const penalty = penalties[currentHintLevel] || 30;
+    html += `<button class="btn-hint" onclick="revealHint(${currentHintLevel + 1}, ${penalty})" style="margin-top:${currentHintLevel > 0 ? '8px' : '0'};">
+      💡 Indice ${currentHintLevel + 1} (−${penalty} XP)
+    </button>`;
+  }
+  container.innerHTML = html;
+}
+
+function revealHint(level, penalty) {
+  hintXpPenalty   += penalty;
+  currentHintLevel = level;
+  renderHintSection();
+}
+
+// ── VÉRIFICATION RÉPONSE ──
+function checkAnswer() {
+  const step = currentStep();
+  if (!step) return;
+  const val      = document.getElementById('answer-input').value.trim().toLowerCase();
+  const expected = (step.answer || '').toLowerCase().trim();
+  if (val && (val === expected || expected.includes(val) || val.includes(expected))) {
+    vibrateFeedback(200);
+    soundSuccess();
+    renderRewardMode();
+  } else if (val.length > 0) {
+    vibrateFeedback([100, 50, 100]);
+    soundError();
+    const input = document.getElementById('answer-input');
+    input.classList.add('error');
+    document.getElementById('error-msg').style.display = 'block';
+    input.value = '';
+    setTimeout(() => input.classList.remove('error'), 1500);
+  }
+}
+
+// ── RÉCOMPENSE + SAUVEGARDE ──
+function renderRewardMode() {
+  const step     = currentStep();
+  const isLast   = currentStepIndex >= (currentAdv?.steps.length || 1) - 1;
+  const earnedXp = Math.max(0, (step?.xp || 0) - hintXpPenalty);
+
+  // Sauvegarde en arrière-plan (XP réel après déduction indices)
+  saveProgress(step, earnedXp);
+
+  // Retours sensoriels (le vibrate/son de bonne réponse vient déjà de checkAnswer)
+  if (isLast) {
+    vibrateFeedback([100, 50, 100, 50, 100]);
+    soundFanfare();
+  }
+
+  const flaviaMsg = isLast && currentAdv.outro_text
+    ? currentAdv.outro_text
+    : 'Flavia est fière de toi, aventurier !';
+
+  const outroImg = isLast && currentAdv.outro_image_url
+    ? `<img src="${currentAdv.outro_image_url}" style="width:100%;border-radius:12px;margin-bottom:8px;object-fit:cover;max-height:200px;" alt=""/>`
+    : '';
+
+  const xpLabel = earnedXp > 0
+    ? `<div class="xp-pill">⭐ +${earnedXp} XP gagnés${hintXpPenalty > 0 ? ` <span style="font-size:11px;opacity:.7;">(−${hintXpPenalty} indices)</span>` : ''}</div>`
+    : '';
+
+  document.getElementById('mode-reward').innerHTML = `
+    <div class="reward-burst">${isLast ? '🏆' : '🎉'}</div>
+    <div class="reward-title">${isLast ? 'Aventure terminée !' : 'Étape débloquée !'}</div>
+    ${outroImg}
+    <div class="bubble-row" style="width:100%;margin-bottom:4px;">
+      <div class="bubble-avatar">${compassSVG(26)}</div>
+      <div class="bubble flavia">${flaviaMsg}</div>
+    </div>
+    ${xpLabel}
+    ${step?.badge_emoji ? `<div class="badge-hex">${step.badge_emoji}</div>
+      <div class="badge-name">Badge : ${step.badge_name || ''}</div>` : ''}
+    <div style="margin-top:16px;width:100%;">
+      ${isLast
+        ? `<button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>`
+        : `<button class="btn-primary" onclick="nextStep()">Continuer →</button>`}
+    </div>`;
+  showMode('reward');
+}
+
+// ── SAUVEGARDE PROGRESSION ──
+async function saveProgress(step, xpOverride) {
+  if (!currentPlayer || !step?.id) return;
+  try {
+    // Évite les doublons
+    const existing = await supaFetch(
+      `player_progress?player_id=eq.${currentPlayer.id}&step_id=eq.${step.id}&select=id`
+    );
+    if (existing.length) return;
+
+    await supaFetch('player_progress', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        player_id:    currentPlayer.id,
+        adventure_id: currentAdv.id,
+        step_id:      step.id,
+        completed:    true,
+        completed_at: new Date().toISOString()
+      }
+    });
+
+    const xpToAdd = xpOverride !== undefined ? xpOverride : (step.xp || 0);
+    if (xpToAdd > 0) {
+      const newXp = (currentPlayer.total_xp || 0) + xpToAdd;
+      await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { total_xp: newXp }
+      });
+      currentPlayer.total_xp = newXp;
+    }
+  } catch (e) {
+    console.error('Erreur sauvegarde progression:', e);
+  }
+}
+
+function nextStep() {
+  currentStepIndex++;
+  gpsAutoUnlocked = false;
+  buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
+  renderStoryMode();
+}
+
+// ══════════════════════════════════════════
+// PROFIL RÉEL
+// ══════════════════════════════════════════
+async function loadProfile() {
+  if (!currentPlayer) return;
+  try {
+    // Rafraîchir données joueur
+    const rows = await supaFetch(`players?id=eq.${currentPlayer.id}`);
+    if (rows.length) currentPlayer = rows[0];
+
+    // Rang mondial
+    const allPlayers = await supaFetch('players?select=id,total_xp&order=total_xp.desc');
+    const rank = allPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
+
+    // Progression complétée
+    const progress = await supaFetch(
+      `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
+    );
+    const stepIds       = [...new Set(progress.map(p => p.step_id).filter(Boolean))];
+    const uniqueAdvIds  = new Set(progress.map(p => p.adventure_id));
+
+    // Badges depuis les steps complétés
+    let badgeSteps = [];
+    if (stepIds.length) {
+      badgeSteps = await supaFetch(
+        `steps?id=in.(${stepIds.join(',')})&badge_emoji=not.is.null&select=badge_emoji,badge_name`
+      );
+    }
+
+    // Mise à jour UI
+    document.getElementById('profile-avatar-el').textContent = currentPlayer.avatar_emoji || '🧒';
+    document.getElementById('profile-name-el').textContent   = currentPlayer.pseudo  || 'Aventurier';
+    document.getElementById('profile-email-el').textContent  = currentPlayer.email   || '';
+
+    const xpFmt = (currentPlayer.total_xp || 0).toLocaleString('fr');
+    document.getElementById('profile-stat-scenarios').textContent = uniqueAdvIds.size;
+    document.getElementById('profile-stat-xp').textContent        = xpFmt;
+    document.getElementById('profile-stat-badges').tex

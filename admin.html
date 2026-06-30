@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Les Aventures de la Jeune Flavia Flint — Admin</title>
+<style>
+.loading-bar {
+  display: none; position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--amber); z-index: 9999;
+  animation: loadpulse 1s ease-in-out infinite;
+}
+@keyframes loadpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+:root {
+  --green-dark: #2D4A2D;
+  --green-mid:  #3D6B3D;
+  --beige:      #F5EDD8;
+  --beige-mid:  #EDE0C4;
+  --terra:      #C4622D;
+  --terra-dk:   #A34E22;
+  --amber:      #E8A020;
+  --white:      #FFFFFF;
+  --gray-bg:    #F8F9FA;
+  --gray-brd:   #E2E8E2;
+  --gray-txt:   #6B7280;
+  --text:       #1A2A1A;
+  --danger:     #DC2626;
+  --success:    #059669;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-bg); color: var(--text); min-height: 100vh; }
+
+/* ── LAYOUT ── */
+.layout { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px; background: var(--green-dark); flex-shrink: 0;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+}
+.sidebar-logo {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo .icon { font-size: 24px; }
+.sidebar-logo .name { color: white; font-size: 15px; font-weight: 700; }
+.sidebar-logo .name span { color: var(--amber); }
+.sidebar-logo .badge { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+
+.sidebar-nav { padding: 12px 8px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 500;
+  cursor: pointer; margin-bottom: 2px; transition: all 0.15s;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+.nav-item.active { background: rgba(255,255,255,0.15); color: white; }
+.nav-item .nav-icon { font-size: 18px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  padding: 12px 8px 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-user {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+}
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--terra); display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.user-name { color: rgba(255,255,255,0.8); font-size: 13px; font-weight: 500; }
+.user-role { color: rgba(255,255,255,0.4); font-size: 11px; }
+
+/* ── MAIN ── */
+.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: white; border-bottom: 1px solid var(--gray-brd);
+  padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 9px 18px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--terra); color: white; }
+.btn-primary:hover { background: var(--terra-dk); }
+.btn-secondary { background: white; color: var(--text); border: 1px solid var(--gray-brd); }
+.btn-secondary:hover { background: var(--gray-bg); }
+.btn-danger { background: #FEF2F2; color: var(--danger); border: 1px solid #FECACA; }
+.btn-danger:hover { background: #FEE2E2; }
+.btn-success { background: #ECFDF5; color: var(--success); border: 1px solid #A7F3D0; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+/* ── PAGE CONTENT ── */
+.page { padding: 28px; display: none; }
+.page.active { display: block; }
+
+/* ── STATS CARDS ── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: white; border-radius: var(--r-md); border: 1px solid var(--gray-brd);
+  padding: 16px 20px;
+}
+.stat-card .label { font-size: 12px; color: var(--gray-txt); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.stat-card .value { font-size: 28px; font-weight: 800; color: var(--text); }
+.stat-card .sub { font-size: 12px; color: var(--gray-txt); margin-top: 3px; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title { font-size: 16px; font-weight: 700; color: var(--text); }
+
+/* ── ADVENTURES TABLE ── */
+.table-wrap {
+  background: white; border-radius: var(--r-lg); border: 1px solid var(--gray-brd); overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--gray-bg); }
+th {
+  padding: 11px 16px; text-align: left;
+  font-size: 12px; font-weight: 600; color: var(--gray-txt);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  border-bottom: 1px solid var(--gray-brd);
+}
+td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--gray-brd); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #FAFBFA; }
+
+.adv-name { font-weight: 600; color: var(--text); }
+.adv-sub { font-size: 12px; color: var(--gray-txt); margin-top: 2px; }
+
+.status-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.status-published { background: #ECFDF5; color: #065F46; }
+.status-draft { background: #FFFBEB; color: #92400E; }
+
+.diff-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+.diff-easy { background: #D1FAE5; color: #065F46; }
+.diff-medium { background: #FEF3C7; color: #92400E; }
+.diff-hard { background: #FEE2E2; color: #991B1B; }
+
+.actions-cell { display: flex; gap: 6px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 200;
+  align-items: flex-start; justify-content: center;
+  padding: 30px 16px; overflow-y: auto;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: white; border-radius: var(--r-lg);
+  width: 100%; max-width: 780px;
+  min-height: 200px;
+  animation: fadeIn 0.18s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--gray-brd);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h2 { font-size: 18px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-txt); line-height: 1; padding: 0; }
+
+.modal-body { padding: 24px; }
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--gray-brd);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+/* ── FORM ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+.form-group.full { grid-column: 1 / -1; }
+label { font-size: 13px; font-weight: 600; color: var(--text); }
+.label-hint { font-size: 11px; color: var(--gray-txt); font-weight: 400; margin-left: 6px; }
+input[type=text], input[type=number], textarea, select {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--gray-brd); border-radius: var(--r-sm);
+  font-size: 14px; color: var(--text); background: white;
+  outline: none; transition: border-color 0.15s;
+  font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(61,107,61,0.1); }
+textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.char-hint { font-size: 11px; color: var(--gray-txt); text-align: right; }
+
+/* ── ÉTAPES ── */
+.steps-section { margin-top: 24px; }
+.steps-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.steps-label { font-size: 15px; font-weight: 700; }
+
+.step-card {
+  border: 1px solid var(--gray-brd); border-radius: var(--r-md);
+  margin-bottom: 12px; overflow: hidden;
+}
+.step-card-header {
+  background: var(--gray-bg); padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--green-dark); color: white;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-card-title { font-size: 14px; font-weight: 600; flex: 1; }
+.step-card-loc { font-size: 12px; color: var(--gray-txt); }
+.step-toggle { font-size: 18px; color: var(--gray-txt); transition: transform 0.2s; }
+.step-toggle.open { transform: rotate(180deg); }
+
+.step-card-body { padding: 16px; display: none; border-top: 1px solid var(--gray-brd); }
+.step-card-body.open { display: block; }
+
+.step-section-label {
+  font-size: 11px; font-weight: 700; color: var(--terra);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 14px 0 8px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--beige-mid);
+}
+.step-section-label:first-child { margin-top: 0; }
+
+.gps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+.step-delete {
+  background: none; border: none; color: var(--danger); cursor: pointer;
+  font-size: 13px; font-weight: 600; padding: 4px 8px;
+  border-radius: var(--r-sm); transition: background 0.15s;
+}
+.step-delete:hover { background: #FEF2F2; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--gray-txt);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.empty-sub { font-size: 14px; line-height: 1.5; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--green-dark); color: white;
+  padding: 12px 20px; border-radius: var(--r-md);
+  font-size: 14px; font-weight: 500;
+  display: none; align-items: center; gap: 8px;
+  z-index: 999; animation: slideToast 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.toast.show { display: flex; }
+@keyframes slideToast { from { transform: translateY(10px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+/* ── STORY SECTIONS ── */
+.story-block {
+  background: var(--gray-bg); border: 1px solid var(--gray-brd);
+  border-radius: var(--r-md); padding: 18px; margin-bottom: 16px;
+}
+.story-block-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.story-block-icon {
+  width: 36px; height: 36px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.story-block-icon.intro  { background: #EDE9FE; }
+.story-block-icon.outro  { background: #ECFDF5; }
+.story-block-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.story-block-sub   { font-size: 12px; color: var(--gray-txt); }
+
+/* ── IMAGE UPLOAD ── */
+.img-upload-zone {
+  border: 2px dashed var(--gray-brd); border-radius: var(--r-md);
+  padding: 16px; text-align: center; cursor: pointer;
+  transition: all 0.15s; background: white; position: relative;
+}
+.img-upload-zone:hover { border-color: var(--green-mid); background: #F0F7F0; }
+.img-upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.img-upload-icon { font-size: 28px; margin-bottom: 6px; }
+.img-upload-label { font-size: 13px; color: var(--gray-txt); }
+.img-upload-label strong { color: var(--green-mid); }
+.img-upload-label .formats { font-size: 11px; display: block; margin-top: 3px; }
+
+.img-preview {
+  display: none; position: relative;
+  border-radius: var(--r-md); overflow: hidden;
+  border: 1px solid var(--gray-brd);
+}
+.img-preview img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.img-preview-remove {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0,0,0,0.55); color: white; border: none;
+  border-radius: 50%; width: 24px; height: 24px; font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.flavia-preview {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: white; border-radius: var(--r-md); padding: 12px;
+  border: 1px solid var(--gray-brd); margin-top: 10px;
+}
+.flavia-bubble-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--green-dark); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.flavia-bubble {
+  background: var(--green-dark); color: white;
+  border-radius: 12px 12px 12px 3px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.5;
+  max-width: calc(100% - 44px);
+}
+.flavia-preview-label { font-size: 11px; color: var(--gray-txt); margin-bottom: 6px; font-weight: 600; }
+
+/* ── SEPARATOR ── */
+.form-separator {
+  border: none; border-top: 1px solid var(--gray-brd);
+  margin: 20px 0;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .gps-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-bar" id="loading-bar"></div>
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="logo.png" style="height:28px;object-fit:contain;flex-shrink:0;">
+      <div>
+        <div class="name">Flavia<span>Flint</span></div>
+        <div class="badge">Admin</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showPage('dashboard', this)">
+        <span class="nav-icon">📊</span> Tableau de bord
+      </button>
+      <button class="nav-item" onclick="showPage('adventures', this)">
+        <span class="nav-icon">🗺️</span> Aventures
+      </button>
+      <button class="nav-item" onclick="showPage('players', this)">
+        <span class="nav-icon">👥</span> Joueurs
+      </button>
+      <button class="nav-item" onclick="showPage('badges', this)">
+        <span class="nav-icon">⬡</span> Badges
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="flavia-flint-app.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
+        <div style="
+          display:flex; align-items:center; gap:8px;
+          background: var(--terra); border-radius: var(--r-sm);
+          padding: 10px 12px; cursor:pointer; transition: background 0.15s;
+        " onmouseover="this.style.background='#A34E22'" onmouseout="this.style.background='#C4622D'">
+          <span style="font-size:18px;">🗺️</span>
+          <div>
+            <div style="color:white; font-size:13px; font-weight:600;">Vue joueur</div>
+            <div style="color:rgba(255,255,255,0.65); font-size:11px;">Ouvrir l'app</div>
+          </div>
+          <span style="margin-left:auto; color:rgba(255,255,255,0.6); font-size:12px;">↗</span>
+        </div>
+      </a>
+      <div class="sidebar-user">
+        <div class="user-avatar">F</div>
+        <div>
+          <div class="user-name">Firmin</div>
+          <div class="user-role">Administrateur</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <h1 id="page-title">Tableau de bord</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="openModal()">+ Nouvelle aventure</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : DASHBOARD ═══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Aventures</div>
+          <div class="value" id="stat-adventures">…</div>
+          <div class="sub"><span id="stat-published">—</span> · <span id="stat-draft">—</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Joueurs inscrits</div>
+          <div class="value">0</div>
+          <div class="sub">Après activation des cartes</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Parties lancées</div>
+          <div class="value">0</div>
+          <div class="sub">Données en temps réel</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Badges délivrés</div>
+          <div class="value">0</div>
+          <div class="sub">XP cumulés</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Dernières aventures</div>
+        <button class="btn btn-secondary btn-sm" onclick="showPage('adventures', document.querySelectorAll('.nav-item')[1])">Voir tout →</button>
+      </div>
+      <div class="table-wrap" id="dashboard-table"></div>
+    </div>
+
+    <!-- ═══ PAGE : AVENTURES ═══ -->
+    <div id="page-adventures" class="page">
+      <div class="section-header">
+        <div class="section-title" id="adv-count">3 aventures</div>
+        <button class="btn btn-primary" onclick="openModal()">+ Nouvelle aventure</button>
+      </div>
+      <div class="table-wrap" id="adventures-table"></div>
+    </div>
+
+    <!-- ═══ PAGE : JOUEURS ═══ -->
+    <div id="page-players" class="page">
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">Aucun joueur inscrit pour l'instant</div>
+        <div class="empty-sub">Les joueurs apparaîtront ici dès qu'ils activeront leur carte d'aventurier.<br>Cette section sera connectée à Supabase à la prochaine étape.</div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : BADGES ═══ -->
+    <div id="page-badges" class="page">
+      <div class="empty-state">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-title">Gestion des badges — bientôt disponible</div>
+        <div class="empty-sub">Tu pourras ici créer et gérer les badges hexagonaux associés à chaque aventure.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ MODAL AVENTURE ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Nouvelle aventure</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- INFOS GÉNÉRALES -->
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Titre de l'aventure</label>
+          <input type="text" id="f-title" placeholder="Ex : Le Mystère de la Tour" />
+        </div>
+        <div class="form-group full">
+          <label>Description <span class="label-hint">(affichée sur la carte joueur)</span></label>
+          <textarea id="f-desc" rows="2" placeholder="Résumé de l'aventure en 1-2 phrases…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Ville / Lieu</label>
+          <input type="text" id="f-location" placeholder="Ex : Draguignan" />
+        </div>
+        <div class="form-group">
+          <label>Durée estimée</label>
+          <input type="text" id="f-duration" placeholder="Ex : 75 min" />
+        </div>
+        <div class="form-group">
+          <label>Difficulté</label>
+          <select id="f-diff">
+            <option value="Facile">Facile</option>
+            <option value="Intermédiaire">Intermédiaire</option>
+            <option value="Expert">Expert</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tranche d'âge</label>
+          <input type="text" id="f-age" placeholder="Ex : 5–12 ans" value="5–12 ans" />
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="f-status">
+            <option value="draft">Brouillon</option>
+            <option value="published">Publié</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Emoji de l'aventure</label>
+          <input type="text" id="f-emoji" placeholder="Ex : 🏛️" value="🗺️" style="font-size:20px;" />
+        </div>
+      </div>
+
+      <hr class="form-separator"/>
+
+      <!-- STORYTELLING INTRO -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:20px;">🎬</span> Storytelling de l'aventure
+        </div>
+
+        <!-- INTRO -->
+        <div class="story-block">
+          <div class="story-block-header">
+            <div class="story-block-icon intro">🧭</div>
+            <div>
+              <div class="story-block-title">Introduction — Flavia présente la mission</div>
+              <div class="story-block-sub">Affiché avant le début de l'aventure, quand le joueur choisit cette chasse</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;">Message de Flavia <span class="label-hint">(accroche de la mission)</span></label>
+                <textarea id="f-intro-text" rows="4" placeholder="Ex : Aventurier ! J'ai besoin de ton aide. Une carte mystérieuse vient d'apparaître sur mon bureau… L'Obscura a caché quelque chose dans ta ville et toi seul peux le trouver !"
+                  oninput="updatePreview('intro')"></textarea>
+              </div>
+              <div class="flavia-preview-label">Aperçu bulle joueur :</div>
+              <div class="flavia-preview">
+                <div class="flavia-bubble-avatar">🧭</div>
+                <div class="flavia-bubble" id="f-intro-preview" style="font-size:12px;opacity:0.7;font-style:italic;">Le texte apparaîtra ici…</div>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image d'illustration <span class="label-hint">(optionnel)</span></label>
+              <div class="img-preview" id="intro-img-preview">
+                <img id="intro-img-tag" src="" alt=""/>
+                <button class="img-preview-remove" onclick="removeImg('intro')">✕</button>
+              </div>
+              <div class="img-upload-zone" id="intro-upload-zone">
+                <input type="file" accept="image/*" onchange="handleImg(event,'intro')"/>
+                <div class="img-upload-icon">🖼️</div>
+                <div class="img-upload-label">
+                  <strong>Clique pour choisir</strong> ou glisse une image
+                  <span class="formats">JPG, PNG, WebP · Max 5 Mo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OUTRO -->
+        <div class="story-block">
+          <div class="story-block-header">
+            <div class="story-block-icon outro">🏆</div>
+            <div>
+              <div class="story-block-title">Conclusion — Fin de l'aventure</div>
+              <div class="story-block-sub">Affiché après la dernière étape, quand le joueur a terminé la chasse</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;">Message final de Flavia</label>
+                <textarea id="f-outro-text" rows="4" placeholder="Ex : Incroyable ! Tu as réussi à percer le secret de l'Obscura. Tu es maintenant un véritable aventurier. Jusqu'à notre prochaine mission !"
+                  oninput="updatePreview('outro')"></textarea>
+              </div>
+              <div class="flavia-preview-label">Aperçu bulle joueur :</div>
+              <div class="flavia-preview">
+                <div class="flavia-bubble-avatar">🧭</div>
+                <div class="flavia-bubble" id="f-outro-preview" style="font-size:12px;opacity:0.7;font-style:italic;">Le texte apparaîtra ici…</div>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image de fin <span class="label-hint">(optionnel)</span></label>
+              <div class="img-preview" id="outro-img-preview">
+                <img id="outro-img-tag" src="" alt=""/>
+                <button class="img-preview-remove" onclick="removeImg('outro')">✕</button>
+              </div>
+              <div class="img-upload-zone" id="outro-upload-zone">
+                <input type="file" accept="image/*" onchange="handleImg(event,'outro')"/>
+                <div class="img-upload-icon">🖼️</div>
+                <div class="img-upload-label">
+                  <strong>Clique pour choisir</strong> ou glisse une image
+                  <span class="formats">JPG, PNG, WebP · Max 5 Mo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="form-separator"/>
+
+      <!-- ÉTAPES -->
+      <div class="steps-section">
+        <div class="steps-header">
+          <div class="steps-label">📍 Étapes de l'aventure</div>
+          <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Ajouter une étape</button>
+        </div>
+        <div id="steps-container">
+          <div class="empty-state" id="steps-empty" style="padding:24px;">
+            <div class="empty-icon" style="font-size:32px;">📍</div>
+            <div class="empty-title" style="font-size:14px;">Aucune étape encore</div>
+            <div class="empty-sub" style="font-size:13px;">Clique sur "+ Ajouter une étape" pour commencer.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-success btn-sm" onclick="saveAdventure(true)" style="margin-right:4px;">💾 Sauvegarder brouillon</button>
+      <button class="btn btn-primary" onclick="saveAdventure(false)">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✓ <span id="toast-msg">Aventure enregistrée</span></div>
+
+<script>
+// ── SUPABASE CONFIG ──
+const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
+
+const headers = {
+  'Content-Type': 'application/json',
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY,
+  'Prefer': 'return=representation'
+};
+
+async function supa(method, table, body, params = '') {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, {
+    method, headers, body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || res.statusText);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── STATE ──
+let adventures = [];
+let editingId = null;
+let stepCount = 0;
+
+// ── PREVIEWS STORYTELLING ──
+function updatePreview(type) {
+  const text = document.getElementById('f-'+type+'-text').value.trim();
+  const el = document.getElementById('f-'+type+'-preview');
+  if (el) {
+    el.textContent = text || 'Le texte apparaîtra ici…';
+    el.style.opacity = text ? '1' : '0.7';
+    el.style.fontStyle = text ? 'normal' : 'italic';
+  }
+}
+
+function updateStepPreview(n) {
+  const text = document.getElementById('s'+n+'-story').value.trim();
+  const el = document.getElementById('s'+n+'-story-preview');
+  if (el) {
+    el.textContent = text || 'Le texte apparaîtra ici…';
+    el.style.opacity = text ? '1' : '0.7';
+    el.style.fontStyle = text ? 'normal' : 'italic';
+  }
+}
+
+// ── IMAGES GLOBALES (intro / outro) ──
+function handleImg(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById(type+'-img-tag').src = e.target.result;
+    document.getElementById(type+'-img-preview').style.display = 'block';
+    document.getElementById(type+'-upload-zone').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImg(type) {
+  document.getElementById(type+'-img-tag').src = '';
+  document.getElementById(type+'-img-preview').style.display = 'none';
+  document.getElementById(type+'-upload-zone').style.display = 'block';
+}
+
+// ── IMAGES ÉTAPES ──
+function handleStepImg(event, n) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('s'+n+'-img-tag').src = e.target.result;
+    document.getElementById('s'+n+'-img-preview').style.display = 'block';
+    document.getElementById('s'+n+'-upload-zone').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeStepImg(n) {
+  document.getElementById('s'+n+'-img-tag').src = '';
+  document.getElementById('s'+n+'-img-preview').style.display = 'none';
+  document.getElementById('s'+n+'-upload-zone').style.display = 'block';
+}
+
+// ── NAVIGATION ──
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges' };
+  document.getElementById('page-title').textContent = titles[name] || name;
+  if (name === 'dashboard' || name === 'adventures') loadAdventures();
+}
+
+// ── CHARGER DEPUIS SUPABASE ──
+async function loadAdventures() {
+  setLoading(true);
+  try {
+    const data = await supa('GET', 'adventures', null, '?select=*,steps(*)&order=created_at.desc');
+    adventures = (data || []).map(a => ({
+      ...a,
+      steps: (a.steps || []).sort((x,y) => x.order_num - y.order_num)
+    }));
+    renderTable();
+    updateStats();
+  } catch(e) {
+    showToast('Erreur chargement : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  const el = document.getElementById('loading-bar');
+  if (el) el.style.display = on ? 'block' : 'none';
+}
+
+function updateStats() {
+  const pub = adventures.filter(a => a.status === 'published').length;
+  const draft = adventures.filter(a => a.status === 'draft').length;
+  document.getElementById('stat-adventures').textContent = adventures.length;
+  document.getElementById('stat-published').textContent = pub + ' publiée' + (pub > 1 ? 's' : '');
+  document.getElementById('stat-draft').textContent = draft + ' brouillon' + (draft > 1 ? 's' : '');
+}
+
+// ── TABLE ──
+function renderTable() {
+  const html = buildTable(adventures);
+  const el1 = document.getElementById('dashboard-table');
+  const el2 = document.getElementById('adventures-table');
+  if (el1) el1.innerHTML = html;
+  if (el2) el2.innerHTML = html;
+  const countEl = document.getElementById('adv-count');
+  if (countEl) countEl.textContent = adventures.length + ' aventure' + (adventures.length > 1 ? 's' : '');
+}
+
+function buildTable(data) {
+  if (!data.length) return '<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">Aucune aventure</div><div class="empty-sub">Crée ta première aventure !</div></div>';
+  return `<table>
+    <thead><tr>
+      <th>Aventure</th><th>Lieu</th><th>Étapes</th><th>Difficulté</th><th>Statut</th><th>Actions</th>
+    </tr></thead>
+    <tbody>` + data.map(a => `
+      <tr>
+        <td><div class="adv-name">${a.emoji || '🗺️'} ${a.title}</div><div class="adv-sub">${a.duration || ''} · ${a.age_range || ''}</div></td>
+        <td>${a.location || '—'}</td>
+        <td><strong>${(a.steps||[]).length}</strong> étape${(a.steps||[]).length > 1 ? 's' : ''}</td>
+        <td><span class="diff-pill ${a.difficulty === 'Facile' ? 'diff-easy' : a.difficulty === 'Intermédiaire' ? 'diff-medium' : 'diff-hard'}">${a.difficulty || '—'}</span></td>
+        <td><span class="status-pill ${a.status === 'published' ? 'status-published' : 'status-draft'}">${a.status === 'published' ? '✓ Publié' : '✏️ Brouillon'}</span></td>
+        <td><div class="actions-cell">
+          <button class="btn btn-secondary btn-sm" onclick="editAdventure('${a.id}')">✏️ Modifier</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAdventure('${a.id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('') + '</tbody></table>';
+}
+
+// ── MODAL OPEN/CLOSE ──
+function openModal(id) {
+  editingId = id || null;
+  stepCount = 0;
+  document.getElementById('steps-container').innerHTML = '';
+
+  if (id) {
+    const adv = adventures.find(a => a.id === id);
+    if (!adv) return;
+    document.getElementById('modal-title').textContent = 'Modifier l\'aventure';
+    document.getElementById('f-title').value = adv.title || '';
+    document.getElementById('f-desc').value = adv.description || '';
+    document.getElementById('f-location').value = adv.location || '';
+    document.getElementById('f-duration').value = adv.duration || '';
+    document.getElementById('f-diff').value = adv.difficulty || 'Facile';
+    document.getElementById('f-age').value = adv.age_range || '5–12 ans';
+    document.getElementById('f-status').value = adv.status || 'draft';
+    document.getElementById('f-emoji').value = adv.emoji || '🗺️';
+    document.getElementById('f-intro-text').value = adv.intro_text || '';
+    document.getElementById('f-outro-text').value = adv.outro_text || '';
+    updatePreview('intro'); updatePreview('outro');
+    (adv.steps || []).forEach(s => addStep(s));
+  } else {
+    document.getElementById('modal-title').textContent = 'Nouvelle aventure';
+    ['f-title','f-desc','f-location','f-duration','f-intro-text','f-outro-text'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-diff').value = 'Facile';
+    document.getElementById('f-age').value = '5–12 ans';
+    document.getElementById('f-status').value = 'draft';
+    document.getElementById('f-emoji').value = '🗺️';
+    updatePreview('intro'); updatePreview('outro');
+    removeImg('intro'); removeImg('outro');
+    showStepsEmpty();
+  }
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+function editAdventure(id) { openModal(id); }
+
+// ── SUPPRIMER ──
+async function deleteAdventure(id) {
+  if (!confirm('Supprimer cette aventure ? Cette action est irréversible.')) return;
+  try {
+    await supa('DELETE', 'adventures', null, `?id=eq.${id}`);
+    adventures = adventures.filter(a => a.id !== id);
+    renderTable();
+    updateStats();
+    showToast('Aventure supprimée');
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+// ── ÉTAPES ──
+function showStepsEmpty() {
+  if (stepCount === 0) {
+    document.getElementById('steps-container').innerHTML = `<div class="empty-state" style="padding:24px;">
+      <div class="empty-icon" style="font-size:32px;">📍</div>
+      <div class="empty-title" style="font-size:14px;">Aucune étape encore</div>
+      <div class="empty-sub" style="font-size:13px;">Clique sur "+ Ajouter une étape" pour commencer.</div>
+    </div>`;
+  }
+}
+
+function addStep(data) {
+  stepCount++;
+  const n = stepCount;
+  const c = document.getElementById('steps-container');
+  if (c.querySelector('.empty-state')) c.innerHTML = '';
+  const d = data || {};
+  const div = document.createElement('div');
+  div.className = 'step-card';
+  div.id = 'step-' + n;
+  div.innerHTML = `
+    <div class="step-card-header" onclick="toggleStep(${n})">
+      <div class="step-num">${n}</div>
+      <div class="step-card-title" id="step-title-label-${n}">${d.title || 'Nouvelle étape'}</div>
+      <div class="step-card-loc" id="step-loc-label-${n}">${d.lat ? d.lat+', '+d.lng : 'GPS non défini'}</div>
+      <span class="step-toggle open" id="step-arrow-${n}">▾</span>
+    </div>
+    <div class="step-card-body open" id="step-body-${n}">
+      <div class="step-section-label">📍 Localisation GPS</div>
+      <div class="gps-grid">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Latitude</label>
+          <input type="text" id="s${n}-lat" placeholder="43.538" value="${d.lat||''}" oninput="updateStepLabel(${n})"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Longitude</label>
+          <input type="text" id="s${n}-lng" placeholder="6.466" value="${d.lng||d.lng||''}" oninput="updateStepLabel(${n})"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Rayon validation (m)</label>
+          <input type="number" id="s${n}-radius" placeholder="20" value="${d.radius_meters||d.radius||'20'}"/>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label style="font-size:12px;">Nom du lieu</label>
+        <input type="text" id="s${n}-title" placeholder="Ex : La fontaine du village" value="${d.title||''}" oninput="updateStepTitleLabel(${n})"/>
+      </div>
+      <div class="step-section-label">💬 Storytelling de Flavia</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Message de Flavia</label>
+          <textarea id="s${n}-story" rows="4" placeholder="Ce que Flavia dit à l'arrivée…" oninput="updateStepPreview(${n})">${d.story_text||d.story||''}</textarea>
+          <div class="flavia-preview-label" style="margin-top:8px;">Aperçu :</div>
+          <div class="flavia-preview">
+            <div class="flavia-bubble-avatar">🧭</div>
+            <div class="flavia-bubble" id="s${n}-story-preview" style="font-size:12px;opacity:0.7;font-style:italic;">${d.story_text||d.story||'Le texte apparaîtra ici…'}</div>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image du lieu</label>
+          <div class="img-preview" id="s${n}-img-preview" style="${(d.image_url||d.img) ? 'display:block;' : ''}">
+            <img id="s${n}-img-tag" src="${d.image_url||d.img||''}" alt=""/>
+            <button class="img-preview-remove" onclick="removeStepImg(${n})">✕</button>
+          </div>
+          <div class="img-upload-zone" id="s${n}-upload-zone" style="${(d.image_url||d.img) ? 'display:none;' : ''}">
+            <input type="file" accept="image/*" onchange="handleStepImg(event,${n})"/>
+            <div class="img-upload-icon">🖼️</div>
+            <div class="img-upload-label"><strong>Clique pour choisir</strong><span class="formats">JPG, PNG, WebP · Max 5 Mo</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-section-label">🔍 Énigme</div>
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;">Texte de l'énigme</label>
+        <textarea id="s${n}-enigme" rows="2" placeholder="L'énigme posée au joueur…">${d.enigme||''}</textarea>
+      </div>
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;">Réponse attendue</label>
+        <input type="text" id="s${n}-answer" placeholder="La réponse correcte" value="${d.answer||''}"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
+        <textarea id="s${n}-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village">${d.hint||''}</textarea>
+        <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
+      </div>
+      <div class="step-section-label">🏆 Récompense</div>
+      <div class="gps-grid">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">XP gagnés</label>
+          <input type="number" id="s${n}-xp" placeholder="50" value="${d.xp||'50'}"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Emoji du badge</label>
+          <input type="text" id="s${n}-badge" placeholder="🗝️" value="${d.badge_emoji||d.badge||''}" style="font-size:18px;"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Nom du badge</label>
+          <input type="text" id="s${n}-badgeName" placeholder="Ex : Gardien de la Fontaine" value="${d.badge_name||d.badgeName||''}"/>
+        </div>
+      </div>
+      <div style="margin-top:14px;text-align:right;">
+        <button class="step-delete" onclick="deleteStep(${n})">🗑️ Supprimer cette étape</button>
+      </div>
+    </div>`;
+  c.appendChild(div);
+}
+
+function toggleStep(n) {
+  document.getElementById('step-body-'+n).classList.toggle('open');
+  document.getElementById('step-arrow-'+n).classList.toggle('open');
+}
+function updateStepLabel(n) {
+  const lat = document.getElementById('s'+n+'-lat').value;
+  const lng = document.getElementById('s'+n+'-lng').value;
+  document.getElementById('step-loc-label-'+n).textContent = (lat && lng) ? lat+', '+lng : 'GPS non défini';
+}
+function updateStepTitleLabel(n) {
+  const val = document.getElementById('s'+n+'-title').value;
+  document.getElementById('step-title-label-'+n).textContent = val || 'Nouvelle étape';
+}
+function deleteStep(n) {
+  const el = document.getElementById('step-'+n);
+  if (el) el.remove();
+  stepCount--;
+  if (stepCount === 0) showStepsEmpty();
+}
+
+// ── PREVIEWS ──
+function updatePreview(type) {
+  const text = document.getElementById('f-'+type+'-text').value.trim();
+  const el = document.getElementById('f-'+type+'-preview');
+  if (el) { el.textContent = text || 'Le texte apparaîtra ici…'; el.style.opacity = text ? '1' : '0.7'; el.style.fontStyle = text ? 'normal' : 'italic'; }
+}
+function updateStepPreview(n) {
+  const text = document.getElementById('s'+n+'-story').value.trim();
+  const el = document.getElementById('s'+n+'-story-preview');
+  if (el) { el.textContent = text || 'Le texte apparaîtra ici…'; el.style.opacity = text ? '1' : '0.7'; el.style.fontStyle = text ? 'normal' : 'italic'; }
+}
+
+// ── UPLOAD IMAGE VERS SUPABASE STORAGE ──
+async function uploadImageToStorage(file, folder) {
+  const ext = file.name.split('.').pop();
+  const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': file.type,
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error('Erreur upload image');
+  return `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+}
+
+function previewImgLocal(file, imgTagId, previewId, zoneId) {
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById(imgTagId).src = e.target.result;
+    document.getElementById(previewId).style.display = 'block';
+    document.getElementById(zoneId).style.display = 'none';
+  };
+  r.readAsDataURL(file);
+}
+
+// ── IMAGES ──
+function handleImg(event, type) {
+  const file = event.target.files[0]; if (!file) return;
+  if (file.size > 5*1024*1024) { alert('Image trop lourde (max 5 Mo)'); return; }
+  window._pendingImgs = window._pendingImgs || {};
+  window._pendingImgs[type] = file;
+  previewImgLocal(file, type+'-img-tag', type+'-img-preview', type+'-upload-zone');
+}
+function removeImg(type) {
+  document.getElementById(type+'-img-tag').src = '';
+  document.getElementById(type+'-img-preview').style.display = 'none';
+  document.getElementById(type+'-upload-zone').style.display = 'block';
+  if (window._pendingImgs) delete window._pendingImgs[type];
+}
+function handleStepImg(event, n) {
+  const file = event.target.files[0]; if (!file) return;
+  if (file.size > 5*1024*1024) { alert('Image trop lourde (max 5 Mo)'); return; }
+  window._pendingStepImgs = window._pendingStepImgs || {};
+  window._pendingStepImgs[n] = file;
+  previewImgLocal(file, 's'+n+'-img-tag', 's'+n+'-img-preview', 's'+n+'-upload-zone');
+}
+function removeStepImg(n) {
+  document.getElementById('s'+n+'-img-tag').src = '';
+  document.getElementById('s'+n+'-img-preview').style.display = 'none';
+  document.getElementById('s'+n+'-upload-zone').style.display = 'block';
+  if (window._pendingStepImgs) delete window._pendingStepImgs[n];
+}
+
+// ── COLLECTER LES ÉTAPES DU FORMULAIRE ──
+function collectSteps() {
+  const steps = [];
+  for (let i = 1; i <= 50; i++) {
+    if (!document.getElementById('step-'+i)) continue;
+    steps.push({
+      order_num:     i,
+      title:         document.getElementById('s'+i+'-title')?.value || '',
+      lat:           parseFloat(document.getElementById('s'+i+'-lat')?.value) || null,
+      lng:           parseFloat(document.getElementById('s'+i+'-lng')?.value) || null,
+      radius_meters: parseInt(document.getElementById('s'+i+'-radius')?.value) || 20,
+      story_text:    document.getElementById('s'+i+'-story')?.value || '',
+      enigme:        document.getElementById('s'+i+'-enigme')?.value || '',
+      answer:        document.getElementById('s'+i+'-answer')?.value || '',
+      hint:          document.getElementById('s'+i+'-hint')?.value || '',
+      xp:            parseInt(document.getElementById('s'+i+'-xp')?.value) || 50,
+      badge_emoji:   document.getElementById('s'+i+'-badge')?.value || '',
+      badge_name:    document.getElementById('s'+i+'-badgeName')?.value || ''
+    });
+  }
+  return steps;
+}
+
+// ── SAUVEGARDER DANS SUPABASE ──
+async function saveAdventure(asDraft) {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { alert('Le titre est obligatoire.'); return; }
+
+  const advData = {
+    title,
+    description:     document.getElementById('f-desc').value,
+    location:        document.getElementById('f-location').value,
+    duration:        document.getElementById('f-duration').value,
+    difficulty:      document.getElementById('f-diff').value,
+    age_range:       document.getElementById('f-age').value,
+    status:          asDraft ? 'draft' : document.getElementById('f-status').value,
+    emoji:           document.getElementById('f-emoji').value || '🗺️',
+    intro_text:      document.getElementById('f-intro-text').value,
+    outro_text:      document.getElementById('f-outro-text').value,
+  };
+
+  const btnSave = document.querySelector('.modal-footer .btn-primary');
+  btnSave.textContent = '⏳ Sauvegarde…';
+  btnSave.disabled = true;
+
+  try {
+    // ── Upload images globales si nouvelles ──
+    const pending = window._pendingImgs || {};
+    if (pending.intro) {
+      btnSave.textContent = '⏳ Upload image intro…';
+      advData.intro_image_url = await uploadImageToStorage(pending.intro, 'intros');
+    } else {
+      const existing = document.getElementById('intro-img-tag')?.src;
+      if (existing && existing.startsWith('http')) advData.intro_image_url = existing;
+    }
+    if (pending.outro) {
+      btnSave.textContent = '⏳ Upload image outro…';
+      advData.outro_image_url = await uploadImageToStorage(pending.outro, 'outros');
+    } else {
+      const existing = document.getElementById('outro-img-tag')?.src;
+      if (existing && existing.startsWith('http')) advData.outro_image_url = existing;
+    }
+
+    btnSave.textContent = '⏳ Sauvegarde…';
+    let adventureId = editingId;
+
+    if (editingId) {
+      await supa('PATCH', 'adventures', advData, `?id=eq.${editingId}`);
+      await supa('DELETE', 'steps', null, `?adventure_id=eq.${editingId}`);
+    } else {
+      const created = await supa('POST', 'adventures', advData);
+      adventureId = created[0].id;
+    }
+
+    // ── Upload images des étapes ──
+    const pendingSteps = window._pendingStepImgs || {};
+    const steps = collectSteps();
+
+    for (let i = 0; i < steps.length; i++) {
+      const stepNum = i + 1;
+      if (pendingSteps[stepNum]) {
+        btnSave.textContent = `⏳ Upload image étape ${stepNum}…`;
+        steps[i].image_url = await uploadImageToStorage(pendingSteps[stepNum], 'steps');
+      } else {
+        const existing = document.getElementById('s'+stepNum+'-img-tag')?.src;
+        if (existing && existing.startsWith('http')) steps[i].image_url = existing;
+      }
+    }
+
+    if (steps.length > 0) {
+      const stepsWithId = steps.map(s => ({ ...s, adventure_id: adventureId }));
+      await supa('POST', 'steps', stepsWithId);
+    }
+
+    // Réinitialiser les images en attente
+    window._pendingImgs = {};
+    window._pendingStepImgs = {};
+
+    showToast(editingId ? 'Aventure mise à jour ✓' : 'Nouvelle aventure créée ✓');
+    closeModal();
+    await loadAdventures();
+
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  } finally {
+    btnSave.textContent = '✓ Enregistrer';
+    btnSave.disabled = false;
+  }
+}
+
+// ── TOAST ──
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.style.background = isError ? '#DC2626' : '#2D4A2D';
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+loadAdventures();
+</script>
+</body>
+</html>
