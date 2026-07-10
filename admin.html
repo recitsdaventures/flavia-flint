@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Les Aventures de Flavia Flint — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 .loading-bar {
   display: none; position: fixed; top: 0; left: 0; right: 0; height: 3px;
@@ -239,6 +240,73 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .step-card-body { padding: 16px; display: none; border-top: 1px solid var(--gray-brd); }
 .step-card-body.open { display: block; }
 
+/* ── ARBRE DE NAVIGATION ── */
+.tree-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+.tree-step {
+  background: white;
+  border: 2px solid #D4C5A9;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1A2A1A;
+  text-align: center;
+  min-width: 100px;
+  max-width: 140px;
+  cursor: default;
+  position: relative;
+  z-index: 1;
+}
+.tree-step.decision { border-color: #E8A020; background: #FFFBEB; }
+.tree-step.endpoint { border-color: #059669; background: #ECFDF5; }
+.tree-step.start    { border-color: #2D4A2D; background: #F0F7F0; }
+.tree-connector { display: flex; flex-direction: column; align-items: center; }
+.tree-connector-line { width: 2px; height: 20px; background: #D4C5A9; }
+.tree-choices-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  position: relative;
+}
+.tree-choices-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 2px;
+  background: #D4C5A9;
+  width: calc(100% - 80px);
+}
+.tree-choice-label {
+  font-size: 10px;
+  color: #C4622D;
+  font-weight: 600;
+  text-align: center;
+  max-width: 120px;
+  margin-bottom: 4px;
+  background: #FFF7F4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #FECACA;
+}
+.tree-unknown {
+  background: #F3F4F6;
+  border: 2px dashed #D1D5DB;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #9CA3AF;
+  text-align: center;
+  min-width: 100px;
+}
+
 .step-section-label {
   font-size: 11px; font-weight: 700; color: var(--terra);
   text-transform: uppercase; letter-spacing: 1px;
@@ -345,6 +413,19 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
   margin: 20px 0;
 }
 
+/* ── DASHBOARD KPI ── */
+.period-btn {
+  padding:6px 14px;border-radius:20px;border:1px solid var(--gray-brd);
+  background:white;font-size:12px;font-weight:600;cursor:pointer;color:#6B7280;
+  transition:all 0.15s;
+}
+.period-btn.active { background:var(--green-dark);color:white;border-color:var(--green-dark); }
+.kpi-bar-row { display:flex;align-items:center;gap:10px;margin-bottom:10px; }
+.kpi-bar-label { font-size:13px;color:#1A2A1A;min-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.kpi-bar-track { flex:1;height:8px;background:#F0EDE4;border-radius:4px;overflow:hidden; }
+.kpi-bar-fill { height:100%;background:linear-gradient(90deg,#2D4A2D,#4A7C4A);border-radius:4px; }
+.kpi-bar-value { font-size:12px;font-weight:700;color:#2D4A2D;min-width:30px;text-align:right; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -382,7 +463,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       </button>
     </nav>
     <div class="sidebar-footer">
-      <a href="flavia-flint-app.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
+      <a href="index.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
         <div style="
           display:flex; align-items:center; gap:8px;
           background: var(--terra); border-radius: var(--r-sm);
@@ -419,34 +500,64 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
     <!-- ═══ PAGE : DASHBOARD ═══ -->
     <div id="page-dashboard" class="page active">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="label">Aventures</div>
-          <div class="value" id="stat-adventures">…</div>
-          <div class="sub"><span id="stat-published">—</span> · <span id="stat-draft">—</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Joueurs inscrits</div>
-          <div class="value">0</div>
-          <div class="sub">Après activation des cartes</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Parties lancées</div>
-          <div class="value">0</div>
-          <div class="sub">Données en temps réel</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Badges délivrés</div>
-          <div class="value">0</div>
-          <div class="sub">XP cumulés</div>
-        </div>
+
+      <!-- Barre de période -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:#6B7280;">Période :</span>
+        <button onclick="setDashboardPeriod('7', this)" class="period-btn">7 jours</button>
+        <button onclick="setDashboardPeriod('30', this)" class="period-btn active">30 jours</button>
+        <button onclick="setDashboardPeriod('90', this)" class="period-btn">90 jours</button>
+        <button onclick="setDashboardPeriod('all', this)" class="period-btn">Tout</button>
+        <button onclick="loadDashboard()" style="margin-left:auto;" class="btn btn-secondary btn-sm">🔄 Actualiser</button>
       </div>
 
-      <div class="section-header">
-        <div class="section-title">Dernières aventures</div>
-        <button class="btn btn-secondary btn-sm" onclick="showPage('adventures', document.querySelectorAll('.nav-item')[1])">Voir tout →</button>
+      <!-- KPI Cards -->
+      <div class="stats-grid" id="kpi-grid">
+        <div class="stat-card"><div class="label">Joueurs total</div><div class="value" id="kpi-total-players">…</div><div class="sub" id="kpi-players-growth"></div></div>
+        <div class="stat-card"><div class="label">Joueurs actifs</div><div class="value" id="kpi-active-players">…</div><div class="sub">Ce mois</div></div>
+        <div class="stat-card"><div class="label">Parties lancées</div><div class="value" id="kpi-launches">…</div><div class="sub" id="kpi-launches-sub"></div></div>
+        <div class="stat-card"><div class="label">Parties terminées</div><div class="value" id="kpi-completions">…</div><div class="sub" id="kpi-completion-rate"></div></div>
+        <div class="stat-card"><div class="label">Taux de complétion</div><div class="value" id="kpi-rate">…</div><div class="sub">Lancées → Terminées</div></div>
+        <div class="stat-card"><div class="label">QR codes scannés</div><div class="value" id="kpi-qr">…</div><div class="sub">Validations terrain</div></div>
+        <div class="stat-card"><div class="label">XP total distribué</div><div class="value" id="kpi-xp">…</div><div class="sub">Points gagnés</div></div>
+        <div class="stat-card"><div class="label">Boîtes signalées</div><div class="value" id="kpi-reports">…</div><div class="sub" id="kpi-reports-sub"></div></div>
       </div>
-      <div class="table-wrap" id="dashboard-table"></div>
+
+      <!-- Graphique croissance joueurs -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;">📈 Croissance des joueurs</div>
+        <div id="growth-chart"></div>
+      </div>
+
+      <!-- 2 colonnes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+
+        <!-- Scénarios les plus joués -->
+        <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px;">🗺️ Scénarios les plus joués</div>
+          <div id="kpi-scenarios-list"></div>
+        </div>
+
+        <!-- Origine des joueurs -->
+        <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px;">📍 Origine des joueurs</div>
+          <div id="kpi-cities-list"></div>
+        </div>
+
+      </div>
+
+      <!-- Signalements -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px;">🚨 Derniers signalements boîtes</div>
+        <div id="kpi-reports-list"></div>
+      </div>
+
+      <!-- Joueurs récents -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px;">👥 Derniers joueurs inscrits</div>
+        <div id="kpi-recent-players"></div>
+      </div>
+
     </div>
 
     <!-- ═══ PAGE : AVENTURES ═══ -->
@@ -515,6 +626,14 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           </select>
         </div>
         <div class="form-group">
+          <label>Type de scénario</label>
+          <select id="f-scenario-type" onchange="onScenarioTypeChange()">
+            <option value="linear">📍 Linéaire — parcours classique A→B→C</option>
+            <option value="branching">🔀 Embranchements — les choix changent le chemin</option>
+            <option value="hybrid">🔀📍 Hybride — mélange des deux</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Tranche d'âge</label>
           <input type="text" id="f-age" placeholder="Ex : 5–12 ans" value="5–12 ans" />
         </div>
@@ -528,6 +647,41 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <div class="form-group">
           <label>Emoji de l'aventure</label>
           <input type="text" id="f-emoji" placeholder="Ex : 🏛️" value="🗺️" style="font-size:20px;" />
+        </div>
+        <div class="form-group full">
+          <label>Image de couverture <span class="label-hint">(affichée sur la card joueur)</span></label>
+          <div class="img-preview" id="cover-img-preview" style="display:none;">
+            <img id="cover-img-tag" src="" alt="" style="height:140px;"/>
+            <button class="img-preview-remove" onclick="removeImg('cover')">✕</button>
+          </div>
+          <div class="img-upload-zone" id="cover-upload-zone">
+            <input type="file" accept="image/*" onchange="handleImg(event,'cover')"/>
+            <div class="img-upload-icon">🖼️</div>
+            <div class="img-upload-label">
+              <strong>Clique pour choisir</strong> une image de couverture
+              <span class="formats">JPG, PNG, WebP · Max 5 Mo · Recommandé : 800×500 px</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>URL du questionnaire de satisfaction <span class="label-hint">(lien Google Forms, Tally, etc.)</span></label>
+          <input type="text" id="f-satisfaction-url" placeholder="https://forms.google.com/..."/>
+        </div>
+        <div class="form-group full">
+          <label>Indice de localisation de la boîte <span class="label-hint">(affiché si le joueur ne trouve pas)</span></label>
+          <textarea id="f-box-hint" rows="2" placeholder="Ex : La boîte est cachée sous le banc en pierre près de la fontaine, dans un sac étanche vert..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Solution — emplacement exact <span class="label-hint">(affiché en dernier recours)</span></label>
+          <textarea id="f-box-solution" rows="2" placeholder="Ex : Exactement sous le 3ème banc à gauche de la fontaine, attachée avec du scotch sous le siège..."></textarea>
+        </div>
+        <div class="form-group full" id="qr-preview-section" style="display:none;">
+          <label>QR Code de fin d'aventure <span class="label-hint">(à imprimer et plastifier)</span></label>
+          <div style="background:white;padding:16px;border-radius:12px;border:1px solid #E2E8E2;text-align:center;">
+            <div id="qr-code-display"></div>
+            <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide la fin de l'aventure et redirige vers ton questionnaire</div>
+            <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
+          </div>
         </div>
       </div>
 
@@ -628,7 +782,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <div class="steps-section">
         <div class="steps-header">
           <div class="steps-label">📍 Étapes de l'aventure</div>
-          <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Ajouter une étape</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleTreeView()">🌳 Voir l'arbre</button>
+            <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Ajouter une étape</button>
+          </div>
+        </div>
+        <div id="tree-view" style="display:none;background:#F8F9FA;border:1px solid #E2E8E2;border-radius:12px;padding:16px;margin-bottom:16px;overflow-x:auto;">
+          <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+            🌳 Arbre de navigation
+          </div>
+          <div id="tree-content"></div>
         </div>
         <div id="steps-container">
           <div class="empty-state" id="steps-empty" style="padding:24px;">
@@ -748,7 +911,203 @@ function showPage(name, btn) {
   if (btn) btn.classList.add('active');
   const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges' };
   document.getElementById('page-title').textContent = titles[name] || name;
-  if (name === 'dashboard' || name === 'adventures') loadAdventures();
+  if (name === 'adventures') loadAdventures();
+  if (name === 'dashboard') loadDashboard();
+}
+
+// ══════════════════════════════════════════
+// DASHBOARD KPI
+// ══════════════════════════════════════════
+let dashboardPeriod = '30';
+
+function setDashboardPeriod(period, btn) {
+  dashboardPeriod = period;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  loadDashboard();
+}
+
+function getPeriodDate() {
+  if (dashboardPeriod === 'all') return null;
+  const d = new Date();
+  d.setDate(d.getDate() - parseInt(dashboardPeriod));
+  return d.toISOString();
+}
+
+async function loadDashboard() {
+  setLoading(true);
+  try {
+    const since = getPeriodDate();
+    // Chaque table a sa propre colonne de date — pas de filtre générique partagé
+    const playersSince    = since ? `&created_at=gte.${since}`   : '';
+    const launchesSince   = since ? `&launched_at=gte.${since}`  : '';
+    const completionsSince = since ? `&completed_at=gte.${since}` : '';
+    const reportsSince    = since ? `&reported_at=gte.${since}`  : '';
+
+    // Charger toutes les données en parallèle
+    const [
+      allPlayers,
+      newPlayers,
+      launches,
+      completions,
+      reports,
+      recentPlayers,
+      cities
+    ] = await Promise.all([
+      supa('GET', 'players', null, '?select=id,created_at,total_xp,city'),
+      supa('GET', 'players', null, `?select=id,created_at${playersSince}`),
+      supa('GET', 'adventure_launches', null, `?select=adventure_id,adventures(title,emoji)${launchesSince}`),
+      supa('GET', 'adventure_completions', null, `?select=adventure_id,total_xp_earned,adventures(title,emoji)${completionsSince}`),
+      supa('GET', 'box_reports', null, `?select=*,adventures(title)${reportsSince}&order=reported_at.desc&limit=5`),
+      supa('GET', 'players', null, '?select=pseudo,avatar_emoji,city,total_xp,created_at&order=created_at.desc&limit=10'),
+      supa('GET', 'players', null, '?select=city&city=not.is.null')
+    ]);
+
+    // KPI simples
+    document.getElementById('kpi-total-players').textContent = allPlayers.length;
+    document.getElementById('kpi-players-growth').textContent = `+${newPlayers.length} sur la période`;
+    document.getElementById('kpi-launches').textContent = launches.length;
+    document.getElementById('kpi-launches-sub').textContent = 'Sur la période';
+    document.getElementById('kpi-completions').textContent = completions.length;
+
+    const rate = launches.length > 0 ? Math.round(completions.length / launches.length * 100) : 0;
+    document.getElementById('kpi-rate').textContent = rate + '%';
+    document.getElementById('kpi-completion-rate').textContent = `${rate}% des lancées`;
+
+    const totalXp = completions.reduce((sum, c) => sum + (c.total_xp_earned || 0), 0);
+    document.getElementById('kpi-xp').textContent = totalXp.toLocaleString();
+
+    // Pas de table de tracking des scans QR pour l'instant — affiché en attente
+    document.getElementById('kpi-qr').textContent = '—';
+
+    document.getElementById('kpi-reports').textContent = reports.length;
+    document.getElementById('kpi-reports-sub').textContent = reports.length > 0 ? 'À vérifier !' : 'Aucun signalement';
+
+    // Joueurs actifs ce mois
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
+    const activePlayers = await supa('GET', 'adventure_launches', null,
+      `?select=player_id&launched_at=gte.${monthAgo.toISOString()}`);
+    const uniqueActive = new Set(activePlayers.map(l => l.player_id)).size;
+    document.getElementById('kpi-active-players').textContent = uniqueActive;
+
+    // Scénarios les plus joués
+    const scenarioCounts = {};
+    launches.forEach(l => {
+      const key = l.adventure_id;
+      if (!scenarioCounts[key]) scenarioCounts[key] = { title: l.adventures?.title || '?', emoji: l.adventures?.emoji || '🗺️', launches: 0, completions: 0 };
+      scenarioCounts[key].launches++;
+    });
+    completions.forEach(c => {
+      const key = c.adventure_id;
+      if (scenarioCounts[key]) scenarioCounts[key].completions++;
+    });
+    const sortedScenarios = Object.values(scenarioCounts).sort((a, b) => b.launches - a.launches).slice(0, 6);
+    const maxLaunches = sortedScenarios[0]?.launches || 1;
+    document.getElementById('kpi-scenarios-list').innerHTML = sortedScenarios.length
+      ? sortedScenarios.map(s => `
+          <div class="kpi-bar-row">
+            <div class="kpi-bar-label">${s.emoji} ${s.title}</div>
+            <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.round(s.launches/maxLaunches*100)}%"></div></div>
+            <div class="kpi-bar-value">${s.launches}</div>
+          </div>`).join('')
+      : '<div style="color:#9CA3AF;font-size:13px;">Aucune donnée</div>';
+
+    // Origine des joueurs par ville
+    const cityCounts = {};
+    cities.forEach(p => {
+      if (p.city) {
+        cityCounts[p.city] = (cityCounts[p.city] || 0) + 1;
+      }
+    });
+    const sortedCities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const maxCity = sortedCities[0]?.[1] || 1;
+    document.getElementById('kpi-cities-list').innerHTML = sortedCities.length
+      ? sortedCities.map(([city, count]) => `
+          <div class="kpi-bar-row">
+            <div class="kpi-bar-label">📍 ${city}</div>
+            <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.round(count/maxCity*100)}%;background:linear-gradient(90deg,#C4622D,#E8A020);"></div></div>
+            <div class="kpi-bar-value">${count}</div>
+          </div>`).join('')
+      : '<div style="color:#9CA3AF;font-size:13px;">Aucune ville renseignée</div>';
+
+    // Signalements récents
+    document.getElementById('kpi-reports-list').innerHTML = reports.length
+      ? reports.map(r => `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #F0EDE4;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#1A2A1A;">🗺️ ${r.adventures?.title || '?'}</div>
+              <div style="font-size:12px;color:#6B7280;margin-top:2px;">${(r.comment || '').substring(0,80)}${(r.comment || '').length>80?'…':''}</div>
+            </div>
+            <div style="font-size:11px;color:#9CA3AF;white-space:nowrap;margin-left:10px;">
+              ${r.reported_at ? new Date(r.reported_at).toLocaleDateString('fr-FR') : ''}
+            </div>
+          </div>`).join('')
+      : '<div style="color:#9CA3AF;font-size:13px;">Aucun signalement</div>';
+
+    // Joueurs récents
+    document.getElementById('kpi-recent-players').innerHTML = recentPlayers.length
+      ? recentPlayers.map(p => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F0EDE4;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#2D4A2D;display:flex;align-items:center;justify-content:center;font-size:18px;">${p.avatar_emoji || '🧒'}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:700;color:#1A2A1A;">${p.pseudo || 'Anonyme'}</div>
+              <div style="font-size:11px;color:#9CA3AF;">${p.city || 'Ville inconnue'} · ${new Date(p.created_at).toLocaleDateString('fr-FR')}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#E8A020;">${p.total_xp || 0} XP</div>
+          </div>`).join('')
+      : '<div style="color:#9CA3AF;font-size:13px;">Aucun joueur</div>';
+
+    // Graphique croissance (simple barres CSS)
+    buildGrowthChart(allPlayers);
+
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    showToast('Erreur chargement dashboard : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function buildGrowthChart(players) {
+  const container = document.getElementById('growth-chart');
+  if (!container) return;
+
+  // Grouper les inscriptions par semaine sur les 8 dernières semaines
+  const weeks = {};
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i * 7);
+    const key = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
+    weeks[key] = 0;
+  }
+
+  players.forEach(p => {
+    const d = new Date(p.created_at);
+    const daysAgo = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+    const weekAgo = Math.floor(daysAgo / 7);
+    if (weekAgo < 8) {
+      const refDate = new Date();
+      refDate.setDate(refDate.getDate() - weekAgo * 7);
+      const key = refDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
+      if (weeks[key] !== undefined) weeks[key]++;
+    }
+  });
+
+  const labels = Object.keys(weeks);
+  const values = Object.values(weeks);
+  const max = Math.max(...values, 1);
+
+  // Graphique en barres CSS simple
+  container.innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:20px;position:relative;">
+      ${values.map((v, i) => `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="font-size:11px;font-weight:700;color:#2D4A2D;">${v || ''}</div>
+          <div style="width:100%;background:linear-gradient(180deg,#4A7C4A,#2D4A2D);border-radius:4px 4px 0 0;
+            height:${Math.max(v/max*70, v>0?8:0)}px;transition:height 0.5s ease;min-height:${v>0?4:0}px;"></div>
+          <div style="font-size:9px;color:#9CA3AF;transform:rotate(-30deg);white-space:nowrap;">${labels[i]}</div>
+        </div>`).join('')}
+    </div>`;
 }
 
 // ── CHARGER DEPUIS SUPABASE ──
@@ -777,17 +1136,18 @@ function setLoading(on) {
 function updateStats() {
   const pub = adventures.filter(a => a.status === 'published').length;
   const draft = adventures.filter(a => a.status === 'draft').length;
-  document.getElementById('stat-adventures').textContent = adventures.length;
-  document.getElementById('stat-published').textContent = pub + ' publiée' + (pub > 1 ? 's' : '');
-  document.getElementById('stat-draft').textContent = draft + ' brouillon' + (draft > 1 ? 's' : '');
+  const elA = document.getElementById('stat-adventures');
+  const elP = document.getElementById('stat-published');
+  const elD = document.getElementById('stat-draft');
+  if (elA) elA.textContent = adventures.length;
+  if (elP) elP.textContent = pub + ' publiée' + (pub > 1 ? 's' : '');
+  if (elD) elD.textContent = draft + ' brouillon' + (draft > 1 ? 's' : '');
 }
 
 // ── TABLE ──
 function renderTable() {
   const html = buildTable(adventures);
-  const el1 = document.getElementById('dashboard-table');
   const el2 = document.getElementById('adventures-table');
-  if (el1) el1.innerHTML = html;
   if (el2) el2.innerHTML = html;
   const countEl = document.getElementById('adv-count');
   if (countEl) countEl.textContent = adventures.length + ' aventure' + (adventures.length > 1 ? 's' : '');
@@ -828,22 +1188,57 @@ function openModal(id) {
     document.getElementById('f-location').value = adv.location || '';
     document.getElementById('f-duration').value = adv.duration || '';
     document.getElementById('f-diff').value = adv.difficulty || 'Facile';
+    document.getElementById('f-scenario-type').value = adv.scenario_type || 'linear';
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
     document.getElementById('f-emoji').value = adv.emoji || '🗺️';
     document.getElementById('f-intro-text').value = adv.intro_text || '';
     document.getElementById('f-outro-text').value = adv.outro_text || '';
+    document.getElementById('f-satisfaction-url').value = adv.satisfaction_url || '';
+    document.getElementById('f-box-hint').value = adv.box_hint || '';
+    document.getElementById('f-box-solution').value = adv.box_solution || '';
+    generateQRCode(adv.satisfaction_url || '');
     updatePreview('intro'); updatePreview('outro');
+    // Cover
+    if (adv.cover_image_url) {
+      document.getElementById('cover-img-tag').src = adv.cover_image_url;
+      document.getElementById('cover-img-preview').style.display = 'block';
+      document.getElementById('cover-upload-zone').style.display = 'none';
+    } else {
+      removeImg('cover');
+    }
+    // Intro image
+    if (adv.intro_image_url) {
+      document.getElementById('intro-img-tag').src = adv.intro_image_url;
+      document.getElementById('intro-img-preview').style.display = 'block';
+      document.getElementById('intro-upload-zone').style.display = 'none';
+    } else {
+      removeImg('intro');
+    }
+    // Outro image
+    if (adv.outro_image_url) {
+      document.getElementById('outro-img-tag').src = adv.outro_image_url;
+      document.getElementById('outro-img-preview').style.display = 'block';
+      document.getElementById('outro-upload-zone').style.display = 'none';
+    } else {
+      removeImg('outro');
+    }
     (adv.steps || []).forEach(s => addStep(s));
   } else {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
     ['f-title','f-desc','f-location','f-duration','f-intro-text','f-outro-text'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-diff').value = 'Facile';
+    document.getElementById('f-scenario-type').value = 'linear';
     document.getElementById('f-age').value = '5–12 ans';
     document.getElementById('f-status').value = 'draft';
     document.getElementById('f-emoji').value = '🗺️';
     updatePreview('intro'); updatePreview('outro');
-    removeImg('intro'); removeImg('outro');
+    removeImg('intro'); removeImg('outro'); removeImg('cover');
+    document.getElementById('f-satisfaction-url').value = '';
+    document.getElementById('f-box-hint').value = '';
+    document.getElementById('f-box-solution').value = '';
+    document.getElementById('qr-preview-section').style.display = 'none';
+    document.getElementById('qr-code-display').innerHTML = '';
     showStepsEmpty();
   }
   document.getElementById('modal-overlay').classList.add('open');
@@ -967,11 +1362,53 @@ function addStep(data) {
           <input type="text" id="s${n}-badgeName" placeholder="Ex : Gardien de la Fontaine" value="${d.badge_name||d.badgeName||''}"/>
         </div>
       </div>
+      <div class="step-section-label">🔀 Type d'étape</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Type</label>
+          <select id="s${n}-step-type" onchange="onStepTypeChange(${n})">
+            <option value="standard">📍 Standard</option>
+            <option value="decision">🔀 Décision</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Étape finale ?</label>
+          <select id="s${n}-is-endpoint">
+            <option value="false">Non</option>
+            <option value="true">Oui — fin possible</option>
+          </select>
+        </div>
+      </div>
+      <div id="s${n}-choices-section" style="display:none;">
+        <div class="step-section-label">🔀 Choix proposés aux joueurs</div>
+        <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">Pour chaque choix, indique le texte affiché au joueur et le numéro de l'étape de destination.</div>
+        <div id="s${n}-choices-list"></div>
+        <button type="button" onclick="addChoice(${n})" class="btn btn-secondary btn-sm" style="margin-top:8px;">+ Ajouter un choix</button>
+      </div>
       <div style="margin-top:14px;text-align:right;">
         <button class="step-delete" onclick="deleteStep(${n})">🗑️ Supprimer cette étape</button>
       </div>
     </div>`;
   c.appendChild(div);
+
+  // Charger les données existantes de branchement
+  if (d.step_type === 'decision') {
+    document.getElementById('s'+n+'-step-type').value = 'decision';
+    onStepTypeChange(n);
+    if (d.choices && Array.isArray(d.choices)) {
+      d.choices.forEach(() => addChoice(n));
+      d.choices.forEach((c, idx) => {
+        const labelEl = document.getElementById('s'+n+'-choice-'+idx+'-label');
+        const nextEl  = document.getElementById('s'+n+'-choice-'+idx+'-next');
+        if (labelEl) labelEl.value = c.label;
+        if (nextEl)  nextEl.value  = c.next_step_order;
+      });
+    }
+  }
+  if (d.is_endpoint) {
+    document.getElementById('s'+n+'-is-endpoint').value = 'true';
+  }
+  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
 }
 
 function toggleStep(n) {
@@ -986,12 +1423,14 @@ function updateStepLabel(n) {
 function updateStepTitleLabel(n) {
   const val = document.getElementById('s'+n+'-title').value;
   document.getElementById('step-title-label-'+n).textContent = val || 'Nouvelle étape';
+  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
 }
 function deleteStep(n) {
   const el = document.getElementById('step-'+n);
   if (el) el.remove();
   stepCount--;
   if (stepCount === 0) showStepsEmpty();
+  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
 }
 
 // ── PREVIEWS ──
@@ -1079,7 +1518,10 @@ function collectSteps() {
       hint:          document.getElementById('s'+i+'-hint')?.value || '',
       xp:            parseInt(document.getElementById('s'+i+'-xp')?.value) || 50,
       badge_emoji:   document.getElementById('s'+i+'-badge')?.value || '',
-      badge_name:    document.getElementById('s'+i+'-badgeName')?.value || ''
+      badge_name:    document.getElementById('s'+i+'-badgeName')?.value || '',
+      step_type:     document.getElementById('s'+i+'-step-type')?.value || 'standard',
+      is_endpoint:   document.getElementById('s'+i+'-is-endpoint')?.value === 'true',
+      choices:       collectChoices(i)
     });
   }
   return steps;
@@ -1096,11 +1538,15 @@ async function saveAdventure(asDraft) {
     location:        document.getElementById('f-location').value,
     duration:        document.getElementById('f-duration').value,
     difficulty:      document.getElementById('f-diff').value,
+    scenario_type:   document.getElementById('f-scenario-type').value,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
     emoji:           document.getElementById('f-emoji').value || '🗺️',
-    intro_text:      document.getElementById('f-intro-text').value,
-    outro_text:      document.getElementById('f-outro-text').value,
+    intro_text:       document.getElementById('f-intro-text').value,
+    outro_text:       document.getElementById('f-outro-text').value,
+    satisfaction_url: document.getElementById('f-satisfaction-url').value,
+    box_hint:         document.getElementById('f-box-hint').value,
+    box_solution:     document.getElementById('f-box-solution').value,
   };
 
   const btnSave = document.querySelector('.modal-footer .btn-primary');
@@ -1123,6 +1569,13 @@ async function saveAdventure(asDraft) {
     } else {
       const existing = document.getElementById('outro-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.outro_image_url = existing;
+    }
+    if (pending.cover) {
+      btnSave.textContent = '⏳ Upload image couverture…';
+      advData.cover_image_url = await uploadImageToStorage(pending.cover, 'covers');
+    } else {
+      const existing = document.getElementById('cover-img-tag')?.src;
+      if (existing && existing.startsWith('http')) advData.cover_image_url = existing;
     }
 
     btnSave.textContent = '⏳ Sauvegarde…';
@@ -1181,8 +1634,193 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── BRANCHEMENTS ──
+function onScenarioTypeChange() {}
+
+function onStepTypeChange(n) {
+  const type = document.getElementById('s'+n+'-step-type').value;
+  const section = document.getElementById('s'+n+'-choices-section');
+  if (section) section.style.display = type === 'decision' ? 'block' : 'none';
+  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
+}
+
+function addChoice(n) {
+  const list = document.getElementById('s'+n+'-choices-list');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.id = `s${n}-choice-${idx}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr auto 60px auto;gap:8px;align-items:center;margin-bottom:8px;';
+  div.innerHTML = `
+    <input type="text" placeholder="Texte du choix ex: Aller à gauche"
+      id="s${n}-choice-${idx}-label"
+      style="padding:8px 10px;border:1px solid #E2E8E2;border-radius:6px;font-size:13px;"/>
+    <span style="font-size:12px;color:#6B7280;white-space:nowrap;">→ étape</span>
+    <input type="number" placeholder="N°" min="1" max="50"
+      id="s${n}-choice-${idx}-next"
+      style="padding:8px;border:1px solid #E2E8E2;border-radius:6px;font-size:13px;text-align:center;"/>
+    <button type="button" onclick="removeChoice(this)"
+      style="background:#FEF2F2;border:none;border-radius:6px;color:#DC2626;padding:6px 8px;cursor:pointer;">🗑️</button>`;
+  list.appendChild(div);
+}
+
+function removeChoice(btn) { btn.closest('div[id]').remove(); }
+
+function collectChoices(n) {
+  const list = document.getElementById('s'+n+'-choices-list');
+  if (!list) return null;
+  const choices = [];
+  const rows = list.querySelectorAll('div[id^="s'+n+'-choice-"]');
+  rows.forEach(row => {
+    const labelInput = row.querySelector('input[type="text"]');
+    const nextInput  = row.querySelector('input[type="number"]');
+    const label = labelInput?.value?.trim();
+    const next  = parseInt(nextInput?.value);
+    if (label && !isNaN(next)) {
+      choices.push({ label, next_step_order: next });
+    }
+  });
+  return choices.length > 0 ? choices : null;
+}
+
+// ── ARBRE DE NAVIGATION ──
+function toggleTreeView() {
+  const tree = document.getElementById('tree-view');
+  const isVisible = tree.style.display !== 'none';
+  if (!isVisible) {
+    buildTreeView();
+    tree.style.display = 'block';
+  } else {
+    tree.style.display = 'none';
+  }
+}
+
+function buildTreeView() {
+  const steps = collectStepsForTree();
+  if (!steps || steps.length === 0) {
+    document.getElementById('tree-content').innerHTML = '<p style="color:#9CA3AF;font-size:13px;">Aucune étape définie.</p>';
+    return;
+  }
+  const html = renderTreeNode(steps, 0, new Set());
+  document.getElementById('tree-content').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;">${html}</div>`;
+}
+
+function collectStepsForTree() {
+  const steps = [];
+  for (let i = 1; i <= 50; i++) {
+    if (!document.getElementById('step-'+i)) continue;
+    const title      = document.getElementById('s'+i+'-title')?.value || 'Étape '+i;
+    const type       = document.getElementById('s'+i+'-step-type')?.value || 'standard';
+    const isEndpoint = document.getElementById('s'+i+'-is-endpoint')?.value === 'true';
+    const choices    = collectChoices(i);
+    steps.push({ order_num: i, title, step_type: type, is_endpoint: isEndpoint, choices });
+  }
+  return steps;
+}
+
+function renderTreeNode(steps, index, visited) {
+  if (index >= steps.length || visited.has(index)) return '';
+  visited.add(index);
+
+  const step = steps[index];
+  const isFirst = index === 0;
+  const typeClass = isFirst ? 'start' : step.is_endpoint ? 'endpoint' : step.step_type === 'decision' ? 'decision' : '';
+  const typeIcon  = step.step_type === 'decision' ? '🔀 ' : step.is_endpoint ? '🏁 ' : '📍 ';
+
+  let html = `
+    <div class="tree-node">
+      <div class="tree-step ${typeClass}" title="Étape ${step.order_num}">
+        ${typeIcon}<strong>${step.order_num}</strong><br>
+        <span style="font-weight:400;font-size:11px;">${step.title.substring(0,20)}${step.title.length>20?'…':''}</span>
+      </div>`;
+
+  if (step.is_endpoint) {
+    html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>
+      <div style="font-size:18px;">🏆</div>`;
+  } else if (step.step_type === 'decision' && step.choices && step.choices.length > 0) {
+    html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>
+      <div class="tree-choices-row">`;
+
+    step.choices.forEach(choice => {
+      const targetIndex = steps.findIndex(s => s.order_num === choice.next_step_order);
+      html += `<div class="tree-node">
+        <div class="tree-choice-label">${choice.label.substring(0,20)}${choice.label.length>20?'…':''}</div>
+        <div class="tree-connector"><div class="tree-connector-line"></div></div>`;
+
+      if (targetIndex >= 0 && !visited.has(targetIndex)) {
+        html += renderTreeNode(steps, targetIndex, new Set(visited));
+      } else if (targetIndex < 0) {
+        html += `<div class="tree-unknown">❓ Étape ${choice.next_step_order}<br><span style="font-size:10px;">non créée</span></div>`;
+      } else {
+        const target = steps[targetIndex];
+        html += `<div class="tree-step" style="opacity:0.6;" title="Déjà affiché">↩ ${target.order_num}. ${target.title.substring(0,15)}</div>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  } else {
+    // Étape linéaire → suivante par order_num+1
+    const nextIndex = steps.findIndex(s => s.order_num === step.order_num + 1);
+    if (nextIndex >= 0) {
+      html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>`;
+      html += renderTreeNode(steps, nextIndex, visited);
+    }
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+// ── QR CODE ──
+function generateQRCode(url) {
+  const section = document.getElementById('qr-preview-section');
+  const display = document.getElementById('qr-code-display');
+  if (url && url.startsWith('http')) {
+    section.style.display = 'block';
+    display.innerHTML = '';
+    try {
+      new QRCode(display, {
+        text: url,
+        width: 200,
+        height: 200,
+        colorDark: '#1A2A1A',
+        colorLight: '#FFFFFF',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) {
+      display.innerHTML = '<p style="color:red;">Erreur génération QR code</p>';
+    }
+  } else {
+    section.style.display = 'none';
+    display.innerHTML = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('f-satisfaction-url').addEventListener('input', function() {
+    generateQRCode(this.value.trim());
+  });
+});
+
+function printQRCode() {
+  const canvas = document.querySelector('#qr-code-display canvas');
+  if (!canvas) return;
+  const win = window.open('');
+  const advTitle = document.getElementById('f-title').value || 'Aventure';
+  win.document.write(`
+    <html><body style="text-align:center;font-family:sans-serif;padding:40px;">
+      <h2>Les Aventures de Flavia Flint</h2>
+      <h3>${advTitle}</h3>
+      <p style="color:#666;">Scanne ce QR code pour valider ton aventure !</p>
+      <img src="${canvas.toDataURL()}" style="width:250px;height:250px;"/>
+      <p style="font-size:12px;color:#999;margin-top:20px;">Récits d'Aventures — recitsdaventures.com</p>
+    </body></html>
+  `);
+  win.print();
+}
+
 // ── INIT ──
 loadAdventures();
+loadDashboard();
 </script>
 </body>
 </html>

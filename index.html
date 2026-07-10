@@ -6,6 +6,7 @@
 <title>Les Aventures de Flavia Flint</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -428,7 +429,8 @@
   /* ══════════════════════════════
      ÉCRAN CLASSEMENT
   ══════════════════════════════ */
-  #screen-ranking { background: var(--beige-light); }
+  #screen-ranking          { background: var(--beige-light); }
+  #screen-adventure-ranking { background: var(--beige-light); flex-direction: column; }
 
   .ranking-tabs {
     display: flex; background: var(--green-dark);
@@ -441,6 +443,7 @@
     cursor: pointer; transition: all 0.15s;
   }
   .ranking-tab.active { background: var(--amber); color: var(--green-dark); }
+
   .ranking-list { flex: 1; overflow-y: auto; padding: 12px 14px; }
 
   .rank-item {
@@ -774,6 +777,10 @@
     animation: fadeHint 0.3s ease;
   }
   @keyframes fadeHint { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+  @keyframes slideDown {
+    from { transform: translateX(-50%) translateY(-20px); opacity:0; }
+    to   { transform: translateX(-50%) translateY(0);    opacity:1; }
+  }
   .hint-level-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--terra); margin-bottom: 3px; }
 
   /* ── CASES RGPD ── */
@@ -853,6 +860,7 @@
       Connecté en tant que <strong id="settings-pseudo">Aventurier</strong>
     </div>
     <button onclick="closeSettingsMenu();goToScreen('profile',document.getElementById('nav-profile'))" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;border-bottom:1px solid #eee;">👤 Mon profil</button>
+    <a href="admin.html" target="_blank" style="display:block;width:100%;padding:12px 16px;background:none;border:none;border-bottom:1px solid #eee;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;text-decoration:none;">⚙️ Interface Admin</a>
     <button onclick="closeSettingsMenu();signOut()" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#C4622D;font-weight:600;">🚪 Se déconnecter</button>
   </div>
 
@@ -962,6 +970,10 @@
           <input type="email" id="signup-email" placeholder="ton@email.com" autocomplete="email"/>
         </div>
         <div class="auth-field">
+          <label for="signup-city">Ville</label>
+          <input type="text" id="signup-city" placeholder="Ex : Draguignan" autocomplete="address-level2"/>
+        </div>
+        <div class="auth-field">
           <label for="signup-password">Mot de passe</label>
           <div class="pw-wrap">
             <input type="password" id="signup-password" placeholder="6 caractères minimum"
@@ -1019,6 +1031,18 @@
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:24px;">
         <button class="btn-start-adventure" onclick="startTutorial()">▶ COMMENCER UNE AVENTURE</button>
         <div class="hero-tagline">Découvrez l'histoire de votre ville par le JEU !</div>
+        <button onclick="goToScreen('flavia-story', null)" style="
+          width:85%;margin:10px auto 0;display:block;
+          padding:14px;border-radius:14px;
+          background:linear-gradient(135deg, #1A3A5C, #2D5A8E);
+          color:white;border:none;cursor:pointer;
+          font-size:14px;font-weight:700;letter-spacing:0.3px;
+        ">
+          📖 L'Histoire de Flavia Flint
+          <div id="compass-balance-home" style="font-size:12px;font-weight:400;opacity:0.8;margin-top:3px;">
+            🧭 Chargement...
+          </div>
+        </button>
       </div>
 
       <!-- Carrousel Nouveautés -->
@@ -1210,6 +1234,9 @@
     </div>
 
     <div class="adventure-popup" id="adventure-popup">
+      <div id="popup-cover-wrap" style="display:none;margin:-14px -14px 10px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;overflow:hidden;height:110px;">
+        <img id="popup-cover-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+      </div>
       <div class="popup-header">
         <div class="popup-title" id="popup-title">Le Mystère de la Tour</div>
         <button class="popup-close" onclick="closePopup()">✕</button>
@@ -1261,9 +1288,11 @@
   <div id="screen-profile" class="screen">
     <div class="profile-hero">
       <div class="profile-avatar" id="profile-avatar-el">🧒</div>
-      <div class="profile-name"   id="profile-name-el">Chargement…</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="profile-name" id="profile-name-el">Chargement…</div>
+        <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
+      </div>
       <div class="profile-pseudo" id="profile-email-el"></div>
-      <button class="btn-logout" onclick="signOut()">Se déconnecter</button>
     </div>
 
     <div class="profile-stats">
@@ -1281,10 +1310,19 @@
       </div>
     </div>
 
+    <div id="profile-rank-progress"></div>
+
+    <div id="profile-compass-card"></div>
+
     <div class="profile-section" style="margin-top:20px;">
       <div class="section-title">Collection de badges</div>
       <div class="badges-grid" id="profile-badges-grid">
         <div style="grid-column:1/-1; color:var(--text-light); font-size:13px; padding:10px 0;">Chargement…</div>
+      </div>
+
+      <div class="section-title" style="margin-top:4px;">Mes aventures</div>
+      <div id="profile-history-list" style="margin-bottom:20px;">
+        <div style="color:var(--text-light); font-size:13px; padding:10px 0;">Chargement…</div>
       </div>
 
       <div class="section-title" style="margin-top:4px;">Statistiques</div>
@@ -1324,6 +1362,64 @@
       <div id="ranking-list-content">
         <div class="adv-card-empty">⏳ Chargement…</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN SCANNER QR CODE
+  ═══════════════════════════════════ -->
+  <div id="screen-qr-scanner" class="screen" style="flex-direction:column;">
+    <div style="background:#1A2A1A;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="closeQRScanner()" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;">← Retour</button>
+      <span style="color:white;font-weight:600;">Scanner le QR code</span>
+    </div>
+    <div style="position:relative;flex:1;display:flex;flex-direction:column;align-items:center;background:#000;overflow:hidden;">
+      <video id="qr-video" style="width:100%;max-height:60vh;object-fit:cover;" playsinline></video>
+      <canvas id="qr-canvas" style="display:none;"></canvas>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);width:220px;height:220px;border:3px solid #E8A020;border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:30%;color:white;font-size:13px;text-align:center;padding:0 20px;">Pointe la caméra vers le QR code dans la boîte</div>
+    </div>
+    <div id="qr-result-msg" style="padding:16px;text-align:center;background:#F5EDD8;display:none;flex-shrink:0;">
+      <div style="font-size:24px;margin-bottom:8px;">✅</div>
+      <div style="font-weight:700;color:#1A2A1A;">QR code validé !</div>
+      <div style="font-size:13px;color:#6B7280;margin-top:4px;">Redirection vers le questionnaire...</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN CLASSEMENT PAR AVENTURE
+  ═══════════════════════════════════ -->
+  <div id="screen-adventure-ranking" class="screen">
+    <div style="background:var(--green-dark);padding:52px 16px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <button onclick="goToScreen('ranking',document.getElementById('nav-ranking'))" style="background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:36px;height:36px;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">←</button>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;text-transform:uppercase;letter-spacing:1px;">Classement</div>
+        <div id="adv-ranking-title" style="font-size:15px;font-weight:800;color:white;line-height:1.3;"></div>
+      </div>
+    </div>
+    <div id="adv-ranking-list" style="flex:1;overflow-y:auto;padding:12px 14px;">
+      <div class="adv-card-empty">⏳ Chargement…</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN HISTOIRE DE FLAVIA FLINT
+  ═══════════════════════════════════ -->
+  <div id="screen-flavia-story" class="screen">
+    <!-- Header -->
+    <div style="background:#1A3A5C;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="
+        background:rgba(255,255,255,0.1);border:none;border-radius:8px;
+        color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
+      <span style="color:white;font-weight:700;flex:1;">📖 Histoire de Flavia Flint</span>
+      <div style="background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px;
+        color:#E8A020;font-size:13px;font-weight:700;" id="compass-balance-story">
+        🧭 ...
+      </div>
+    </div>
+    <!-- Contenu -->
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;" id="flavia-story-content">
+      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
     </div>
   </div>
 
@@ -1371,6 +1467,11 @@
 </div><!-- #app -->
 
 <script>
+// ══════════════════════════════════════════
+// HISTOIRE DE FLAVIA FLINT — MONNAIE BOUSSOLES
+// ══════════════════════════════════════════
+const COMPASS_PER_ADVENTURE = 10; // Boussoles gagnées par scénario terminé
+
 // ══════════════════════════════════════════
 // SUPABASE REST — SANS SDK
 // ══════════════════════════════════════════
@@ -1482,7 +1583,9 @@ let adventures       = [];
 let currentAdv       = null;
 let currentStepIndex = 0;
 let currentPlayer    = null;
-let currentRankingTab = 'general';
+let currentRankingTab  = 'general';
+let rankingPage         = 0;
+let rankingSearchQuery  = '';
 let map              = null;
 let playerMarker     = null;
 let playerPos        = null;
@@ -1493,6 +1596,20 @@ let hintXpPenalty    = 0;   // XP déduit par les indices demandés
 let _audioCtx        = null;
 
 const DIFF_COLORS = { 'Facile': '#3D6B3D', 'Intermédiaire': '#C4622D', 'Expert': '#7C3AED' };
+
+// Rangs joueur — univers Flavia Flint (utilisés sur le profil et le classement)
+const PLAYER_RANKS = [
+  { name: 'Apprenti Explorateur', min: 0,    icon: '🌱' },
+  { name: 'Découvreur',           min: 100,  icon: '🧭' },
+  { name: 'Aventurier',           min: 300,  icon: '⚔️' },
+  { name: 'Chasseur de Trésors',  min: 600,  icon: '🏹' },
+  { name: 'Gardien des Secrets',  min: 1000, icon: '🗝️' },
+  { name: 'Maître Explorateur',   min: 1500, icon: '🏆' },
+  { name: 'Héros de l\'Histoire', min: 2500, icon: '👑' }
+];
+function getPlayerRank(xp) {
+  return PLAYER_RANKS.filter(r => xp >= r.min).pop() || PLAYER_RANKS[0];
+}
 
 // ══════════════════════════════════════════
 // AUTH
@@ -1524,6 +1641,7 @@ async function loadCurrentPlayer(user) {
   const avatarEl = document.getElementById('home-player-avatar');
   if (greetEl)  greetEl.textContent  = `Bonjour, ${currentPlayer.pseudo} !`;
   if (avatarEl) avatarEl.textContent = currentPlayer.avatar_emoji || '🧭';
+  updateCompassBalanceDisplay(currentPlayer.compass_balance || 0);
 }
 
 function showAuthTab(tab) {
@@ -1584,6 +1702,16 @@ async function handleSignup() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || data.error_description || 'Erreur inscription');
+
+    // Sauvegarder la ville dans le profil joueur
+    const city = document.getElementById('signup-city')?.value?.trim();
+    if (city && data.user?.id) {
+      supaFetch(`players?id=eq.${data.user.id}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { city }
+      }).catch(e => console.error('Erreur sauvegarde ville:', e));
+    }
 
     btn.textContent      = '✓ Compte créé !';
     btn.style.background = '#2D4A2D';
@@ -1671,6 +1799,8 @@ async function signOut() {
   localStorage.removeItem('ff_guest');
   currentPlayer = null;
   adventures = [];
+  const balanceHome = document.getElementById('compass-balance-home');
+  if (balanceHome) balanceHome.textContent = '🧭 Chargement...';
   document.getElementById('app').classList.add('auth-mode');
   goToScreen('auth', null);
 }
@@ -1681,6 +1811,8 @@ function enterGuestMode() {
   localStorage.removeItem('ff_access_token');
   localStorage.removeItem('ff_user');
   document.getElementById('app').classList.remove('auth-mode');
+  const balanceHome = document.getElementById('compass-balance-home');
+  if (balanceHome) balanceHome.textContent = '🧭 Connecte-toi pour en gagner';
   loadAdventures();
   goToScreen('home', document.getElementById('nav-home'));
   startGlobalGPS();
@@ -1932,8 +2064,10 @@ function renderAdventureCards() {
     return;
   }
   container.innerHTML = adventures.map(adv => {
-    const firstStep = adv.steps?.[0];
-    const imgHtml   = firstStep?.image_url ? `<img src="${firstStep.image_url}" alt=""/>` : '';
+    const coverUrl  = adv.cover_image_url || '';
+    const imgHtml   = coverUrl
+      ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
+      : '';
     const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
     return `
       <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')">
@@ -1951,6 +2085,9 @@ function renderAdventureCards() {
             <span>👶 ${adv.age_range || ''}</span>
           </div>
         </div>
+        <div style="padding:6px 14px 12px;border-top:1px solid #F0E8D5;display:flex;justify-content:flex-end;">
+          <button onclick="event.stopPropagation();showAdventureRanking('${adv.id}','${adv.title.replace(/'/g,"\\'")}')" style="background:none;border:none;font-size:12px;font-weight:700;color:#C4622D;cursor:pointer;padding:4px 8px;display:flex;align-items:center;gap:4px;">🏆 Classement</button>
+        </div>
       </div>`;
   }).join('');
   renderCarousel();
@@ -1965,6 +2102,11 @@ function selectAdventureFromCard(id) {
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
   document.getElementById('popup-dur').textContent   = adv.duration   || '';
   document.getElementById('popup-loc').textContent   = adv.location   || '';
+  const coverUrl = adv.cover_image_url || '';
+  const coverWrap = document.getElementById('popup-cover-wrap');
+  const coverImg  = document.getElementById('popup-cover-img');
+  if (coverUrl) { coverImg.src = coverUrl; coverWrap.style.display = 'block'; }
+  else { coverWrap.style.display = 'none'; coverImg.src = ''; }
   goToScreen('map', document.getElementById('nav-map'));
   setTimeout(() => document.getElementById('adventure-popup').classList.add('show'), 200);
 }
@@ -2013,6 +2155,11 @@ function showPopup(adv) {
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
   document.getElementById('popup-dur').textContent   = adv.duration   || '';
   document.getElementById('popup-loc').textContent   = adv.location   || '';
+  const coverUrl = adv.cover_image_url || '';
+  const coverWrap = document.getElementById('popup-cover-wrap');
+  const coverImg  = document.getElementById('popup-cover-img');
+  if (coverUrl) { coverImg.src = coverUrl; coverWrap.style.display = 'block'; }
+  else { coverWrap.style.display = 'none'; coverImg.src = ''; }
   document.getElementById('adventure-popup').classList.add('show');
   currentAdv = adv;
 }
@@ -2025,8 +2172,23 @@ function locateMe()    { if (map && playerPos) map.setView([playerPos.lat, playe
 function startGlobalGPS() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    async pos => {
       playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+
+      // Sauvegarder la position GPS du joueur si connecté et pas encore enregistrée
+      if (currentPlayer?.id && !isGuest() && !localStorage.getItem('ff_gps_saved')) {
+        try {
+          await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+            method: 'PATCH',
+            prefer: 'return=minimal',
+            body: { lat: playerPos.lat, lng: playerPos.lng }
+          });
+          localStorage.setItem('ff_gps_saved', '1');
+        } catch (e) {
+          console.error('Erreur sauvegarde GPS joueur:', e);
+        }
+      }
+
       if (map) { map.setView([playerPos.lat, playerPos.lng], 13); updatePlayerMarker(playerPos.lat, playerPos.lng); }
     },
     () => {},
@@ -2049,9 +2211,30 @@ async function startAdventure() {
   closePopup();
   if (!currentAdv) return;
 
-  currentStepIndex = 0;
+  // Tracker le lancement de l'aventure (statistiques admin)
+  if (currentAdv.id) {
+    supaFetch('adventure_launches', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        adventure_id: currentAdv.id,
+        player_id: currentPlayer?.id || null
+      }
+    }).catch(() => {});
+  }
+
   gpsAutoUnlocked  = false;
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+
+  // Trier les étapes par order_num (important pour les scénarios à embranchements)
+  currentAdv.steps.sort((a, b) => a.order_num - b.order_num);
+  currentStepIndex = 0;
+
+  // Chrono et compteur d'essais
+  window._adventureStartTime = Date.now();
+  window._adventureAttempts  = 0;
+  window._adventureTotalXp   = 0;
+  window._currentStepId      = currentAdv.steps[0]?.id || null;
 
   // Reprise à la dernière étape non complétée
   if (currentPlayer && currentAdv.steps?.length) {
@@ -2096,7 +2279,16 @@ function buildStepDots(total, current) {
   }
 }
 
-function currentStep() { return currentAdv?.steps[currentStepIndex] || null; }
+function currentStep() {
+  if (!currentAdv) return null;
+  if (currentAdv.scenario_type === 'linear') {
+    return currentAdv.steps[currentStepIndex] || null;
+  }
+  if (window._currentStepId) {
+    return currentAdv.steps.find(s => s.id === window._currentStepId) || null;
+  }
+  return currentAdv.steps[0] || null;
+}
 
 // ── STORY ──
 function renderStoryMode() {
@@ -2240,7 +2432,45 @@ function renderEnigmeMode() {
   hintXpPenalty    = 0;
   const step = currentStep();
   if (!step) return;
+  // Parser choices si Supabase le renvoie en string JSON
+  let choices = step.choices;
+  if (typeof choices === 'string') {
+    try { choices = JSON.parse(choices); } catch(e) { choices = []; }
+  }
+  step.choices = choices;
+  console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
 
+  // Étape DÉCISION — afficher les choix
+  if (step.step_type === 'decision' && step.choices && step.choices.length > 0) {
+    const choicesHtml = step.choices.map((c, i) => `
+      <button onclick="handleChoice(${i})" style="
+        width:100%;padding:14px;margin-bottom:10px;
+        background:white;border:2px solid #D4C5A9;border-radius:14px;
+        font-size:14px;font-weight:600;color:#1A2A1A;cursor:pointer;
+        text-align:left;display:flex;align-items:center;gap:10px;
+      " onmouseover="this.style.borderColor='#C4622D';this.style.background='#FFF7F4'"
+         onmouseout="this.style.borderColor='#D4C5A9';this.style.background='white'">
+        <span style="min-width:28px;height:28px;border-radius:50%;background:#F5EDD8;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#C4622D;">
+          ${String.fromCharCode(65 + i)}
+        </span>
+        ${c.label}
+      </button>`).join('');
+
+    document.getElementById('mode-enigme').innerHTML = `
+      <div class="bubble-row" style="margin-bottom:12px;">
+        <div class="bubble-avatar">${compassSVG(26)}</div>
+        <div class="bubble flavia">Tu arrives à ${step.title || 'destination'}. Une décision s'impose !</div>
+      </div>
+      <div class="enigme-card">
+        <div class="enigme-label">🔀 À toi de choisir</div>
+        <div class="enigme-text">"${step.enigme || 'Quelle direction vas-tu prendre ?'}"</div>
+        <div style="margin-top:14px;">${choicesHtml}</div>
+      </div>`;
+    showMode('enigme');
+    return;
+  }
+
+  // Étape STANDARD — champ texte libre
   document.getElementById('mode-enigme').innerHTML = `
     <div class="bubble-row" style="margin-bottom:12px;">
       <div class="bubble-avatar">${compassSVG(26)}</div>
@@ -2303,6 +2533,7 @@ function checkAnswer() {
   } else if (val.length > 0) {
     vibrateFeedback([100, 50, 100]);
     soundError();
+    window._adventureAttempts = (window._adventureAttempts || 0) + 1;
     const input = document.getElementById('answer-input');
     input.classList.add('error');
     document.getElementById('error-msg').style.display = 'block';
@@ -2312,7 +2543,7 @@ function checkAnswer() {
 }
 
 // ── RÉCOMPENSE + SAUVEGARDE ──
-function renderRewardMode() {
+async function renderRewardMode() {
   const step     = currentStep();
   const isLast   = currentStepIndex >= (currentAdv?.steps.length || 1) - 1;
   const earnedXp = Math.max(0, (step?.xp || 0) - hintXpPenalty);
@@ -2320,10 +2551,94 @@ function renderRewardMode() {
   // Sauvegarde en arrière-plan (XP réel après déduction indices)
   saveProgress(step, earnedXp);
 
+  // Étape intermédiaire — toast discret + auto-avance
+  if (!isLast) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position:fixed;top:70px;left:50%;transform:translateX(-50%);
+      background:#2D4A2D;color:white;
+      padding:10px 20px;border-radius:30px;
+      font-size:13px;font-weight:600;
+      z-index:9999;
+      display:flex;align-items:center;gap:8px;
+      box-shadow:0 4px 15px rgba(0,0,0,0.2);
+      animation:slideDown 0.3s ease;
+    `;
+    toast.innerHTML = `${step?.badge_emoji || '⭐'} +${step?.xp || 0} XP · ${step?.badge_name || 'Étape débloquée'} !`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => { toast.remove(); goToNextStep(); }, 300);
+    }, 2500);
+    return;
+  }
+
+  // Chrono : calcul durée et sauvegarde adventure_completions si dernière étape
+  let formattedTime = '0:00';
+  if (isLast) {
+    const durationSeconds = Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000);
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const userId = JSON.parse(localStorage.getItem('ff_user') || '{}').id;
+    if (userId) {
+      supaFetch('adventure_completions', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates',
+        body: {
+          player_id: userId,
+          adventure_id: currentAdv.id,
+          total_duration_seconds: durationSeconds,
+          total_attempts: window._adventureAttempts || 0,
+          total_xp_earned: window._adventureTotalXp || 0
+        }
+      }).catch(e => console.error('Erreur enregistrement chrono:', e));
+
+      // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
+      awardCompasses(userId, COMPASS_PER_ADVENTURE);
+    }
+  }
+
   // Retours sensoriels (le vibrate/son de bonne réponse vient déjà de checkAnswer)
   if (isLast) {
     vibrateFeedback([100, 50, 100, 50, 100]);
     soundFanfare();
+  }
+
+  // Flux QR : écran intermédiaire avant les résultats
+  if (isLast && currentAdv.satisfaction_url) {
+    document.getElementById('mode-reward').innerHTML = `
+      <div class="reward-burst">🎉</div>
+      <div class="reward-title">Aventure terminée !</div>
+      <div class="reward-sub">Il ne te reste plus qu'à trouver la boîte secrète et scanner le QR code !</div>
+      <div style="width:100%;margin-top:16px;">
+        <button class="btn-primary" onclick="openQRScanner()">📷 Scanner le QR code de fin</button>
+      </div>
+      <div id="box-hint-section" style="width:100%;margin-top:12px;">
+        <button onclick="showBoxHint()" id="btn-box-hint" style="width:100%;padding:12px;background:none;border:1.5px solid #E8A020;border-radius:12px;color:#92400E;font-size:13px;font-weight:600;cursor:pointer;">💡 Indice — où est la boîte ?</button>
+        <div id="box-hint-content" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 14px;margin-top:8px;font-size:13px;color:#92400E;line-height:1.5;">
+          ${currentAdv.box_hint || 'La boîte est cachée près du dernier lieu de l\'aventure. Regarde bien autour de toi !'}
+        </div>
+      </div>
+      <div id="box-solution-section" style="width:100%;margin-top:8px;display:none;">
+        <button onclick="showBoxSolution()" id="btn-box-solution" style="width:100%;padding:12px;background:none;border:1.5px solid #C4622D;border-radius:12px;color:#C4622D;font-size:13px;font-weight:600;cursor:pointer;">🔍 Solution — emplacement exact</button>
+        <div id="box-solution-content" style="display:none;background:#FFF7F4;border:1px solid #FECACA;border-radius:12px;padding:12px 14px;margin-top:8px;font-size:13px;color:#991B1B;line-height:1.5;">
+          ${currentAdv.box_solution || 'Contacte l\'organisateur si tu ne trouves pas la boîte.'}
+        </div>
+      </div>
+      <div id="box-skip-section" style="width:100%;margin-top:8px;display:none;">
+        <button onclick="showFinalReward()" style="width:100%;padding:12px;background:none;border:1.5px solid #D4C5A9;border-radius:12px;color:#6B7280;font-size:13px;cursor:pointer;">⏭ La boîte est introuvable — voir mes résultats quand même</button>
+      </div>
+      <div id="box-report-section" style="width:100%;margin-top:8px;display:none;">
+        <button onclick="toggleReportForm()" style="width:100%;padding:12px;background:none;border:1.5px solid #DC2626;border-radius:12px;color:#DC2626;font-size:13px;cursor:pointer;font-weight:600;">🚨 Signaler la boîte perdue</button>
+        <div id="report-form" style="display:none;margin-top:10px;">
+          <textarea id="report-comment" placeholder="Décris où tu as cherché, depuis quand tu es là..." style="width:100%;padding:10px 12px;border:1.5px solid #FECACA;border-radius:10px;font-size:13px;resize:none;height:80px;background:#FFF7F4;color:#1A2A1A;font-family:inherit;box-sizing:border-box;"></textarea>
+          <button onclick="sendBoxReport()" style="width:100%;margin-top:8px;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📤 Envoyer le signalement</button>
+        </div>
+      </div>`;
+    showMode('reward');
+    return;
   }
 
   const flaviaMsg = isLast && currentAdv.outro_text
@@ -2350,9 +2665,14 @@ function renderRewardMode() {
     ${step?.badge_emoji ? `<div class="badge-hex">${step.badge_emoji}</div>
       <div class="badge-name">Badge : ${step.badge_name || ''}</div>` : ''}
     <div style="margin-top:16px;width:100%;">
-      ${isLast
-        ? `<button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>`
-        : `<button class="btn-primary" onclick="nextStep()">Continuer →</button>`}
+      ${isLast ? `
+        <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
+          <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
+          <div style="font-size:13px;color:#6B7280;margin-top:6px;">${window._adventureAttempts || 0} essai${(window._adventureAttempts || 0) > 1 ? 's' : ''} raté${(window._adventureAttempts || 0) > 1 ? 's' : ''}</div>
+        </div>
+        <button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>`
+        : `<button class="btn-primary" onclick="goToNextStep()">Continuer →</button>`}
     </div>
     ${isLast && isGuest() ? `
       <div class="guest-banner" style="margin-top:12px;">
@@ -2360,6 +2680,78 @@ function renderRewardMode() {
         <button class="guest-banner-btn" onclick="leaveGuestMode()">Créer mon compte →</button>
       </div>` : ''}`;
   showMode('reward');
+}
+
+// ── ÉCRAN RÉCOMPENSE FINAL (après QR ou "Passer") ──
+function showFinalReward() {
+  const step = currentStep();
+  const durationSeconds = Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000);
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = durationSeconds % 60;
+  const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const attempts = window._adventureAttempts || 0;
+
+  document.getElementById('mode-reward').innerHTML = `
+    <div class="reward-burst">🏆</div>
+    <div class="reward-title">Bravo, aventurier !</div>
+    <div class="reward-sub">${currentAdv?.outro_text || 'Flavia est fière de toi !'}</div>
+    ${step?.xp ? `<div class="xp-pill">⭐ +${step.xp} XP gagnés</div>` : ''}
+    ${step?.badge_emoji ? `<div class="badge-hex">${step.badge_emoji}</div><div class="badge-name">Badge : ${step.badge_name || ''}</div>` : ''}
+    <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin:16px 0;text-align:center;">
+      <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
+      <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
+      <div style="font-size:13px;color:#6B7280;margin-top:6px;">${attempts} essai${attempts > 1 ? 's' : ''} raté${attempts > 1 ? 's' : ''}</div>
+    </div>
+    <div style="margin-top:8px;width:100%;">
+      <button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>
+    </div>
+    ${isGuest() ? `
+      <div class="guest-banner" style="margin-top:12px;">
+        <div class="guest-banner-text">💾 <strong>Sauvegarde tes points !</strong><br>Crée un compte pour rejoindre le classement et garder ta progression.</div>
+        <button class="guest-banner-btn" onclick="leaveGuestMode()">Créer mon compte →</button>
+      </div>` : ''}`;
+  showMode('reward');
+}
+
+function showBoxHint() {
+  document.getElementById('box-hint-content').style.display = 'block';
+  document.getElementById('btn-box-hint').style.display = 'none';
+  document.getElementById('box-solution-section').style.display = 'block';
+}
+
+function showBoxSolution() {
+  document.getElementById('box-solution-content').style.display = 'block';
+  document.getElementById('btn-box-solution').style.display = 'none';
+  document.getElementById('box-skip-section').style.display = 'block';
+  document.getElementById('box-report-section').style.display = 'block';
+}
+
+function toggleReportForm() {
+  const form = document.getElementById('report-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function sendBoxReport() {
+  const comment = document.getElementById('report-comment').value.trim();
+  const user = JSON.parse(localStorage.getItem('ff_user') || '{}');
+  if (!comment) { alert('Écris un commentaire avant d\'envoyer.'); return; }
+  try {
+    await supaFetch('box_reports', {
+      method: 'POST',
+      body: {
+        adventure_id: currentAdv.id,
+        player_id: user.id || null,
+        comment,
+        reported_at: new Date().toISOString()
+      }
+    });
+    document.getElementById('report-form').innerHTML = `
+      <div style="text-align:center;padding:12px;color:#059669;font-weight:600;">
+        ✅ Signalement envoyé ! Merci, on va vérifier rapidement.
+      </div>`;
+  } catch(e) {
+    alert('Erreur envoi signalement. Réessaie.');
+  }
 }
 
 // ── SAUVEGARDE PROGRESSION ──
@@ -2386,13 +2778,18 @@ async function saveProgress(step, xpOverride) {
 
     const xpToAdd = xpOverride !== undefined ? xpOverride : (step.xp || 0);
     if (xpToAdd > 0) {
-      const newXp = (currentPlayer.total_xp || 0) + xpToAdd;
+      // Repartir du XP réellement en base (évite un total_xp figé/désynchronisé)
+      const playerData = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
+      const currentXp  = playerData[0]?.total_xp || 0;
+      const newXp      = currentXp + xpToAdd;
+
       await supaFetch(`players?id=eq.${currentPlayer.id}`, {
         method: 'PATCH',
         prefer: 'return=minimal',
         body: { total_xp: newXp }
       });
       currentPlayer.total_xp = newXp;
+      window._adventureTotalXp = (window._adventureTotalXp || 0) + xpToAdd;
     }
   } catch (e) {
     console.error('Erreur sauvegarde progression:', e);
@@ -2401,9 +2798,71 @@ async function saveProgress(step, xpOverride) {
 
 function nextStep() {
   currentStepIndex++;
+  if (currentAdv.steps[currentStepIndex]) {
+    window._currentStepId = currentAdv.steps[currentStepIndex].id;
+  }
   gpsAutoUnlocked = false;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   renderStoryMode();
+}
+
+function goToNextStep(choiceIndex) {
+  const step = currentStep();
+  if (!step) return;
+
+  if (step.step_type === 'decision' && step.choices && choiceIndex !== undefined) {
+    const choice = step.choices[choiceIndex];
+    if (!choice) return;
+
+    // Trouver l'étape cible par order_num
+    const nextStep = currentAdv.steps.find(s => s.order_num === choice.next_step_order);
+    if (!nextStep) {
+      console.error('Étape introuvable pour order_num:', choice.next_step_order);
+      return;
+    }
+    window._currentStepId = nextStep.id;
+    currentStepIndex = currentAdv.steps.findIndex(s => s.id === nextStep.id);
+  } else {
+    // Navigation linéaire
+    currentStepIndex++;
+    const next = currentAdv.steps[currentStepIndex];
+    if (next) window._currentStepId = next.id;
+  }
+
+  gpsAutoUnlocked = false;
+  buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
+  renderStoryMode();
+}
+
+function handleChoice(choiceIndex) {
+  const step = currentStep();
+  if (!step || !step.choices) return;
+
+  const choice = step.choices[choiceIndex];
+  if (!choice) return;
+
+  // Animation boutons
+  const buttons = document.querySelectorAll('#mode-enigme button[onclick^="handleChoice"]');
+  buttons.forEach((btn, i) => {
+    btn.style.opacity     = i === choiceIndex ? '1' : '0.4';
+    btn.style.borderColor = i === choiceIndex ? '#C4622D' : '#D4C5A9';
+    btn.style.background  = i === choiceIndex ? '#FFF7F4' : 'white';
+    btn.disabled = true;
+  });
+
+  // Trouver l'étape suivante
+  const nextStep = currentAdv.steps.find(s => s.order_num === choice.next_step_order);
+  const isEnd = !nextStep || nextStep.is_endpoint;
+
+  console.log('Choix sélectionné:', choice.label, '→ étape', choice.next_step_order, 'trouvée:', !!nextStep);
+
+  setTimeout(() => {
+    if (isEnd) {
+      renderRewardMode();
+    } else {
+      goToNextStep(choiceIndex);
+    }
+  }, 600);
 }
 
 // ══════════════════════════════════════════
@@ -2440,30 +2899,23 @@ async function loadProfile() {
     const allPlayers = await supaFetch('players?select=id,total_xp&order=total_xp.desc');
     const rank = allPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
 
-    // Progression complétée
-    const progress = await supaFetch(
-      `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
+    // Progression complétée + badges des steps (jointure avec l'aventure d'origine)
+    const progressData = await supaFetch(
+      `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id,steps(badge_emoji,badge_name,xp,adventure_id,adventures(title,emoji))`
     );
-    const stepIds       = [...new Set(progress.map(p => p.step_id).filter(Boolean))];
-    const uniqueAdvIds  = new Set(progress.map(p => p.adventure_id));
-
-    // Badges depuis les steps complétés
-    let badgeSteps = [];
-    if (stepIds.length) {
-      badgeSteps = await supaFetch(
-        `steps?id=in.(${stepIds.join(',')})&badge_emoji=not.is.null&select=badge_emoji,badge_name`
-      );
-    }
+    const uniqueAdvIds = new Set(progressData.map(p => p.adventure_id));
+    const badgeList    = progressData.filter(p => p.steps?.badge_emoji);
 
     // Mise à jour UI
     document.getElementById('profile-avatar-el').textContent = currentPlayer.avatar_emoji || '🧒';
     document.getElementById('profile-name-el').textContent   = currentPlayer.pseudo  || 'Aventurier';
     document.getElementById('profile-email-el').textContent  = currentPlayer.email   || '';
 
-    const xpFmt = (currentPlayer.total_xp || 0).toLocaleString('fr');
+    const xp    = currentPlayer.total_xp || 0;
+    const xpFmt = xp.toLocaleString('fr');
     document.getElementById('profile-stat-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-stat-xp').textContent        = xpFmt;
-    document.getElementById('profile-stat-badges').textContent    = badgeSteps.length;
+    document.getElementById('profile-stat-badges').textContent    = badgeList.length;
 
     document.getElementById('profile-tbl-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-tbl-xp').textContent        = xpFmt;
@@ -2471,74 +2923,677 @@ async function loadProfile() {
 
     // Grille badges
     const grid = document.getElementById('profile-badges-grid');
-    if (badgeSteps.length) {
-      grid.innerHTML = badgeSteps.map(s => `
+    grid.innerHTML = badgeList.length
+      ? badgeList.map(p => `
         <div class="badge-item">
-          <div class="badge-hex-sm">${s.badge_emoji}</div>
-          <div class="badge-label">${s.badge_name || ''}</div>
-        </div>`).join('');
-    } else {
-      grid.innerHTML = '<div style="grid-column:1/-1; color:var(--text-light); font-size:13px; padding:10px 0;">Aucun badge encore… Lance-toi dans une aventure !</div>';
-    }
+          <div class="badge-hex-sm" style="background:var(--green-dark);">${p.steps.badge_emoji}</div>
+          <div class="badge-label">${p.steps.badge_name || ''}</div>
+        </div>`).join('')
+      : '<div style="grid-column:1/-1; color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
+
+    // Barre de progression vers le rang suivant
+    const currentRank  = getPlayerRank(xp);
+    const nextRank     = PLAYER_RANKS.find(r => r.min > xp);
+    const rankProgress = nextRank
+      ? Math.round((xp - currentRank.min) / (nextRank.min - currentRank.min) * 100)
+      : 100;
+    document.getElementById('profile-rank-progress').innerHTML = `
+      <div style="background:white;border-radius:14px;border:1px solid var(--beige-dark);padding:14px;margin:16px 16px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text-dark);">
+            ${getRankIcon(xp)} ${getRankName(xp)}
+          </div>
+          ${nextRank ? `<div style="font-size:11px;color:#9CA3AF;">→ ${getRankIcon(nextRank.min)} ${getRankName(nextRank.min)} (${nextRank.min} XP)</div>` : '<div style="font-size:11px;color:#E8A020;">Rang maximum !</div>'}
+        </div>
+        <div style="height:8px;background:#F0EDE4;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${rankProgress}%;background:linear-gradient(90deg,#C4622D,#E8A020);border-radius:4px;transition:width 0.5s ease;"></div>
+        </div>
+        <div style="font-size:11px;color:#9CA3AF;margin-top:4px;text-align:right;">${rankProgress}%</div>
+      </div>`;
+
+    // Solde de boussoles (monnaie de l'Histoire de Flavia Flint)
+    const compassBalance = currentPlayer.compass_balance || 0;
+    document.getElementById('profile-compass-card').innerHTML = `
+      <div style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);border-radius:14px;padding:14px 16px;margin:16px 16px 0;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Boussoles</div>
+          <div style="color:white;font-size:28px;font-weight:800;margin-top:2px;">🧭 ${compassBalance}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:rgba(255,255,255,0.7);font-size:12px;">+${COMPASS_PER_ADVENTURE} par aventure terminée</div>
+          <button onclick="goToScreen('flavia-story',null)" style="margin-top:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:white;padding:5px 12px;font-size:12px;cursor:pointer;">
+            📖 Voir l'histoire →
+          </button>
+        </div>
+      </div>`;
+
+    // Historique des aventures jouées
+    const completions = await supaFetch(
+      `adventure_completions?player_id=eq.${currentPlayer.id}&select=*,adventures(title,emoji)&order=completed_at.desc&limit=5`
+    );
+    const historyEl = document.getElementById('profile-history-list');
+    historyEl.innerHTML = completions.length
+      ? completions.map(c => {
+          const dur  = c.total_duration_seconds || 0;
+          const mins = Math.floor(dur / 60);
+          const secs = dur % 60;
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--beige-mid);">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:20px;">${c.adventures?.emoji || '🗺️'}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--text-dark);">${c.adventures?.title || 'Aventure'}</span>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px;font-weight:700;color:var(--green-dark);">⏱ ${mins}:${String(secs).padStart(2,'0')}</div>
+                <div style="font-size:11px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+              </div>
+            </div>`;
+        }).join('')
+      : '<div style="color:#9CA3AF;font-size:13px;padding:10px 0;">Aucune aventure terminée encore.</div>';
+
   } catch (e) {
     console.error('Erreur chargement profil:', e);
+  }
+}
+
+async function editPseudo() {
+  if (!currentPlayer) return;
+  const newPseudo = prompt('Nouveau pseudo :', currentPlayer.pseudo || '');
+  if (!newPseudo || !newPseudo.trim()) return;
+  try {
+    await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { pseudo: newPseudo.trim() }
+    });
+    currentPlayer.pseudo = newPseudo.trim();
+    loadProfile();
+  } catch (e) {
+    console.error('Erreur modification pseudo:', e);
+    alert('Impossible de modifier le pseudo. Réessaie.');
   }
 }
 
 // ══════════════════════════════════════════
 // CLASSEMENT RÉEL
 // ══════════════════════════════════════════
+const RANKING_MOTIVATION_HTML = `
+  <div style="text-align:center;padding:30px 20px;">
+    <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+    <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
+      Sois parmi les premiers !
+    </div>
+    <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
+      Le classement se remplira au fur et à mesure que les aventuriers terminent leurs quêtes.
+    </div>
+  </div>`;
+
+// Titres de rang — univers Flavia Flint
+function getRankName(xp) {
+  if (xp >= 2500) return 'Héros de l\'Histoire';
+  if (xp >= 1500) return 'Maître Explorateur';
+  if (xp >= 1000) return 'Gardien des Secrets';
+  if (xp >= 600)  return 'Chasseur de Trésors';
+  if (xp >= 300)  return 'Aventurier';
+  if (xp >= 100)  return 'Découvreur';
+  return 'Apprenti Explorateur';
+}
+
+function getRankIcon(xp) {
+  if (xp >= 2500) return '👑';
+  if (xp >= 1500) return '🏆';
+  if (xp >= 1000) return '🗝️';
+  if (xp >= 600)  return '🏹';
+  if (xp >= 300)  return '⚔️';
+  if (xp >= 100)  return '🧭';
+  return '🌱';
+}
+
 async function loadRanking(tab = 'general') {
   const container = document.getElementById('ranking-list-content');
-  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
+  if (!container) return;
 
-  try {
-    let players;
+  const myId = currentPlayer?.id;
 
-    if (tab === 'friends') {
-      container.innerHTML = '<div class="adv-card-empty">👥 Les amis arrivent bientôt…</div>';
-      return;
-    } else if (tab === 'week') {
-      // Classement hebdo via fonction Supabase (SECURITY DEFINER)
+  // ── Onglet Amis (à venir) ──
+  if (tab === 'friends') {
+    container.innerHTML = '<div class="adv-card-empty">👥 Les amis arrivent bientôt…</div>';
+    return;
+  }
+
+  // ── Onglet Cette semaine ──
+  if (tab === 'week') {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
+    try {
+      let weekPlayers;
       try {
         const rows = await supaFetch('rpc/get_weekly_ranking', { method: 'POST', body: {} });
-        players = (rows || []).map(p => ({ ...p, total_xp: p.weekly_xp }));
+        weekPlayers = (rows || []).map(p => ({ ...p, total_xp: p.weekly_xp }));
       } catch {
         // Fallback : classement général si la fonction n'existe pas encore
-        players = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc&limit=20');
+        weekPlayers = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc&limit=50');
       }
-    } else {
-      players = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc&limit=20');
+      const ranked = weekPlayers.map((p, i) => ({
+        ...p,
+        rank: i + 1,
+        value: `${(p.total_xp || 0).toLocaleString('fr')} XP semaine`,
+        subvalue: `${getRankIcon(p.total_xp)} ${getRankName(p.total_xp)}`
+      }));
+      renderRankingList(container, ranked, myId);
+    } catch (e) {
+      console.error('Erreur classement semaine:', e);
+      container.innerHTML = '<div class="adv-card-empty">Impossible de charger le classement.</div>';
+    }
+    return;
+  }
+
+  // ── Onglet Général : recherche + pagination 10 par 10 ──
+  container.innerHTML = `
+    <div style="padding:12px 0 8px;">
+      <input type="text" id="ranking-search" placeholder="🔍 Rechercher un joueur..."
+        oninput="searchRanking(this.value)"
+        style="width:100%;padding:10px 14px;border:1.5px solid #D4C5A9;
+        border-radius:10px;font-size:14px;background:white;
+        color:#1A2A1A;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div id="ranking-rows">
+      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
+    </div>
+    <div id="ranking-pagination" style="display:flex;gap:8px;justify-content:center;padding:12px 0;"></div>
+    <div id="ranking-adventure-section" style="margin-top:8px;"></div>`;
+
+  rankingPage = 0;
+  rankingSearchQuery = '';
+  await renderRankingRows(myId);
+  await renderAdventureRankings();
+}
+
+async function searchRanking(query) {
+  rankingSearchQuery = query;
+  rankingPage = 0;
+  await renderRankingRows(currentPlayer?.id);
+}
+
+async function renderRankingRows(userId) {
+  const rowsEl       = document.getElementById('ranking-rows');
+  const paginationEl = document.getElementById('ranking-pagination');
+  if (!rowsEl) return;
+
+  rowsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>';
+
+  try {
+    // Fetch tous les joueurs triés par XP
+    let query = 'players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc';
+    if (rankingSearchQuery.trim()) {
+      query += `&pseudo=ilike.*${encodeURIComponent(rankingSearchQuery.trim())}*`;
+    }
+    const allPlayers = await supaFetch(query);
+
+    if (!allPlayers.length) {
+      rowsEl.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
+            ${rankingSearchQuery ? 'Aucun joueur trouvé' : 'Sois parmi les premiers !'}
+          </div>
+          <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
+            ${rankingSearchQuery ? 'Essaie un autre nom' : 'Le classement se remplira au fur et à mesure.'}
+          </div>
+        </div>`;
+      if (paginationEl) paginationEl.innerHTML = '';
+      return;
     }
 
-    if (!players.length) {
-      container.innerHTML = '<div class="adv-card-empty">Aucun joueur pour le moment.</div>';
+    // Pagination 10 par 10
+    const totalPages  = Math.ceil(allPlayers.length / 10);
+    const pagePlayers  = allPlayers.slice(rankingPage * 10, (rankingPage + 1) * 10);
+
+    // Position de chaque joueur (globale hors recherche, position dans les résultats sinon)
+    const rows = pagePlayers.map((p, i) => {
+      const globalRank = rankingSearchQuery
+        ? allPlayers.indexOf(p) + 1
+        : rankingPage * 10 + i + 1;
+      const xp = p.total_xp || 0;
+      return renderRankRow({ ...p, rank: globalRank, value: `${xp.toLocaleString('fr')} XP`, subvalue: `${getRankIcon(xp)} ${getRankName(xp)}` }, p.id === userId);
+    }).join('');
+
+    // Si le joueur connecté n'est pas sur cette page, l'afficher en sticky
+    const myGlobalIndex = allPlayers.findIndex(p => p.id === userId);
+    const myPage = Math.floor(myGlobalIndex / 10);
+    let stickyMe = '';
+    if (myGlobalIndex >= 0 && myPage !== rankingPage && !rankingSearchQuery) {
+      const me = allPlayers[myGlobalIndex];
+      const meXp = me.total_xp || 0;
+      stickyMe = `
+        <div style="background:#FFF7F4;border:2px solid var(--terra);border-radius:12px;padding:8px 14px;margin-bottom:12px;">
+          <div style="font-size:10px;color:var(--terra);font-weight:700;margin-bottom:4px;">TA POSITION</div>
+          ${renderRankRow({ ...me, rank: myGlobalIndex + 1, value: `${meXp.toLocaleString('fr')} XP`, subvalue: `${getRankIcon(meXp)} ${getRankName(meXp)}` }, true)}
+        </div>`;
+    }
+
+    rowsEl.innerHTML = stickyMe + rows;
+
+    // Pagination
+    if (totalPages > 1 && paginationEl) {
+      let paginationHtml = '';
+      if (rankingPage > 0) {
+        paginationHtml += `<button onclick="changeRankingPage(${rankingPage - 1})" style="
+          padding:8px 16px;background:white;border:1px solid #D4C5A9;
+          border-radius:8px;cursor:pointer;font-size:13px;color:#1A2A1A;">← Préc.</button>`;
+      }
+      paginationHtml += `<span style="padding:8px 12px;font-size:13px;color:#6B7280;">
+        Page ${rankingPage + 1} / ${totalPages}
+      </span>`;
+      if (rankingPage < totalPages - 1) {
+        paginationHtml += `<button onclick="changeRankingPage(${rankingPage + 1})" style="
+          padding:8px 16px;background:white;border:1px solid #D4C5A9;
+          border-radius:8px;cursor:pointer;font-size:13px;color:#1A2A1A;">Suiv. →</button>`;
+      }
+      paginationEl.innerHTML = paginationHtml;
+    } else if (paginationEl) {
+      paginationEl.innerHTML = '';
+    }
+
+  } catch (e) {
+    console.error('Erreur classement:', e);
+    rowsEl.innerHTML = `<div style="color:#DC2626;padding:20px;text-align:center;">Erreur chargement</div>`;
+  }
+}
+
+async function changeRankingPage(page) {
+  rankingPage = page;
+  await renderRankingRows(currentPlayer?.id);
+  document.querySelector('.ranking-list')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function renderAdventureRankings() {
+  const el = document.getElementById('ranking-adventure-section');
+  if (!el) return;
+
+  try {
+    const advs = await supaFetch('adventures?select=id,title,emoji&status=eq.published&order=created_at.asc');
+    if (!advs.length) { el.innerHTML = ''; return; }
+
+    el.innerHTML = `
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #E5D9C0;">
+        <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;
+          letter-spacing:1px;margin-bottom:12px;">🏆 Classements par aventure</div>
+        ${advs.map(adv => `
+          <div style="display:flex;align-items:center;justify-content:space-between;
+            background:white;border:1px solid #E5D9C0;border-radius:12px;
+            padding:12px 14px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">${adv.emoji || '🗺️'}</span>
+              <span style="font-size:13px;font-weight:600;color:#1A2A1A;">${adv.title}</span>
+            </div>
+            <button onclick="showAdventureRanking('${adv.id}','${(adv.title || '').replace(/'/g,"\\'")}')" style="
+              background:#2D4A2D;color:white;border:none;border-radius:8px;
+              padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
+              🏆 Voir
+            </button>
+          </div>`).join('')}
+      </div>`;
+  } catch (e) {
+    console.error('Erreur classements par aventure:', e);
+    el.innerHTML = '';
+  }
+}
+
+// Affiche la liste (top 20) + la position du joueur connecté si hors du top 20
+function renderRankingList(container, players, myId) {
+  if (!players.length || players.length < 3) {
+    container.innerHTML = RANKING_MOTIVATION_HTML;
+    return;
+  }
+
+  const myPosition = players.findIndex(p => p.id === myId);
+  let stickyPlayer = '';
+  if (myPosition > 19) {
+    stickyPlayer = `
+      <div style="background:#FFF7F4;border:2px solid var(--terra);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--terra);font-weight:700;margin-bottom:6px;">TA POSITION</div>
+        ${renderRankRow(players[myPosition], true)}
+      </div>`;
+  }
+
+  const rows = players.slice(0, 20).map(p => renderRankRow(p, p.id === myId)).join('');
+  container.innerHTML = stickyPlayer + rows + '<div style="height:16px;"></div>';
+}
+
+function renderRankRow(player, isMe) {
+  const medals = ['🥇','🥈','🥉'];
+  const rankDisplay = player.rank <= 3 ? medals[player.rank - 1] : `#${player.rank}`;
+  return `
+    <div style="display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : 'white'};border:${isMe ? '2px solid var(--terra)' : '1px solid var(--beige-dark)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
+      <div style="font-size:18px;font-weight:800;min-width:32px;text-align:center;color:${player.rank === 1 ? '#F59E0B' : player.rank === 2 ? '#9CA3AF' : player.rank === 3 ? '#B45309' : 'var(--text-mid)'};">
+        ${rankDisplay}
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+        ${player.avatar_emoji || '🧒'}
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text-dark);">
+          ${player.pseudo || 'Aventurier'}${isMe ? ' <span style="color:var(--terra);font-size:11px;">← Toi</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:#9CA3AF;">${player.subvalue || ''}</div>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:var(--amber);white-space:nowrap;">${player.value}</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// HISTOIRE DE FLAVIA FLINT — MONNAIE BOUSSOLES
+// ══════════════════════════════════════════
+function updateCompassBalanceDisplay(balance) {
+  const home  = document.getElementById('compass-balance-home');
+  const story = document.getElementById('compass-balance-story');
+  if (home)  home.textContent  = `🧭 ${balance} boussole${balance > 1 ? 's' : ''}`;
+  if (story) story.textContent = `🧭 ${balance}`;
+}
+
+async function awardCompasses(userId, amount) {
+  if (!userId || !amount) return;
+  try {
+    const rows = await supaFetch(`players?id=eq.${userId}&select=compass_balance`);
+    const newBalance = (rows[0]?.compass_balance || 0) + amount;
+    await supaFetch(`players?id=eq.${userId}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { compass_balance: newBalance }
+    });
+    if (currentPlayer && currentPlayer.id === userId) currentPlayer.compass_balance = newBalance;
+    updateCompassBalanceDisplay(newBalance);
+  } catch (e) {
+    console.error('Erreur attribution boussoles:', e);
+  }
+}
+
+async function loadFlaviaStory() {
+  const content = document.getElementById('flavia-story-content');
+  if (!content) return;
+
+  if (isGuest() || !currentPlayer?.id) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:12px;">📖</div>
+        <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">Connecte-toi pour accéder à l'histoire</div>
+        <div style="font-size:13px;color:#9CA3AF;margin-bottom:20px;">Termine des aventures pour gagner des 🧭 boussoles et débloquer les chapitres</div>
+        <button onclick="goToScreen('auth',null)" style="background:#C4622D;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
+      </div>`;
+    return;
+  }
+
+  const userId = currentPlayer.id;
+
+  try {
+    // Charger joueur + chapitres + chapitres débloqués en parallèle
+    const [playerData, chapters, unlocked] = await Promise.all([
+      supaFetch(`players?id=eq.${userId}&select=compass_balance`),
+      supaFetch('flavia_chapters?order=order_index.asc'),
+      supaFetch(`player_unlocked_chapters?player_id=eq.${userId}&select=chapter_id,has_been_read`)
+    ]);
+
+    const balance = playerData[0]?.compass_balance || 0;
+    updateCompassBalanceDisplay(balance);
+
+    const unlockedMap = {};
+    (unlocked || []).forEach(u => { unlockedMap[u.chapter_id] = u.has_been_read; });
+
+    const chaptersHtml = (chapters || []).map(ch => {
+      const isUnlocked  = unlockedMap.hasOwnProperty(ch.id);
+      const hasBeenRead = unlockedMap[ch.id];
+      const canAfford   = balance >= ch.unlock_cost;
+
+      if (isUnlocked) {
+        // DÉBLOQUÉ
+        return `
+          <div onclick="readChapter('${ch.id}')" style="
+            background:white;border-radius:14px;padding:14px 16px;
+            margin-bottom:10px;cursor:pointer;
+            border:2px solid ${hasBeenRead ? '#D4C5A9' : '#E8A020'};
+            display:flex;align-items:center;gap:12px;
+          ">
+            <span style="font-size:24px;">${hasBeenRead ? '✅' : '📖'}</span>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
+              ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#9CA3AF;">Appuie pour relire</div>'}
+            </div>
+            <span style="color:#C4622D;font-size:18px;">›</span>
+          </div>`;
+      }
+
+      // VERROUILLÉ
+      const missing = ch.unlock_cost - balance;
+      return `
+        <div style="
+          background:${canAfford ? 'white' : '#F9F9F9'};
+          border-radius:14px;padding:14px 16px;margin-bottom:10px;
+          border:1px solid #E5D9C0;opacity:${canAfford ? '1' : '0.75'};
+        ">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <span style="font-size:24px;">🔒</span>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:700;color:${canAfford ? '#1A2A1A' : '#9CA3AF'};">${ch.title}</div>
+              <div style="font-size:12px;color:#9CA3AF;">Coût : 🧭 ${ch.unlock_cost} boussoles</div>
+            </div>
+          </div>
+          ${canAfford
+            ? `<button onclick="unlockChapter('${ch.id}', ${ch.unlock_cost})" style="
+                width:100%;padding:10px;background:#1A3A5C;color:white;
+                border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
+                🧭 Débloquer pour ${ch.unlock_cost} boussoles
+              </button>`
+            : `<div style="text-align:center;font-size:12px;color:#C4622D;font-weight:600;">
+                Il te manque ${missing} boussole${missing > 1 ? 's' : ''} — termine des aventures !
+              </div>`
+          }
+        </div>`;
+    }).join('');
+
+    content.innerHTML = `
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:48px;margin-bottom:8px;">📖</div>
+        <div style="font-size:16px;font-weight:700;color:#1A2A1A;">L'Histoire de Flavia Flint</div>
+        <div style="font-size:13px;color:#9CA3AF;margin-top:4px;">Termine des aventures pour gagner des boussoles</div>
+      </div>
+      ${chaptersHtml}`;
+
+  } catch (e) {
+    console.error('Erreur chargement histoire Flavia:', e);
+    content.innerHTML = `<div style="color:#DC2626;text-align:center;padding:20px;">Erreur chargement</div>`;
+  }
+}
+
+async function unlockChapter(chapterId, cost) {
+  const userId = currentPlayer?.id;
+  if (!userId) return;
+
+  try {
+    // Déduire les boussoles
+    const playerData = await supaFetch(`players?id=eq.${userId}&select=compass_balance`);
+    const currentBalance = playerData[0]?.compass_balance || 0;
+    if (currentBalance < cost) { alert('Pas assez de boussoles !'); return; }
+
+    const newBalance = currentBalance - cost;
+    await supaFetch(`players?id=eq.${userId}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { compass_balance: newBalance }
+    });
+    currentPlayer.compass_balance = newBalance;
+    updateCompassBalanceDisplay(newBalance);
+
+    // Enregistrer le déblocage
+    await supaFetch('player_unlocked_chapters', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: { player_id: userId, chapter_id: chapterId, has_been_read: false }
+    });
+
+    // Ouvrir directement le chapitre
+    await readChapter(chapterId);
+
+  } catch (e) {
+    console.error('Erreur déblocage chapitre:', e);
+    alert('Erreur lors du déblocage. Réessaie.');
+  }
+}
+
+async function readChapter(chapterId) {
+  const userId = currentPlayer?.id;
+
+  try {
+    const chapters = await supaFetch(`flavia_chapters?id=eq.${chapterId}`);
+    const chapter = chapters[0];
+    if (!chapter) return;
+
+    const content = document.getElementById('flavia-story-content');
+
+    if (!chapter.is_published || !chapter.content) {
+      content.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">⏳</div>
+          <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">${chapter.title}</div>
+          <div style="font-size:13px;color:#9CA3AF;line-height:1.6;">Ce chapitre arrive bientôt...<br>Tes boussoles sont conservées !</div>
+          <button onclick="loadFlaviaStory()" style="margin-top:20px;background:#1A3A5C;color:white;border:none;border-radius:12px;padding:10px 20px;cursor:pointer;font-weight:700;">← Retour aux chapitres</button>
+        </div>`;
+      return;
+    }
+
+    // Marquer comme lu
+    if (userId) {
+      await supaFetch(`player_unlocked_chapters?player_id=eq.${userId}&chapter_id=eq.${chapterId}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { has_been_read: true }
+      });
+    }
+
+    content.innerHTML = `
+      <div style="max-width:100%;">
+        <button onclick="loadFlaviaStory()" style="
+          background:none;border:1px solid #D4C5A9;border-radius:8px;
+          padding:6px 12px;font-size:13px;color:#6B7280;cursor:pointer;margin-bottom:16px;">
+          ← Retour
+        </button>
+        <h2 style="font-size:20px;font-weight:800;color:#1A2A1A;margin-bottom:16px;">${chapter.title}</h2>
+        <div style="font-size:15px;line-height:1.8;color:#1A2A1A;white-space:pre-wrap;">${chapter.content}</div>
+      </div>`;
+
+  } catch (e) {
+    console.error('Erreur lecture chapitre:', e);
+    alert('Erreur lecture chapitre.');
+  }
+}
+
+// ── SCANNER QR CODE ──
+let qrStream = null;
+let qrScanInterval = null;
+
+async function openQRScanner() {
+  goToScreen('qr-scanner', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('qr-result-msg').style.display = 'none';
+
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+    qrScanInterval = setInterval(() => scanQRFrame(), 300);
+  } catch(e) {
+    alert('Impossible d\'accéder à la caméra. Vérifie les permissions.');
+    closeQRScanner();
+  }
+}
+
+function scanQRFrame() {
+  const video = document.getElementById('qr-video');
+  const canvas = document.getElementById('qr-canvas');
+  if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (code) {
+    clearInterval(qrScanInterval);
+    stopQRStream();
+    const expectedUrl = currentAdv?.satisfaction_url;
+    const targetUrl = (expectedUrl && code.data === expectedUrl) ? expectedUrl
+                      : (code.data.startsWith('http') ? code.data : null);
+    if (targetUrl) {
+      document.getElementById('qr-result-msg').style.display = 'block';
+      vibrateFeedback([200, 100, 200]);
+      setTimeout(() => {
+        window.open(targetUrl, '_blank');
+        closeQRScanner();
+      }, 2000);
+    }
+  }
+}
+
+function stopQRStream() {
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
+}
+
+function closeQRScanner() {
+  stopQRStream();
+  goToScreen('adventure', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  showMode('reward');
+}
+
+// ── CLASSEMENT PAR AVENTURE ──
+async function showAdventureRanking(advId, advTitle) {
+  document.getElementById('adv-ranking-title').textContent = advTitle;
+  document.getElementById('adv-ranking-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
+  goToScreen('adventure-ranking', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  try {
+    const results = await supaFetch(
+      `adventure_completions?adventure_id=eq.${advId}&select=*,players!player_id(pseudo,avatar_emoji)&order=total_duration_seconds.asc&limit=50`
+    );
+
+    if (!results || !results.length) {
+      document.getElementById('adv-ranking-list').innerHTML =
+        '<div class="adv-card-empty" style="padding:40px 20px;">🗺️ Sois le premier à terminer cette aventure !</div>';
       return;
     }
 
     const medals = ['🥇','🥈','🥉'];
-    container.innerHTML = players.map((p, i) => {
-      const isMe      = currentPlayer && p.id === currentPlayer.id;
-      const posClass  = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-      const rankDisp  = i < 3 ? medals[i] : (i + 1);
-      const xpLabel   = tab === 'week' ? 'XP semaine' : 'pts';
+    const myId = currentPlayer?.id;
+
+    document.getElementById('adv-ranking-list').innerHTML = results.map((r, i) => {
+      const player  = r.players || {};
+      const isMe    = myId && r.player_id === myId;
+      const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankDisp = i < 3 ? medals[i] : (i + 1);
+      const dur = r.total_duration_seconds || 0;
+      const min = Math.floor(dur / 60);
+      const sec = (dur % 60).toString().padStart(2, '0');
+      const attempts = r.total_attempts || 0;
       return `
         <div class="rank-item ${posClass} ${isMe ? 'me' : ''}">
           <div class="rank-num">${rankDisp}</div>
-          <div class="rank-avatar">${p.avatar_emoji || '🧒'}</div>
+          <div class="rank-avatar">${player.avatar_emoji || '🧒'}</div>
           <div class="rank-info">
-            <div class="rank-name">${p.pseudo || 'Aventurier'}</div>
-            ${isMe ? '<div class="rank-pseudo">← Toi</div>' : ''}
+            <div class="rank-name">${player.pseudo || 'Aventurier'}${isMe ? ' <span style="font-size:11px;color:var(--terra);">← Toi</span>' : ''}</div>
+            <div class="rank-pseudo">${attempts} essai${attempts > 1 ? 's' : ''} raté${attempts > 1 ? 's' : ''}</div>
           </div>
           <div class="rank-right">
-            <div class="rank-pts">${(p.total_xp || 0).toLocaleString('fr')} ${xpLabel}</div>
+            <div class="rank-pts" style="font-size:16px;font-weight:800;">${min}:${sec}</div>
           </div>
         </div>`;
     }).join('') + '<div style="height:16px;"></div>';
 
   } catch (e) {
-    console.error('Erreur classement:', e);
-    container.innerHTML = '<div class="adv-card-empty">Impossible de charger le classement.</div>';
+    console.error('Erreur classement aventure:', e);
+    document.getElementById('adv-ranking-list').innerHTML =
+      '<div class="adv-card-empty">Impossible de charger le classement.</div>';
   }
 }
 
@@ -2582,6 +3637,7 @@ function goToScreen(name, btn) {
     if (isGuest()) renderGuestGate('screen-ranking');
     else loadRanking(currentRankingTab);
   }
+  if (name === 'flavia-story') loadFlaviaStory();
 }
 
 function goBack() {
