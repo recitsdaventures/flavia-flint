@@ -461,6 +461,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('badges', this)">
         <span class="nav-icon">⬡</span> Badges
       </button>
+      <button class="nav-item" onclick="showPage('authors', this)">
+        <span class="nav-icon">✍️</span> Auteurs
+      </button>
+      <button class="nav-item" onclick="showPage('professor', this)">
+        <span class="nav-icon">📖</span> Professeur Flint
+      </button>
     </nav>
     <div class="sidebar-footer">
       <a href="index.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
@@ -585,6 +591,38 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <div class="empty-title">Gestion des badges — bientôt disponible</div>
         <div class="empty-sub">Tu pourras ici créer et gérer les badges hexagonaux associés à chaque aventure.</div>
       </div>
+    </div>
+
+    <!-- ═══ PAGE : AUTEURS ═══ -->
+    <div id="page-authors" class="page">
+      <div class="section-header">
+        <div class="section-title">Auteurs certifiés</div>
+      </div>
+
+      <!-- Demandes en attente -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">
+          ⏳ Demandes en attente
+        </div>
+        <div id="pending-requests-list" class="table-wrap"></div>
+      </div>
+
+      <!-- Auteurs actifs -->
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">
+          ✅ Auteurs certifiés actifs
+        </div>
+        <div id="active-authors-list" class="table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : PROFESSEUR FLINT ═══ -->
+    <div id="page-professor" class="page">
+      <div class="section-header">
+        <div class="section-title" id="books-count">Livres Professeur Flint</div>
+        <button class="btn btn-primary" onclick="openBookModal()">+ Nouveau livre</button>
+      </div>
+      <div class="table-wrap" id="books-table"></div>
     </div>
 
   </main>
@@ -909,10 +947,12 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
+  if (name === 'authors') loadAuthorsPage();
+  if (name === 'professor') loadBooksPage();
 }
 
 // ══════════════════════════════════════════
@@ -1108,6 +1148,364 @@ function buildGrowthChart(players) {
           <div style="font-size:9px;color:#9CA3AF;transform:rotate(-30deg);white-space:nowrap;">${labels[i]}</div>
         </div>`).join('')}
     </div>`;
+}
+
+// ══════════════════════════════════════════
+// AUTEURS CERTIFIÉS
+// ══════════════════════════════════════════
+async function loadAuthorsPage() {
+  try {
+    const [requests, authors] = await Promise.all([
+      supa('GET', 'author_requests', null, '?status=eq.pending&select=*,players(pseudo,email)&order=requested_at.desc'),
+      supa('GET', 'players', null, '?role=eq.author&select=id,pseudo,email,created_at&order=created_at.desc')
+    ]);
+
+    // Demandes en attente
+    const pendingEl = document.getElementById('pending-requests-list');
+    pendingEl.innerHTML = requests.length ? `
+      <table>
+        <thead><tr>
+          <th>Joueur</th><th>Nom complet</th><th>Profession</th><th>Motivation</th><th>Date</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${requests.map(r => `
+            <tr>
+              <td>${r.players?.pseudo || '—'}<br><small style="color:#9CA3AF;">${r.players?.email || ''}</small></td>
+              <td><strong>${r.full_name}</strong></td>
+              <td>${r.profession}</td>
+              <td style="max-width:200px;font-size:12px;color:#6B7280;">${(r.motivation || '').substring(0,100)}${(r.motivation || '').length > 100 ? '…' : ''}</td>
+              <td style="font-size:12px;color:#9CA3AF;">${new Date(r.requested_at).toLocaleDateString('fr-FR')}</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="approveAuthor('${r.id}','${r.player_id}')" class="btn btn-success btn-sm">✅ Accepter</button>
+                  <button onclick="rejectAuthor('${r.id}')" class="btn btn-danger btn-sm">❌ Refuser</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`
+      : '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Aucune demande en attente</div></div>';
+
+    // Auteurs actifs
+    const authorsEl = document.getElementById('active-authors-list');
+    authorsEl.innerHTML = authors.length ? `
+      <table>
+        <thead><tr><th>Pseudo</th><th>Email</th><th>Depuis</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${authors.map(a => `
+            <tr>
+              <td><strong>${a.pseudo}</strong></td>
+              <td>${a.email || '—'}</td>
+              <td>${new Date(a.created_at).toLocaleDateString('fr-FR')}</td>
+              <td><button onclick="revokeAuthor('${a.id}')" class="btn btn-danger btn-sm">Révoquer</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`
+      : '<div class="empty-state"><div class="empty-icon">✍️</div><div class="empty-title">Aucun auteur certifié</div></div>';
+
+  } catch(e) {
+    showToast('Erreur chargement auteurs : ' + e.message, true);
+  }
+}
+
+async function approveAuthor(requestId, playerId) {
+  if (!confirm('Accepter cette candidature et donner accès auteur ?')) return;
+  try {
+    // Mettre à jour la demande
+    await supa('PATCH', 'author_requests', { status: 'approved', reviewed_at: new Date().toISOString() }, `?id=eq.${requestId}`);
+    // Donner le rôle auteur au joueur
+    await supa('PATCH', 'players', { role: 'author' }, `?id=eq.${playerId}`);
+    showToast('Auteur accepté ✓');
+    loadAuthorsPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function rejectAuthor(requestId) {
+  if (!confirm('Refuser cette candidature ?')) return;
+  try {
+    await supa('PATCH', 'author_requests', { status: 'rejected', reviewed_at: new Date().toISOString() }, `?id=eq.${requestId}`);
+    showToast('Candidature refusée');
+    loadAuthorsPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function revokeAuthor(playerId) {
+  if (!confirm('Révoquer les droits auteur de ce joueur ?')) return;
+  try {
+    await supa('PATCH', 'players', { role: 'player' }, `?id=eq.${playerId}`);
+    showToast('Droits révoqués');
+    loadAuthorsPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+// ══════════════════════════════════════════
+// GESTION DES LIVRES PROFESSEUR FLINT
+// ══════════════════════════════════════════
+let books = [];
+let editingBookId = null;
+
+async function loadBooksPage() {
+  setLoading(true);
+  try {
+    const data = await supa('GET', 'professor_flint_books', null, '?select=*&order=created_at.desc');
+    books = data || [];
+    document.getElementById('books-count').textContent =
+      `${books.length} livre${books.length > 1 ? 's' : ''}`;
+    document.getElementById('books-table').innerHTML = buildBooksTable(books);
+  } catch(e) {
+    showToast('Erreur chargement livres : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function buildBooksTable(data) {
+  if (!data.length) return '<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-title">Aucun livre</div><div class="empty-sub">Crée ton premier livre Professeur Flint !</div></div>';
+  return `<table>
+    <thead><tr>
+      <th>Livre</th><th>Lieu</th><th>Difficulté</th><th>XP</th><th>Statut</th><th>Actions</th>
+    </tr></thead>
+    <tbody>` + data.map(b => `
+      <tr>
+        <td><div class="adv-name">${b.emoji || '📖'} ${b.title}</div><div class="adv-sub">${b.duration || ''}</div></td>
+        <td>${b.location || '—'}</td>
+        <td><span class="diff-pill ${b.difficulty === 'Facile' ? 'diff-easy' : b.difficulty === 'Intermédiaire' ? 'diff-medium' : 'diff-hard'}">${b.difficulty || '—'}</span></td>
+        <td><strong>${b.xp_reward || 0}</strong></td>
+        <td><span class="status-pill ${b.status === 'published' ? 'status-published' : 'status-draft'}">${b.status === 'published' ? '✓ Publié' : '✏️ Brouillon'}</span></td>
+        <td><div class="actions-cell">
+          <button class="btn btn-secondary btn-sm" onclick="editBook('${b.id}')">✏️ Modifier</button>
+          <button class="btn btn-secondary btn-sm" onclick="generateBookQR('${b.id}')">🔳 QR</button>
+          <button class="btn btn-secondary btn-sm" onclick="showBookParticipations('${b.id}')">👥 Participations</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBook('${b.id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('') + '</tbody></table>';
+}
+
+function editBook(id) { openBookModal(id); }
+
+function openBookModal(id) {
+  editingBookId = id || null;
+  const book = id ? books.find(b => b.id === id) : null;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'book-modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeBookModal(); };
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h2>${book ? "Modifier le livre" : "Nouveau livre"}</h2>
+        <button class="modal-close" onclick="closeBookModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Titre *</label>
+            <input type="text" id="bf-title" value="${book?.title ? book.title.replace(/"/g,'&quot;') : ''}" placeholder="Ex : Le Mystère du Vieux Phare"/>
+          </div>
+          <div class="form-group full">
+            <label>Description</label>
+            <textarea id="bf-desc" rows="3" placeholder="Résumé du livre...">${book?.description || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Emoji</label>
+            <input type="text" id="bf-emoji" value="${book?.emoji || '📖'}" maxlength="4"/>
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select id="bf-status">
+              <option value="draft" ${book?.status !== 'published' ? 'selected' : ''}>Brouillon</option>
+              <option value="published" ${book?.status === 'published' ? 'selected' : ''}>Publié</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Lieu</label>
+            <input type="text" id="bf-location" value="${book?.location || ''}" placeholder="Ex : Vieux-Port"/>
+          </div>
+          <div class="form-group">
+            <label>Durée</label>
+            <input type="text" id="bf-duration" value="${book?.duration || ''}" placeholder="Ex : 45 min"/>
+          </div>
+          <div class="form-group">
+            <label>Difficulté</label>
+            <select id="bf-diff">
+              <option value="Facile" ${book?.difficulty === 'Facile' ? 'selected' : ''}>Facile</option>
+              <option value="Intermédiaire" ${!book || book?.difficulty === 'Intermédiaire' ? 'selected' : ''}>Intermédiaire</option>
+              <option value="Expert" ${book?.difficulty === 'Expert' ? 'selected' : ''}>Expert</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Récompense XP</label>
+            <input type="number" id="bf-xp" value="${book?.xp_reward ?? 50}" min="0"/>
+          </div>
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" id="bf-lat" value="${book?.lat ?? ''}" step="0.000001"/>
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" id="bf-lng" value="${book?.lng ?? ''}" step="0.000001"/>
+          </div>
+          <div class="form-group full">
+            <label>URL image de couverture <span class="label-hint">(optionnel)</span></label>
+            <input type="text" id="bf-cover" value="${book?.cover_image_url || ''}" placeholder="https://..."/>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeBookModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveBook()">💾 Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function closeBookModal() {
+  const overlay = document.getElementById('book-modal-overlay');
+  if (overlay) overlay.remove();
+  editingBookId = null;
+}
+
+async function saveBook() {
+  const title = document.getElementById('bf-title').value.trim();
+  if (!title) { alert('Le titre est obligatoire'); return; }
+
+  const payload = {
+    title,
+    description: document.getElementById('bf-desc').value.trim(),
+    emoji: document.getElementById('bf-emoji').value.trim() || '📖',
+    status: document.getElementById('bf-status').value,
+    location: document.getElementById('bf-location').value.trim(),
+    duration: document.getElementById('bf-duration').value.trim(),
+    difficulty: document.getElementById('bf-diff').value,
+    xp_reward: parseInt(document.getElementById('bf-xp').value, 10) || 0,
+    lat: document.getElementById('bf-lat').value ? parseFloat(document.getElementById('bf-lat').value) : null,
+    lng: document.getElementById('bf-lng').value ? parseFloat(document.getElementById('bf-lng').value) : null,
+    cover_image_url: document.getElementById('bf-cover').value.trim() || null
+  };
+
+  try {
+    if (editingBookId) {
+      await supa('PATCH', 'professor_flint_books', payload, `?id=eq.${editingBookId}`);
+      showToast('Livre mis à jour');
+    } else {
+      await supa('POST', 'professor_flint_books', payload);
+      showToast('Livre créé');
+    }
+    closeBookModal();
+    loadBooksPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function deleteBook(id) {
+  if (!confirm('Supprimer ce livre ? Cette action est irréversible.')) return;
+  try {
+    await supa('DELETE', 'professor_flint_books', null, `?id=eq.${id}`);
+    showToast('Livre supprimé');
+    loadBooksPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+// ── GÉNÉRATION DES QR CODES DÉBUT / FIN ──
+function generateBookQR(id) {
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'book-qr-modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h2>🔳 QR codes — ${book.title}</h2>
+        <button class="modal-close" onclick="document.getElementById('book-qr-modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-weight:700;margin-bottom:10px;">▶ Début</div>
+          <div id="book-qr-start"></div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-weight:700;margin-bottom:10px;">⏹ Fin</div>
+          <div id="book-qr-end"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimer</button>
+        <button class="btn btn-primary" onclick="document.getElementById('book-qr-modal-overlay').remove()">Fermer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  new QRCode(document.getElementById('book-qr-start'), {
+    text: `FFBOOK:${book.id}:START`, width: 180, height: 180,
+    colorDark: '#1A2A1A', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M
+  });
+  new QRCode(document.getElementById('book-qr-end'), {
+    text: `FFBOOK:${book.id}:END`, width: 180, height: 180,
+    colorDark: '#1A2A1A', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+// ── PARTICIPATIONS ──
+async function showBookParticipations(id) {
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'book-participations-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>👥 Participations — ${book.title}</h2>
+        <button class="modal-close" onclick="document.getElementById('book-participations-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" id="book-participations-body">
+        <div style="text-align:center;padding:20px;color:var(--gray-txt);">⏳ Chargement...</div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  try {
+    const rows = await supa('GET', 'book_participations', null,
+      `?book_id=eq.${id}&select=*,players!player_id(pseudo,avatar_emoji)&order=started_at.desc`);
+    const body = document.getElementById('book-participations-body');
+    if (!rows || !rows.length) {
+      body.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Aucune participation</div></div>';
+      return;
+    }
+    body.innerHTML = `<table>
+      <thead><tr><th>Joueur</th><th>Équipe</th><th>Statut</th><th>Démarré</th><th>Terminé</th><th>XP</th></tr></thead>
+      <tbody>` + rows.map(r => {
+        const player = r.players || {};
+        const started = r.started_at ? new Date(r.started_at).toLocaleString('fr-FR') : '—';
+        const completed = r.completed_at ? new Date(r.completed_at).toLocaleString('fr-FR') : '—';
+        return `<tr>
+          <td>${player.avatar_emoji || '🙂'} ${player.pseudo || '—'}</td>
+          <td>${r.team_name || '—'}${r.team_size ? ` (${r.team_size})` : ''}</td>
+          <td><span class="status-pill ${r.status === 'completed' ? 'status-published' : 'status-draft'}">${r.status === 'completed' ? '✓ Terminé' : '⏳ En cours'}</span></td>
+          <td>${started}</td>
+          <td>${completed}</td>
+          <td>${r.xp_earned || 0}</td>
+        </tr>`;
+      }).join('') + '</tbody></table>';
+  } catch(e) {
+    document.getElementById('book-participations-body').innerHTML =
+      `<div style="color:var(--danger,#DC2626);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  }
 }
 
 // ── CHARGER DEPUIS SUPABASE ──
@@ -1818,9 +2216,60 @@ function printQRCode() {
   win.print();
 }
 
+// ══════════════════════════════════════════
+// CONTRÔLE D'ACCÈS (admin / auteur certifié)
+// ══════════════════════════════════════════
+async function checkAdminRole() {
+  const token = localStorage.getItem('ff_access_token');
+  const user  = JSON.parse(localStorage.getItem('ff_user') || '{}');
+  if (!token || !user.id) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  try {
+    const playerData = await supa('GET', 'players', null, `?id=eq.${user.id}&select=role,pseudo`);
+    const role   = playerData[0]?.role;
+    const pseudo = playerData[0]?.pseudo || 'Admin';
+
+    // Mettre à jour le nom dans la sidebar
+    const nameEl = document.querySelector('.user-name');
+    const roleEl = document.querySelector('.user-role');
+    if (nameEl) nameEl.textContent = pseudo;
+    if (roleEl) roleEl.textContent = role === 'admin' ? 'Administrateur' : role === 'author' ? 'Auteur certifié' : 'Joueur';
+
+    if (role === 'author') {
+      // Auteur — masquer tableau de bord, joueurs, auteurs, badges
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        const text = btn.textContent.trim();
+        if (text.includes('Tableau') || text.includes('Joueurs') || text.includes('Auteurs') || text.includes('Badges') || text.includes('Professeur')) {
+          btn.style.display = 'none';
+        }
+      });
+      // Masquer le bouton "Vue joueur" aussi
+      const playerViewLink = document.querySelector('.sidebar-footer a');
+      if (playerViewLink) playerViewLink.style.display = 'none';
+      // Aller directement sur la page aventures
+      showPage('adventures', document.querySelectorAll('.nav-item')[1]);
+      // Afficher un message de bienvenue auteur
+      document.getElementById('page-title').textContent = 'Mes scénarios';
+    } else if (role !== 'admin') {
+      // Ni admin ni auteur — rediriger
+      window.location.href = 'index.html';
+    }
+  } catch (e) {
+    console.error('Erreur vérification rôle:', e);
+  }
+}
+
 // ── INIT ──
-loadAdventures();
-loadDashboard();
+checkAdminRole().then(() => {
+  loadAdventures();
+  // Le dashboard ne se charge que s'il est resté l'écran actif (un auteur en est redirigé)
+  if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+    loadDashboard();
+  }
+});
 </script>
 </body>
 </html>

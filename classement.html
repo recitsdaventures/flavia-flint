@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classement — Flavia Flint</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #F5EDD8;
+    padding: 16px;
+  }
+  .header {
+    text-align: center;
+    padding: 20px 0 16px;
+    border-bottom: 2px solid #D4C5A9;
+    margin-bottom: 16px;
+  }
+  .header img { height: 40px; margin-bottom: 8px; }
+  .header h1 { font-size: 20px; color: #1A2A1A; font-weight: 800; }
+  .header p { font-size: 13px; color: #9CA3AF; margin-top: 4px; }
+
+  .tabs {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1; padding: 8px; border-radius: 8px;
+    border: 1px solid #D4C5A9; background: white;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    color: #6B7280; transition: all 0.15s;
+  }
+  .tab.active { background: #2D4A2D; color: white; border-color: #2D4A2D; }
+
+  .rank-row {
+    display: flex; align-items: center; gap: 10px;
+    background: white; border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 8px;
+    border: 1px solid #E5D9C0;
+    transition: transform 0.1s;
+  }
+  .rank-row:hover { transform: scale(1.01); }
+  .rank-num { font-size: 16px; font-weight: 800; min-width: 32px; text-align: center; }
+  .rank-avatar { width: 36px; height: 36px; border-radius: 50%; background: #2D4A2D; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-name { font-size: 14px; font-weight: 700; color: #1A2A1A; }
+  .rank-sub { font-size: 11px; color: #9CA3AF; }
+  .rank-score { font-size: 14px; font-weight: 800; color: #E8A020; white-space: nowrap; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; color: #6B7280;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 16px 0 8px;
+  }
+
+  .book-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #EEF4FF; border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 8px;
+    border: 1px solid #BFDBFE;
+  }
+
+  .footer {
+    text-align: center; padding: 16px 0;
+    font-size: 12px; color: #9CA3AF;
+    border-top: 1px solid #D4C5A9; margin-top: 16px;
+  }
+  .footer a { color: #C4622D; text-decoration: none; font-weight: 600; }
+
+  .loading { text-align: center; padding: 40px; color: #9CA3AF; }
+  .empty { text-align: center; padding: 30px; color: #9CA3AF; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.png" alt="Récits d'Aventures" onerror="this.style.display='none'"/>
+  <h1>🏆 Classement des Explorateurs</h1>
+  <p>Les aventuriers de Flavia Flint &amp; Professeur Flint</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="setTab('general', this)">⭐ Général</button>
+  <button class="tab" onclick="setTab('flavia', this)">🧭 Flavia Flint</button>
+  <button class="tab" onclick="setTab('professor', this)">📖 Prof. Flint</button>
+</div>
+
+<div id="ranking-content">
+  <div class="loading">⏳ Chargement...</div>
+</div>
+
+<div class="footer">
+  <p>Rejoins l'aventure sur <a href="https://flavia-flint.vercel.app" target="_blank">flavia-flint.vercel.app</a></p>
+  <p style="margin-top:4px;">© Récits d'Aventures — <a href="https://recitsdaventures.com" target="_blank">recitsdaventures.com</a></p>
+</div>
+
+<script>
+const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
+
+const HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+
+async function get(table, params = '') {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, { headers: HEADERS });
+  return res.json();
+}
+
+// Rangs joueur — mêmes seuils/titres que dans index.html (univers Flavia Flint)
+function getRankName(xp) {
+  if (xp >= 2500) return '👑 Héros de l\'Histoire';
+  if (xp >= 1500) return '🏆 Maître Explorateur';
+  if (xp >= 1000) return '🗝️ Gardien des Secrets';
+  if (xp >= 600)  return '🏹 Chasseur de Trésors';
+  if (xp >= 300)  return '⚔️ Aventurier';
+  if (xp >= 100)  return '🧭 Découvreur';
+  return '🌱 Apprenti Explorateur';
+}
+
+function formatDuration(seconds) {
+  const s = seconds || 0;
+  const mins = Math.floor(s / 60);
+  const secs = s % 60;
+  return `${mins}:${String(secs).padStart(2,'0')}`;
+}
+
+let currentTab = 'general';
+
+async function setTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  await loadRanking();
+}
+
+async function loadRanking() {
+  const el = document.getElementById('ranking-content');
+  el.innerHTML = '<div class="loading">⏳ Chargement...</div>';
+
+  try {
+    if (currentTab === 'general') {
+      // Classement général XP
+      const players = await get('players', '?select=pseudo,avatar_emoji,total_xp,city&order=total_xp.desc&limit=20');
+
+      if (!players.length) {
+        el.innerHTML = '<div class="empty">Aucun joueur encore — sois le premier ! 🏆</div>';
+        return;
+      }
+
+      const medals = ['🥇','🥈','🥉'];
+      el.innerHTML = players.map((p, i) => `
+        <div class="rank-row">
+          <div class="rank-num" style="color:${i===0?'#F59E0B':i===1?'#9CA3AF':i===2?'#B45309':'#6B7280'}">
+            ${i < 3 ? medals[i] : '#'+(i+1)}
+          </div>
+          <div class="rank-avatar">${p.avatar_emoji || '🧒'}</div>
+          <div class="rank-info">
+            <div class="rank-name">${p.pseudo || 'Aventurier'}</div>
+            <div class="rank-sub">${getRankName(p.total_xp)}${p.city ? ' · '+p.city : ''}</div>
+          </div>
+          <div class="rank-score">${p.total_xp || 0} XP</div>
+        </div>`).join('');
+
+    } else if (currentTab === 'flavia') {
+      // Classement par aventures Flavia Flint
+      const completions = await get('adventure_completions',
+        '?select=total_duration_seconds,total_xp_earned,completed_at,players!player_id(pseudo,avatar_emoji),adventures(title,emoji)&order=total_duration_seconds.asc&limit=100');
+
+      if (!completions.length) {
+        el.innerHTML = '<div class="empty">Aucune aventure terminée encore !</div>';
+        return;
+      }
+
+      // Grouper par aventure
+      const byAdventure = {};
+      completions.forEach(c => {
+        const title = c.adventures?.title || 'Aventure';
+        if (!byAdventure[title]) byAdventure[title] = { emoji: c.adventures?.emoji || '🗺️', entries: [] };
+        byAdventure[title].entries.push(c);
+      });
+
+      el.innerHTML = Object.entries(byAdventure).map(([title, data]) => `
+        <div class="section-title">${data.emoji} ${title}</div>
+        ${data.entries.slice(0, 5).map((c, i) => `
+            <div class="rank-row">
+              <div class="rank-num">${['🥇','🥈','🥉'][i] || '#'+(i+1)}</div>
+              <div class="rank-avatar">${c.players?.avatar_emoji || '🧒'}</div>
+              <div class="rank-info">
+                <div class="rank-name">${c.players?.pseudo || 'Aventurier'}</div>
+                <div class="rank-sub">⏱ ${formatDuration(c.total_duration_seconds)}</div>
+              </div>
+              <div class="rank-score">${c.total_xp_earned || 0} XP</div>
+            </div>`).join('')}`).join('');
+
+    } else if (currentTab === 'professor') {
+      // Classement livres Professeur Flint — pas de colonne durée en base,
+      // on la calcule côté client à partir de started_at / completed_at
+      const parts = await get('book_participations',
+        '?status=eq.completed&select=team_name,team_size,started_at,completed_at,xp_earned,professor_flint_books(title)&order=completed_at.desc&limit=100');
+
+      if (!parts.length) {
+        el.innerHTML = '<div class="empty">Aucun livre terminé encore — commandez le vôtre ! 📖</div>';
+        return;
+      }
+
+      const withDuration = parts
+        .map(p => ({
+          ...p,
+          durationSeconds: (p.started_at && p.completed_at)
+            ? Math.max(0, Math.round((new Date(p.completed_at) - new Date(p.started_at)) / 1000))
+            : null
+        }))
+        .filter(p => p.durationSeconds !== null)
+        .sort((a, b) => a.durationSeconds - b.durationSeconds)
+        .slice(0, 20);
+
+      if (!withDuration.length) {
+        el.innerHTML = '<div class="empty">Aucun livre terminé encore — commandez le vôtre ! 📖</div>';
+        return;
+      }
+
+      el.innerHTML = withDuration.map((p, i) => `
+          <div class="book-row">
+            <div class="rank-num" style="color:#1A3A5C;">${['🥇','🥈','🥉'][i] || '#'+(i+1)}</div>
+            <div class="rank-avatar" style="background:#1A3A5C;">📖</div>
+            <div class="rank-info">
+              <div class="rank-name">${p.team_name || 'Équipe'}</div>
+              <div class="rank-sub">${p.professor_flint_books?.title || ''} · ${p.team_size || 1} joueur${p.team_size > 1 ? 's' : ''}</div>
+            </div>
+            <div class="rank-score" style="color:#1A3A5C;">⏱ ${formatDuration(p.durationSeconds)}</div>
+          </div>`).join('');
+    }
+
+  } catch(e) {
+    console.error('Erreur chargement classement:', e);
+    el.innerHTML = '<div class="empty">Erreur de chargement. Réessaie dans quelques instants.</div>';
+  }
+}
+
+// Actualisation automatique toutes les 60 secondes
+loadRanking();
+setInterval(loadRanking, 60000);
+</script>
+</body>
+</html>

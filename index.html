@@ -860,8 +860,10 @@
       Connecté en tant que <strong id="settings-pseudo">Aventurier</strong>
     </div>
     <button onclick="closeSettingsMenu();goToScreen('profile',document.getElementById('nav-profile'))" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;border-bottom:1px solid #eee;">👤 Mon profil</button>
+    <button onclick="openAuthorRequest()" style="width:100%;padding:12px 16px;background:none;border:none;border-bottom:1px solid #eee;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;display:block;">✍️ Devenir auteur certifié</button>
     <a href="admin.html" target="_blank" style="display:block;width:100%;padding:12px 16px;background:none;border:none;border-bottom:1px solid #eee;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;text-decoration:none;">⚙️ Interface Admin</a>
     <button onclick="closeSettingsMenu();signOut()" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#C4622D;font-weight:600;">🚪 Se déconnecter</button>
+    <button onclick="closeSettingsMenu();deleteAccount()" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:13px;cursor:pointer;color:#DC2626;">🗑️ Supprimer mon compte</button>
   </div>
 
   <!-- Toast notification -->
@@ -1017,7 +1019,7 @@
   ═══════════════════════════════════ -->
   <div id="screen-home" class="screen">
     <!-- Bouton engrenage visible sur l'accueil (sans header) -->
-    <button class="home-settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
+    <button id="settings-btn-home" class="home-settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
     <!-- Hero -->
     <div class="home-hero-new">
       <img src="logo.png" style="height:70px;object-fit:contain;filter:brightness(0) invert(1);mix-blend-mode:screen;background:transparent;">
@@ -1068,6 +1070,9 @@
           <div class="adv-card-empty">⏳ Chargement des aventures…</div>
         </div>
       </div>
+
+      <!-- Livres Professeur Flint -->
+      <div id="professor-books-section"></div>
 
     </div>
   </div>
@@ -1314,6 +1319,8 @@
 
     <div id="profile-compass-card"></div>
 
+    <div id="profile-bio-section"></div>
+
     <div class="profile-section" style="margin-top:20px;">
       <div class="section-title">Collection de badges</div>
       <div class="badges-grid" id="profile-badges-grid">
@@ -1419,6 +1426,99 @@
     </div>
     <!-- Contenu -->
     <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;" id="flavia-story-content">
+      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN DEVENIR AUTEUR CERTIFIÉ
+  ═══════════════════════════════════ -->
+  <div id="screen-author-request" class="screen">
+    <div style="background:var(--green-dark);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="goToScreen('home',document.getElementById('nav-home'))" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;">← Retour</button>
+      <span style="color:white;font-weight:700;">✍️ Devenir auteur certifié</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
+
+      <!-- Présentation -->
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+        <div style="font-size:20px;margin-bottom:8px;">✍️</div>
+        <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Programme Auteurs Flavia Flint</div>
+        <div style="font-size:13px;color:#6B7280;line-height:1.6;">
+          Tu es passionné d'histoire locale, guide touristique, enseignant ou expert du patrimoine ?
+          Rejoins notre équipe d'auteurs certifiés et crée des aventures pour les familles de ta région.
+        </div>
+      </div>
+
+      <!-- Avantages -->
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">Ce que tu obtiens :</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:18px;">🛠️</span>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Accès à l'interface de création</div><div style="font-size:12px;color:#9CA3AF;">Crée tes scénarios directement dans notre outil</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:18px;">💰</span>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Rémunération à la vente</div><div style="font-size:12px;color:#9CA3AF;">Tu es rémunéré à chaque scénario vendu à une commune</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:18px;">🏛️</span>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Valorise ton expertise</div><div style="font-size:12px;color:#9CA3AF;">Partage ta passion du patrimoine avec des milliers de familles</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:18px;">✅</span>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Validation editoriale</div><div style="font-size:12px;color:#9CA3AF;">Chaque scénario est relu et validé avant publication</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut existant (déjà auteur / demande en cours / refusée) -->
+      <div id="author-request-status" style="display:none;margin-bottom:16px;"></div>
+
+      <!-- Formulaire -->
+      <div id="author-request-form-wrap">
+        <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+          <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:14px;">Candidature</div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom complet *</label>
+            <input type="text" id="author-fullname" placeholder="Prénom Nom" style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Profession / Expertise *</label>
+            <input type="text" id="author-profession" placeholder="Ex : Professeur d'histoire, Guide touristique..." style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Pourquoi veux-tu devenir auteur ? *</label>
+            <textarea id="author-motivation" placeholder="Décris ta passion pour le patrimoine local, les sujets qui t'intéressent, les lieux que tu voudrais faire découvrir..." style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;resize:none;height:100px;box-sizing:border-box;font-family:inherit;"></textarea>
+          </div>
+
+          <button id="author-request-submit-btn" onclick="submitAuthorRequest()" style="width:100%;padding:13px;background:var(--terra,#C4622D);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+            Envoyer ma candidature →
+          </button>
+        </div>
+      </div>
+
+      <div id="author-request-success" style="display:none;background:#ECFDF5;border:2px solid #059669;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">✅</div>
+        <div style="font-size:16px;font-weight:700;color:#065F46;margin-bottom:6px;">Candidature envoyée !</div>
+        <div style="font-size:13px;color:#6B7280;">Nous étudions ta candidature et te répondons sous 48h.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       ÉCRAN DÉTAIL LIVRE PROFESSEUR FLINT
+  ═══════════════════════════════════ -->
+  <div id="screen-book-detail" class="screen">
+    <div style="background:#1A3A5C;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
+      <span style="color:white;font-weight:700;flex:1;">📖 Livre Professeur Flint</span>
+    </div>
+    <div id="book-detail-content" style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
       <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
     </div>
   </div>
@@ -1586,6 +1686,10 @@ let currentPlayer    = null;
 let currentRankingTab  = 'general';
 let rankingPage         = 0;
 let rankingSearchQuery  = '';
+let selectedTeamSize    = 0;
+let currentBook         = null;
+let currentBookParticipation = null;
+let selectedBookTeamSize = 0;
 let map              = null;
 let playerMarker     = null;
 let playerPos        = null;
@@ -1805,6 +1909,37 @@ async function signOut() {
   goToScreen('auth', null);
 }
 
+async function deleteAccount() {
+  const confirm1 = confirm('Es-tu sûr de vouloir supprimer ton compte ? Cette action est irréversible.');
+  if (!confirm1) return;
+  const confirm2 = confirm('Toutes tes données (progression, badges, XP) seront supprimées définitivement. Confirmer ?');
+  if (!confirm2) return;
+
+  const userId = currentPlayer?.id;
+  const token  = localStorage.getItem('ff_access_token');
+  if (!userId || !token) return;
+
+  try {
+    // Supprimer les données du joueur (cascade supprimera le reste)
+    await supaFetch(`players?id=eq.${userId}`, { method: 'DELETE', prefer: 'return=minimal' });
+    // Supprimer le compte auth via Supabase
+    await fetch(`${SUPA_URL}/auth/v1/user`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    // Vider le localStorage
+    localStorage.clear();
+    currentPlayer = null;
+    adventures = [];
+    document.getElementById('app').classList.add('auth-mode');
+    alert('Ton compte a été supprimé. À bientôt !');
+    goToScreen('auth', null);
+  } catch (e) {
+    console.error('Erreur suppression compte:', e);
+    alert('Erreur suppression compte. Contacte-nous à contact@recitsdaventures.com');
+  }
+}
+
 // ── MODE INVITÉ ──
 function enterGuestMode() {
   localStorage.setItem('ff_guest', '1');
@@ -1865,9 +2000,10 @@ function toggleSettingsMenu() {
 
 // Fermer si clic en dehors
 document.addEventListener('click', function(e) {
-  const menu = document.getElementById('settings-menu');
-  const btn  = document.getElementById('settings-btn');
-  if (menu && !menu.contains(e.target) && e.target !== btn) {
+  const menu    = document.getElementById('settings-menu');
+  const btn     = document.getElementById('settings-btn');
+  const btnHome = document.getElementById('settings-btn-home');
+  if (menu && !menu.contains(e.target) && e.target !== btn && e.target !== btnHome) {
     menu.style.display = 'none';
   }
 });
@@ -1914,12 +2050,21 @@ async function loadAdventures() {
   try {
     console.log('Token présent:', !!localStorage.getItem('ff_access_token'));
     console.log('Chargement aventures...');
-    const data = await supaFetch('adventures?select=*,steps(*)&status=eq.published&order=created_at.asc');
+    const [data, books] = await Promise.all([
+      supaFetch('adventures?select=*,steps(*)&status=eq.published&order=created_at.asc'),
+      supaFetch('professor_flint_books?select=*&status=eq.published&order=created_at.asc').catch(e => {
+        console.error('Erreur chargement livres Professeur Flint:', e);
+        return [];
+      })
+    ]);
     adventures = data.map(a => ({
       ...a,
+      type: 'flavia',
       steps: (a.steps || []).sort((x, y) => x.order_num - y.order_num)
     }));
+    window._professorBooks = (books || []).map(b => ({ ...b, type: 'professor' }));
     renderAdventureCards();
+    renderProfessorBooksSection();
     renderMapMarkers();
     checkAdventureNotif();
   } catch(e) {
@@ -2093,6 +2238,41 @@ function renderAdventureCards() {
   renderCarousel();
 }
 
+function renderProfessorBooksSection() {
+  const container = document.getElementById('professor-books-section');
+  if (!container) return;
+  const books = window._professorBooks || [];
+  if (!books.length) { container.innerHTML = ''; return; }
+  container.innerHTML = `
+    <div class="home-section-new" style="padding-top:4px;">
+      <div class="home-section-label">📖 Livres Professeur Flint</div>
+    </div>
+    <div class="home-adv-list">
+      ${books.map(b => {
+        const coverUrl = b.cover_image_url || '';
+        const imgHtml  = coverUrl
+          ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
+          : '';
+        return `
+          <div class="adv-card" onclick="showBookDetail('${b.id}')">
+            <div class="adv-card-banner" style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);">
+              ${imgHtml}
+              <span>${b.emoji || '📖'}</span>
+            </div>
+            <div class="adv-card-body">
+              <div class="adv-card-title">${b.title}</div>
+              <div class="adv-card-desc">${b.description || ''}</div>
+              <div class="adv-card-meta">
+                <span>⏱ ${b.duration || ''}</span>
+                <span>📍 ${b.location || ''}</span>
+                <span>⭐ ${b.xp_reward || 0} XP</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function selectAdventureFromCard(id) {
   const adv = adventures.find(a => a.id === id);
   if (!adv) return;
@@ -2147,6 +2327,13 @@ function renderMapMarkers() {
     }).addTo(map);
     marker.on('click', () => showPopup(adv));
   });
+  (window._professorBooks || []).forEach(book => {
+    if (!book.lat) return;
+    const marker = L.circleMarker([book.lat, book.lng], {
+      radius: 14, fillColor: '#2D5A8E', color: 'white', weight: 2.5, fillOpacity: 0.9
+    }).addTo(map);
+    marker.on('click', () => showBookDetail(book.id));
+  });
 }
 
 function showPopup(adv) {
@@ -2165,6 +2352,71 @@ function showPopup(adv) {
 }
 function closePopup()  { document.getElementById('adventure-popup').classList.remove('show'); }
 function locateMe()    { if (map && playerPos) map.setView([playerPos.lat, playerPos.lng], 14); }
+
+// ══════════════════════════════════════════
+// LIVRES PROFESSEUR FLINT — DÉTAIL
+// ══════════════════════════════════════════
+async function showBookDetail(bookId) {
+  const book = (window._professorBooks || []).find(b => b.id === bookId);
+  const content = document.getElementById('book-detail-content');
+  goToScreen('book-detail', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (!book) { content.innerHTML = '<div class="adv-card-empty">Livre introuvable.</div>'; return; }
+  currentBook = book;
+  content.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>';
+
+  let participation = null;
+  if (currentPlayer?.id && !isGuest()) {
+    try {
+      const rows = await supaFetch(
+        `book_participations?book_id=eq.${bookId}&player_id=eq.${currentPlayer.id}&order=started_at.desc&limit=1`
+      );
+      participation = rows?.[0] || null;
+    } catch (e) {
+      console.error('Erreur chargement participation livre:', e);
+    }
+  }
+  currentBookParticipation = participation;
+
+  const coverUrl = book.cover_image_url || '';
+  const coverHtml = coverUrl
+    ? `<img src="${coverUrl}" style="width:100%;height:160px;object-fit:cover;border-radius:14px;margin-bottom:14px;" alt=""/>`
+    : `<div style="width:100%;height:160px;border-radius:14px;margin-bottom:14px;background:linear-gradient(135deg,#1A3A5C,#2D5A8E);display:flex;align-items:center;justify-content:center;font-size:48px;">${book.emoji || '📖'}</div>`;
+
+  let actionHtml = '';
+  if (isGuest()) {
+    actionHtml = `<div style="text-align:center;padding:14px;color:#6B7280;font-size:13px;">Connecte-toi pour participer à ce livre.</div>`;
+  } else if (!participation || participation.status === 'completed') {
+    actionHtml = participation?.status === 'completed'
+      ? `<div style="background:#ECFDF5;border:2px solid #059669;border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;">
+           <div style="font-size:24px;margin-bottom:6px;">✅</div>
+           <div style="font-weight:700;color:#065F46;">Livre terminé !</div>
+           <div style="font-size:13px;color:#6B7280;margin-top:4px;">+${participation.xp_earned || 0} XP gagnés</div>
+         </div>
+         <button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Rejouer — Scanner le QR de départ</button>`
+      : `<button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Scanner le QR de départ</button>`;
+  } else {
+    actionHtml = `
+      <div style="background:#FFF7F4;border:2px solid #C4622D;border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:13px;color:#6B7280;">Participation en cours${participation.team_name ? ' — équipe ' + participation.team_name : ''}</div>
+      </div>
+      <button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Scanner le QR de fin</button>`;
+  }
+
+  content.innerHTML = `
+    ${coverHtml}
+    <div style="font-size:19px;font-weight:800;color:#1A2A1A;margin-bottom:8px;">${book.title}</div>
+    <div style="font-size:14px;color:#6B7280;line-height:1.6;margin-bottom:14px;">${book.description || ''}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;color:#6B7280;">
+      <span>⏱ ${book.duration || ''}</span>
+      <span>📍 ${book.location || ''}</span>
+      <span>⭐ ${book.xp_reward || 0} XP</span>
+      ${book.difficulty ? `<span>${book.difficulty}</span>` : ''}
+    </div>
+    <div id="book-start-form-wrap"></div>
+    ${actionHtml}
+  `;
+}
 
 // ══════════════════════════════════════════
 // GPS GLOBAL
@@ -2967,6 +3219,10 @@ async function loadProfile() {
         </div>
       </div>`;
 
+    // Mon profil public — équipe & bio (éditable)
+    selectedTeamSize = currentPlayer.team_size || 0;
+    document.getElementById('profile-bio-section').innerHTML = renderBioSectionHtml(currentPlayer);
+
     // Historique des aventures jouées
     const completions = await supaFetch(
       `adventure_completions?player_id=eq.${currentPlayer.id}&select=*,adventures(title,emoji)&order=completed_at.desc&limit=5`
@@ -2996,6 +3252,160 @@ async function loadProfile() {
   }
 }
 
+// ── SECTION "MON PROFIL PUBLIC" (équipe & bio, éditable) ──
+function renderBioSectionHtml(player) {
+  const teamSize  = player.team_size || 0;
+  const bio       = player.bio || '';
+  const bioLength = bio.length;
+
+  return `
+    <div style="margin:16px 16px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;">Mon profil public</div>
+        <button onclick="toggleEditProfile()" id="btn-edit-profile" style="background:none;border:1px solid #D4C5A9;border-radius:8px;padding:5px 12px;font-size:12px;color:#6B7280;cursor:pointer;">
+          ✏️ Modifier
+        </button>
+      </div>
+
+      <!-- Mode lecture -->
+      <div id="profile-view-mode" style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span style="font-size:16px;">👥</span>
+            <div>
+              <div style="font-size:11px;color:#9CA3AF;">Équipe</div>
+              <div style="font-size:14px;font-weight:600;color:#1A2A1A;" id="profile-team-name">${player.team_name || 'Pas encore défini'}</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+              <div style="font-size:11px;color:#9CA3AF;">Joueurs</div>
+              <div style="font-size:14px;font-weight:600;color:#1A2A1A;" id="profile-team-size">${teamSize || '—'}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
+            <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">Bio</div>
+            <div style="font-size:13px;color:#4A5A4A;line-height:1.5;font-style:${bio ? 'normal' : 'italic'};" id="profile-bio">${bio || 'Ajoute une présentation pour les autres aventuriers...'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode édition (caché par défaut) -->
+      <div id="profile-edit-mode" style="display:none;background:white;border-radius:14px;border:1.5px solid #C4622D;padding:14px;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom de l'équipe / famille</label>
+            <input type="text" id="edit-team-name" value="${player.team_name || ''}"
+              placeholder="Ex : La famille Dupont, Les Petits Explorateurs..."
+              style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nombre de joueurs dans l'équipe</label>
+            <div style="display:flex;gap:8px;">
+              ${[1,2,3,4,5,6].map(n => `
+                <button type="button" onclick="selectTeamSize(${n})" id="team-size-btn-${n}" style="
+                  flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;
+                  border:2px solid ${teamSize === n ? '#C4622D' : '#D4C5A9'};
+                  background:${teamSize === n ? '#FFF7F4' : 'white'};
+                  color:${teamSize === n ? '#C4622D' : '#6B7280'};
+                ">${n}${n === 6 ? '+' : ''}</button>`).join('')}
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Bio publique <span style="font-weight:400;color:#9CA3AF;">(visible par tous)</span></label>
+            <textarea id="edit-bio" maxlength="150" oninput="updateBioCharCount()" placeholder="Présente-toi aux autres aventuriers ! D'où viens-tu, qu'est-ce qui te passionne..."
+              style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:13px;resize:none;height:80px;box-sizing:border-box;font-family:inherit;">${bio}</textarea>
+            <div style="font-size:11px;color:#9CA3AF;text-align:right;margin-top:2px;" id="bio-char-count">${bioLength}/150</div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Pseudo</label>
+            <input type="text" id="edit-pseudo" value="${player.pseudo || ''}"
+              style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="saveProfileEdits()" style="flex:1;padding:12px;background:#C4622D;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+              ✓ Sauvegarder
+            </button>
+            <button onclick="toggleEditProfile()" style="padding:12px 16px;background:none;border:1px solid #D4C5A9;border-radius:10px;font-size:14px;cursor:pointer;color:#6B7280;">
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleEditProfile() {
+  const viewMode = document.getElementById('profile-view-mode');
+  const editMode = document.getElementById('profile-edit-mode');
+  const btn      = document.getElementById('btn-edit-profile');
+  if (!viewMode || !editMode) return;
+  const isEditing = editMode.style.display !== 'none';
+
+  viewMode.style.display = isEditing ? 'block' : 'none';
+  editMode.style.display = isEditing ? 'none'  : 'block';
+  if (btn) btn.textContent = isEditing ? '✏️ Modifier' : '✕ Fermer';
+
+  // En quittant l'édition sans sauvegarder, on revient à la taille d'équipe enregistrée
+  if (isEditing) selectedTeamSize = currentPlayer?.team_size || 0;
+}
+
+function selectTeamSize(n) {
+  selectedTeamSize = n;
+  [1,2,3,4,5,6].forEach(i => {
+    const btn = document.getElementById('team-size-btn-' + i);
+    if (!btn) return;
+    btn.style.borderColor = i === n ? '#C4622D' : '#D4C5A9';
+    btn.style.background  = i === n ? '#FFF7F4' : 'white';
+    btn.style.color       = i === n ? '#C4622D' : '#6B7280';
+  });
+}
+
+function updateBioCharCount() {
+  const el      = document.getElementById('edit-bio');
+  const counter = document.getElementById('bio-char-count');
+  if (el && counter) counter.textContent = `${el.value.length}/150`;
+}
+
+async function saveProfileEdits() {
+  if (!currentPlayer?.id) return;
+
+  const pseudo   = document.getElementById('edit-pseudo')?.value?.trim();
+  const teamName = document.getElementById('edit-team-name')?.value?.trim();
+  const bio      = document.getElementById('edit-bio')?.value?.trim()?.substring(0, 150);
+  const teamSize = selectedTeamSize || null;
+
+  if (!pseudo) { alert('Le pseudo est obligatoire'); return; }
+
+  try {
+    // Vérifier que le nom d'équipe n'est pas déjà pris par un autre joueur
+    if (teamName && teamName !== currentPlayer.team_name) {
+      const existing = await supaFetch(
+        `players?team_name=ilike.${encodeURIComponent(teamName)}&id=neq.${currentPlayer.id}&select=id`
+      );
+      if (existing.length > 0) {
+        alert('Ce nom d\'équipe est déjà pris ! Choisis-en un autre.');
+        return;
+      }
+    }
+
+    await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: {
+        pseudo,
+        team_name: teamName || null,
+        team_size: teamSize,
+        bio: bio || null
+      }
+    });
+
+    showToast('Profil mis à jour ✓');
+    await loadProfile();
+  } catch (e) {
+    console.error('Erreur sauvegarde profil:', e);
+    alert('Erreur sauvegarde : ' + e.message);
+  }
+}
+
 async function editPseudo() {
   if (!currentPlayer) return;
   const newPseudo = prompt('Nouveau pseudo :', currentPlayer.pseudo || '');
@@ -3011,6 +3421,105 @@ async function editPseudo() {
   } catch (e) {
     console.error('Erreur modification pseudo:', e);
     alert('Impossible de modifier le pseudo. Réessaie.');
+  }
+}
+
+// ══════════════════════════════════════════
+// DEVENIR AUTEUR CERTIFIÉ
+// ══════════════════════════════════════════
+function openAuthorRequest() {
+  closeSettingsMenu();
+
+  if (isGuest() || !currentPlayer?.id) {
+    goToScreen('auth', null);
+    return;
+  }
+
+  goToScreen('author-request', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+}
+
+async function loadAuthorRequestStatus() {
+  const formWrap  = document.getElementById('author-request-form-wrap');
+  const statusEl  = document.getElementById('author-request-status');
+  const successEl = document.getElementById('author-request-success');
+  if (successEl) successEl.style.display = 'none';
+  if (formWrap)  formWrap.style.display  = 'block';
+  if (statusEl)  { statusEl.style.display = 'none'; statusEl.innerHTML = ''; }
+  if (!currentPlayer?.id) return;
+
+  try {
+    // Rafraîchir le rôle au cas où une décision admin serait tombée entre-temps
+    const rows = await supaFetch(`players?id=eq.${currentPlayer.id}&select=role`);
+    if (rows.length) currentPlayer.role = rows[0].role;
+
+    if (currentPlayer.role === 'author') {
+      showAuthorStatusMessage('🏅', 'Tu es déjà auteur certifié !', 'Connecte-toi à l\'interface admin pour créer tes aventures.');
+      return;
+    }
+
+    const existing = await supaFetch(
+      `author_requests?player_id=eq.${currentPlayer.id}&order=requested_at.desc&limit=1`
+    );
+    const last = existing?.[0];
+    if (last?.status === 'pending') {
+      showAuthorStatusMessage('⏳', 'Candidature en cours d\'examen', 'Nous étudions ta candidature et te répondons sous 48h.');
+    } else if (last?.status === 'rejected') {
+      showAuthorStatusMessage('📭', 'Candidature précédente refusée', 'Tu peux nous en soumettre une nouvelle si ta situation a évolué.');
+    }
+  } catch (e) {
+    console.error('Erreur vérification statut auteur:', e);
+  }
+}
+
+function showAuthorStatusMessage(icon, title, sub) {
+  const formWrap = document.getElementById('author-request-form-wrap');
+  const statusEl = document.getElementById('author-request-status');
+  if (formWrap) formWrap.style.display = 'none';
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `
+      <div style="background:white;border-radius:14px;padding:24px;text-align:center;border:1px solid #E5D9C0;">
+        <div style="font-size:32px;margin-bottom:8px;">${icon}</div>
+        <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">${title}</div>
+        <div style="font-size:13px;color:#6B7280;">${sub}</div>
+      </div>`;
+  }
+}
+
+async function submitAuthorRequest() {
+  const fullname   = document.getElementById('author-fullname').value.trim();
+  const profession = document.getElementById('author-profession').value.trim();
+  const motivation = document.getElementById('author-motivation').value.trim();
+
+  if (!fullname || !profession || !motivation) {
+    alert('Remplis tous les champs obligatoires.');
+    return;
+  }
+  if (!currentPlayer?.id) { alert('Tu dois être connecté.'); return; }
+
+  const btn = document.getElementById('author-request-submit-btn');
+  btn.textContent = '⏳ Envoi en cours...';
+  btn.disabled = true;
+
+  try {
+    await supaFetch('author_requests', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        player_id:  currentPlayer.id,
+        full_name:  fullname,
+        profession,
+        motivation
+      }
+    });
+    document.getElementById('author-request-form-wrap').style.display = 'none';
+    document.getElementById('author-request-success').style.display = 'block';
+  } catch (e) {
+    console.error('Erreur envoi candidature auteur:', e);
+    alert('Erreur envoi. Réessaie.');
+    btn.textContent = 'Envoyer ma candidature →';
+    btn.disabled = false;
   }
 }
 
@@ -3489,6 +3998,8 @@ async function readChapter(chapterId) {
 // ── SCANNER QR CODE ──
 let qrStream = null;
 let qrScanInterval = null;
+let qrScannerContext = 'adventure'; // 'adventure' | 'book'
+let qrScannerBookId = null;
 
 async function openQRScanner() {
   goToScreen('qr-scanner', null);
@@ -3507,7 +4018,13 @@ async function openQRScanner() {
   }
 }
 
-function scanQRFrame() {
+function openBookScanner(bookId) {
+  qrScannerContext = 'book';
+  qrScannerBookId = bookId;
+  openQRScanner();
+}
+
+async function scanQRFrame() {
   const video = document.getElementById('qr-video');
   const canvas = document.getElementById('qr-canvas');
   if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
@@ -3520,6 +4037,11 @@ function scanQRFrame() {
   if (code) {
     clearInterval(qrScanInterval);
     stopQRStream();
+
+    // Détecter en premier les QR codes de livres Professeur Flint
+    const isBookQR = await handleBookQR(code.data);
+    if (isBookQR) return;
+
     const expectedUrl = currentAdv?.satisfaction_url;
     const targetUrl = (expectedUrl && code.data === expectedUrl) ? expectedUrl
                       : (code.data.startsWith('http') ? code.data : null);
@@ -3541,9 +4063,137 @@ function stopQRStream() {
 
 function closeQRScanner() {
   stopQRStream();
+  if (qrScannerContext === 'book') {
+    const bookId = qrScannerBookId;
+    qrScannerContext = 'adventure';
+    qrScannerBookId = null;
+    if (bookId) showBookDetail(bookId);
+    else goToScreen('home', document.getElementById('nav-home'));
+    return;
+  }
   goToScreen('adventure', null);
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   showMode('reward');
+}
+
+// ── QR CODES LIVRES PROFESSEUR FLINT (format "FFBOOK:<id>:START" / "FFBOOK:<id>:END") ──
+async function handleBookQR(data) {
+  const m = /^FFBOOK:([a-zA-Z0-9-]+):(START|END)$/i.exec((data || '').trim());
+  if (!m) return false;
+
+  const bookId = m[1];
+  const action = m[2].toUpperCase();
+  const book = (window._professorBooks || []).find(b => b.id === bookId);
+  if (!book) { alert('Ce QR code ne correspond à aucun livre disponible.'); closeQRScanner(); return true; }
+
+  vibrateFeedback([200, 100, 200]);
+
+  if (action === 'START') {
+    goToScreen('book-detail', null);
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    showBookStartForm(book);
+  } else {
+    await completeBookParticipation(bookId);
+    showBookDetail(bookId);
+  }
+  qrScannerContext = 'adventure';
+  qrScannerBookId = null;
+  return true;
+}
+
+function showBookStartForm(book) {
+  currentBook = book;
+  selectedBookTeamSize = 0;
+  const wrap = document.getElementById('book-start-form-wrap');
+  if (!wrap) { showBookDetail(book.id); return; }
+  wrap.innerHTML = `
+    <div style="background:white;border-radius:14px;padding:16px;margin-bottom:14px;border:1.5px solid #C4622D;">
+      <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">📖 Démarrer le livre "${book.title}"</div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom d'équipe (optionnel)</label>
+        <input type="text" id="book-team-name" placeholder="Ex : Les Aventuriers" style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Taille de l'équipe</label>
+        <div style="display:flex;gap:8px;">
+          ${[1,2,3,4,5,6].map(n => `
+            <button type="button" onclick="selectBookTeamSize(${n})" id="book-team-size-btn-${n}" style="
+              flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;
+              border:2px solid #D4C5A9;background:white;color:#6B7280;
+            ">${n}${n === 6 ? '+' : ''}</button>`).join('')}
+        </div>
+      </div>
+      <button class="btn-primary" onclick="startBookParticipation('${book.id}')" style="width:100%;">Valider et commencer →</button>
+    </div>`;
+}
+
+function selectBookTeamSize(n) {
+  selectedBookTeamSize = n;
+  [1,2,3,4,5,6].forEach(i => {
+    const btn = document.getElementById('book-team-size-btn-' + i);
+    if (!btn) return;
+    btn.style.borderColor = i === n ? '#C4622D' : '#D4C5A9';
+    btn.style.background  = i === n ? '#FFF7F4' : 'white';
+    btn.style.color       = i === n ? '#C4622D' : '#6B7280';
+  });
+}
+
+async function startBookParticipation(bookId) {
+  if (!currentPlayer?.id) { alert('Connecte-toi pour participer.'); return; }
+  const teamName = document.getElementById('book-team-name')?.value?.trim() || null;
+  const teamSize = selectedBookTeamSize || null;
+  try {
+    await supaFetch('book_participations', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        book_id: bookId,
+        player_id: currentPlayer.id,
+        team_name: teamName,
+        team_size: teamSize,
+        status: 'in_progress',
+        started_at: new Date().toISOString()
+      }
+    });
+    await showBookDetail(bookId);
+  } catch (e) {
+    console.error('Erreur démarrage participation livre:', e);
+    alert('Erreur lors du démarrage. Réessaie.');
+  }
+}
+
+async function completeBookParticipation(bookId) {
+  if (!currentPlayer?.id) return;
+  try {
+    const rows = await supaFetch(
+      `book_participations?book_id=eq.${bookId}&player_id=eq.${currentPlayer.id}&status=eq.in_progress&order=started_at.desc&limit=1`
+    );
+    const participation = rows?.[0];
+    if (!participation) { alert('Aucune participation en cours pour ce livre. Scanne d\'abord le QR de départ.'); return; }
+
+    const book = (window._professorBooks || []).find(b => b.id === bookId);
+    const xpReward = book?.xp_reward || 0;
+
+    // Pas de boussoles pour les livres Professeur Flint — uniquement de l'XP
+    const fresh = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
+    const newXp = (fresh?.[0]?.total_xp || 0) + xpReward;
+
+    await supaFetch(`book_participations?id=eq.${participation.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { status: 'completed', completed_at: new Date().toISOString(), xp_earned: xpReward }
+    });
+    await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { total_xp: newXp }
+    });
+    currentPlayer.total_xp = newXp;
+    alert(`✅ Livre terminé ! +${xpReward} XP`);
+  } catch (e) {
+    console.error('Erreur fin participation livre:', e);
+    alert('Erreur lors de la validation. Réessaie.');
+  }
 }
 
 // ── CLASSEMENT PAR AVENTURE ──
@@ -3638,6 +4288,7 @@ function goToScreen(name, btn) {
     else loadRanking(currentRankingTab);
   }
   if (name === 'flavia-story') loadFlaviaStory();
+  if (name === 'author-request') loadAuthorRequestStatus();
 }
 
 function goBack() {
