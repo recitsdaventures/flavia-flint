@@ -869,6 +869,12 @@
     <button onclick="closeSettingsMenu();goToScreen('profile',document.getElementById('nav-profile'))" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;border-bottom:1px solid #eee;">👤 Mon profil</button>
     <button onclick="openAuthorRequest()" style="width:100%;padding:12px 16px;background:none;border:none;border-bottom:1px solid #eee;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;display:block;">✍️ Devenir auteur certifié</button>
     <a href="admin.html" target="_blank" style="display:block;width:100%;padding:12px 16px;background:none;border:none;border-bottom:1px solid #eee;text-align:left;font-size:14px;cursor:pointer;color:#1A2A1A;text-decoration:none;">⚙️ Interface Admin</a>
+    <button onclick="closeSettingsMenu();installApp()" id="btn-install-menu" style="
+      width:100%;padding:12px 16px;background:none;border:none;
+      border-bottom:1px solid #eee;text-align:left;font-size:14px;
+      cursor:pointer;color:#2D4A2D;font-weight:600;display:block;">
+      📲 Télécharger l'app
+    </button>
     <button onclick="closeSettingsMenu();signOut()" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:14px;cursor:pointer;color:#C4622D;font-weight:600;">🚪 Se déconnecter</button>
     <button onclick="closeSettingsMenu();deleteAccount()" style="width:100%;padding:12px 16px;background:none;border:none;text-align:left;font-size:13px;cursor:pointer;color:#DC2626;">🗑️ Supprimer mon compte</button>
   </div>
@@ -4987,20 +4993,94 @@ function showInstallButton() {
 }
 
 async function installApp() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') {
-    showToast('🎉 App installée ! Retrouve-la sur ton écran d\'accueil');
+  if (deferredPrompt) {
+    // Chrome Android — prompt natif
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      showToast('🎉 App installée ! Retrouve-la sur ton écran d\'accueil');
+    }
+    deferredPrompt = null;
+    dismissInstall();
+  } else if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    // iOS Safari — pas de prompt natif possible, instructions manuelles
+    showIOSInstallInstructions();
+  } else {
+    // Déjà installée, navigateur non supporté, ou prompt pas encore proposé par Chrome
+    showManualInstallInstructions();
   }
-  deferredPrompt = null;
-  dismissInstall();
 }
 
 function dismissInstall() {
   const banner = document.getElementById('install-banner');
   if (banner) banner.remove();
   localStorage.setItem('ff_install_dismissed', Date.now());
+}
+
+function closeInstallInstructions() {
+  document.getElementById('install-instructions-modal')?.remove();
+}
+
+function showIOSInstallInstructions() {
+  const modal = document.createElement('div');
+  modal.id = 'install-instructions-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  modal.onclick = (e) => { if (e.target === modal) closeInstallInstructions(); };
+  modal.innerHTML = `
+    <div style="background:white;width:100%;border-radius:20px 20px 0 0;padding:24px;">
+      <div style="font-size:18px;font-weight:700;text-align:center;margin-bottom:16px;">📲 Installer sur iPhone</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+          <div style="font-size:14px;color:#1A2A1A;">Appuie sur le bouton <strong>Partager</strong> en bas de Safari (icône avec une flèche)</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+          <div style="font-size:14px;color:#1A2A1A;">Fais défiler et appuie sur <strong>"Sur l'écran d'accueil"</strong></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+          <div style="font-size:14px;color:#1A2A1A;">Appuie sur <strong>"Ajouter"</strong> en haut à droite</div>
+        </div>
+      </div>
+      <button onclick="closeInstallInstructions()" style="
+        width:100%;padding:13px;background:#2D4A2D;color:white;
+        border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+        Compris !
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function showManualInstallInstructions() {
+  const modal = document.createElement('div');
+  modal.id = 'install-instructions-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;';
+  modal.onclick = (e) => { if (e.target === modal) closeInstallInstructions(); };
+  modal.innerHTML = `
+    <div style="background:white;width:100%;border-radius:20px 20px 0 0;padding:24px;">
+      <div style="font-size:18px;font-weight:700;text-align:center;margin-bottom:16px;">📲 Installer l'app</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+          <div style="font-size:14px;color:#1A2A1A;">Dans Chrome, appuie sur les <strong>3 points</strong> en haut à droite</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+          <div style="font-size:14px;color:#1A2A1A;">Appuie sur <strong>"Ajouter à l'écran d'accueil"</strong></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+          <div style="font-size:14px;color:#1A2A1A;">Confirme en appuyant sur <strong>"Ajouter"</strong></div>
+        </div>
+      </div>
+      <button onclick="closeInstallInstructions()" style="
+        width:100%;padding:13px;background:#2D4A2D;color:white;
+        border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+        Compris !
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
 }
 </script>
 </body>
