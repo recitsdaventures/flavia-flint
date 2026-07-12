@@ -1,0 +1,26 @@
+{
+  "name": "Les Aventures de Flavia Flint",
+  "short_name": "Flavia Flint",
+  "description": "La chasse au trésor géolocalisée pour toute la famille",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2D4A2D",
+  "theme_color": "#2D4A2D",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment", "education"],
+  "lang": "fr"
+}

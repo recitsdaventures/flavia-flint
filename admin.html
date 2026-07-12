@@ -467,6 +467,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('professor', this)">
         <span class="nav-icon">📖</span> Professeur Flint
       </button>
+      <button class="nav-item" onclick="showPage('xp-validations', this)">
+        <span class="nav-icon">⭐</span> Validations XP
+      </button>
+      <button class="nav-item" onclick="showPage('settings', this)">
+        <span class="nav-icon">⚙️</span> Paramètres
+      </button>
     </nav>
     <div class="sidebar-footer">
       <a href="index.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
@@ -623,6 +629,75 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <button class="btn btn-primary" onclick="openBookModal()">+ Nouveau livre</button>
       </div>
       <div class="table-wrap" id="books-table"></div>
+    </div>
+
+    <!-- ═══ PAGE : VALIDATIONS XP ═══ -->
+    <div id="page-xp-validations" class="page">
+      <div class="section-header">
+        <div class="section-title">Demandes de validation XP</div>
+        <button class="btn btn-secondary btn-sm" onclick="loadXpValidations()">🔄 Actualiser</button>
+      </div>
+      <div id="xp-validations-list"></div>
+    </div>
+
+    <!-- ═══ PAGE : PARAMÈTRES ═══ -->
+    <div id="page-settings" class="page">
+      <div class="section-header">
+        <div class="section-title">Paramètres de l'application</div>
+        <button class="btn btn-primary" onclick="saveAppSettings()">💾 Sauvegarder</button>
+      </div>
+
+      <!-- Liens réseaux sociaux -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;">🔗 Liens réseaux sociaux</div>
+        <div class="form-group">
+          <label>📸 URL Instagram</label>
+          <input type="text" id="setting-instagram" placeholder="https://instagram.com/recitsdaventures"/>
+        </div>
+        <div class="form-group">
+          <label>👍 URL Page Facebook</label>
+          <input type="text" id="setting-facebook" placeholder="https://facebook.com/recitsdaventures"/>
+        </div>
+        <div class="form-group">
+          <label>⭐ URL Avis Google My Business</label>
+          <input type="text" id="setting-google" placeholder="https://g.page/r/TON_ID/review"/>
+          <div style="font-size:12px;color:#9CA3AF;margin-top:4px;">
+            Pour trouver ton URL : Google My Business → Obtenir plus d'avis → Copier le lien
+          </div>
+        </div>
+      </div>
+
+      <!-- XP Réseaux sociaux -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;">⭐ Configuration des XP bonus</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group" style="margin:0;">
+            <label>XP abonnement Instagram/Facebook</label>
+            <input type="number" id="setting-social-xp" placeholder="50" min="0" max="500"/>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>% XP partage photo (du total scénario)</label>
+            <input type="number" id="setting-share-xp-percent" placeholder="20" min="0" max="100"/>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:4px;">Ex: 20 = 20% des XP du scénario</div>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>XP avis Google</label>
+            <input type="number" id="setting-google-xp" placeholder="150" min="0" max="1000"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code de partage -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">🔑 Codes de validation partage</div>
+        <div style="font-size:13px;color:#6B7280;margin-bottom:16px;">
+          Mets ces codes dans ta bio Instagram/Facebook. Les joueurs les entrent dans l'app pour valider leur partage. Change-les régulièrement !
+        </div>
+        <div class="form-group">
+          <label>Codes valides <span class="label-hint">(séparés par des virgules)</span></label>
+          <input type="text" id="setting-share-codes" placeholder="EXPLORATEUR2026, RECITS2026, FLAVIAVIP"/>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -947,12 +1022,14 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'xp-validations':'Validations XP', settings:'Paramètres' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
   if (name === 'authors') loadAuthorsPage();
   if (name === 'professor') loadBooksPage();
+  if (name === 'xp-validations') loadXpValidations();
+  if (name === 'settings') loadAppSettings();
 }
 
 // ══════════════════════════════════════════
@@ -1505,6 +1582,141 @@ async function showBookParticipations(id) {
   } catch(e) {
     document.getElementById('book-participations-body').innerHTML =
       `<div style="color:var(--danger,#DC2626);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════
+// VALIDATIONS XP (avis Google, etc.)
+// ══════════════════════════════════════════
+async function loadXpValidations() {
+  setLoading(true);
+  try {
+    const requests = await supa('GET', 'xp_validation_requests', null,
+      '?order=created_at.desc&select=*,players(pseudo,email)');
+
+    const el = document.getElementById('xp-validations-list');
+
+    if (!requests.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-title">Aucune demande en attente</div></div>';
+      return;
+    }
+
+    el.innerHTML = requests.map(r => `
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${r.players?.pseudo || '?'}</div>
+            <div style="font-size:12px;color:#6B7280;">${r.players?.email || ''}</div>
+            <div style="margin-top:4px;">
+              <span style="background:${r.status==='pending'?'#FFFBEB':r.status==='approved'?'#ECFDF5':'#FEF2F2'};
+                color:${r.status==='pending'?'#92400E':r.status==='approved'?'#065F46':'#991B1B'};
+                padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">
+                ${r.status==='pending'?'⏳ En attente':r.status==='approved'?'✅ Approuvé':'❌ Refusé'}
+              </span>
+              <span style="font-size:12px;color:#6B7280;margin-left:8px;">+${r.xp_reward} XP · ${r.type === 'google_review' ? 'Avis Google' : r.type}</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#9CA3AF;">${new Date(r.created_at).toLocaleDateString('fr-FR')}</div>
+        </div>
+
+        ${r.screenshot_url ? `
+          <img src="${r.screenshot_url}" onclick="window.open('${r.screenshot_url}','_blank')" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid #E5D9C0;margin-bottom:12px;cursor:pointer;"/>` : ''}
+
+        ${r.status === 'pending' ? `
+          <div style="display:flex;gap:8px;">
+            <button onclick="approveXpRequest('${r.id}','${r.player_id}',${r.xp_reward})"
+              class="btn btn-success" style="flex:1;">✅ Valider +${r.xp_reward} XP</button>
+            <button onclick="rejectXpRequest('${r.id}')"
+              class="btn btn-danger" style="flex:1;">❌ Refuser</button>
+          </div>` : ''}
+      </div>`).join('');
+
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function approveXpRequest(requestId, playerId, xpReward) {
+  if (!confirm(`Valider et créditer ${xpReward} XP ?`)) return;
+  try {
+    // Mettre à jour le statut
+    await supa('PATCH', 'xp_validation_requests',
+      { status: 'approved', reviewed_at: new Date().toISOString() },
+      `?id=eq.${requestId}`);
+
+    // Créditer les XP (à partir de la valeur réelle en base)
+    const playerData = await supa('GET', 'players', null, `?id=eq.${playerId}&select=total_xp`);
+    const currentXp = playerData[0]?.total_xp || 0;
+    await supa('PATCH', 'players',
+      { total_xp: currentXp + xpReward },
+      `?id=eq.${playerId}`);
+
+    showToast(`+${xpReward} XP crédités ✓`);
+    loadXpValidations();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function rejectXpRequest(requestId) {
+  if (!confirm('Refuser cette demande ?')) return;
+  try {
+    await supa('PATCH', 'xp_validation_requests',
+      { status: 'rejected', reviewed_at: new Date().toISOString() },
+      `?id=eq.${requestId}`);
+    showToast('Demande refusée');
+    loadXpValidations();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+// ══════════════════════════════════════════
+// PARAMÈTRES DE L'APPLICATION (app_settings — clé/valeur)
+// ══════════════════════════════════════════
+async function loadAppSettings() {
+  try {
+    const settings = await supa('GET', 'app_settings', null, '?select=key,value');
+    const map = {};
+    (settings || []).forEach(s => { map[s.key] = s.value; });
+
+    document.getElementById('setting-instagram').value        = map.instagram_url || '';
+    document.getElementById('setting-facebook').value         = map.facebook_url || '';
+    document.getElementById('setting-google').value           = map.google_review_url || '';
+    document.getElementById('setting-social-xp').value        = map.social_xp || '50';
+    document.getElementById('setting-share-xp-percent').value = map.share_xp_percent || '20';
+    document.getElementById('setting-google-xp').value        = map.google_review_xp || '150';
+    document.getElementById('setting-share-codes').value      = map.share_codes || 'EXPLORATEUR2026';
+  } catch(e) {
+    showToast('Erreur chargement paramètres', true);
+  }
+}
+
+async function saveAppSettings() {
+  const settings = [
+    { key: 'instagram_url',      value: document.getElementById('setting-instagram').value.trim() },
+    { key: 'facebook_url',       value: document.getElementById('setting-facebook').value.trim() },
+    { key: 'google_review_url',  value: document.getElementById('setting-google').value.trim() },
+    { key: 'social_xp',          value: document.getElementById('setting-social-xp').value || '50' },
+    { key: 'share_xp_percent',   value: document.getElementById('setting-share-xp-percent').value || '20' },
+    { key: 'google_review_xp',   value: document.getElementById('setting-google-xp').value || '150' },
+    { key: 'share_codes',        value: document.getElementById('setting-share-codes').value || 'EXPLORATEUR2026' }
+  ];
+
+  try {
+    // Upsert manuel : on tente un PATCH (clé déjà existante), et si aucune ligne
+    // n'a été mise à jour, on crée la ligne avec un POST.
+    for (const s of settings) {
+      const updated = await supa('PATCH', 'app_settings', { value: s.value }, `?key=eq.${s.key}`);
+      if (!updated || !updated.length) {
+        await supa('POST', 'app_settings', s);
+      }
+    }
+    showToast('Paramètres sauvegardés ✓');
+  } catch(e) {
+    showToast('Erreur sauvegarde : ' + e.message, true);
   }
 }
 
@@ -2242,7 +2454,7 @@ async function checkAdminRole() {
       // Auteur — masquer tableau de bord, joueurs, auteurs, badges
       document.querySelectorAll('.nav-item').forEach(btn => {
         const text = btn.textContent.trim();
-        if (text.includes('Tableau') || text.includes('Joueurs') || text.includes('Auteurs') || text.includes('Badges') || text.includes('Professeur')) {
+        if (text.includes('Tableau') || text.includes('Joueurs') || text.includes('Auteurs') || text.includes('Badges') || text.includes('Professeur') || text.includes('Validations') || text.includes('Paramètres')) {
           btn.style.display = 'none';
         }
       });

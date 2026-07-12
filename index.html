@@ -7,6 +7,13 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#2D4A2D"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Flavia Flint"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -1293,11 +1300,7 @@
   <div id="screen-profile" class="screen">
     <div class="profile-hero">
       <div class="profile-avatar" id="profile-avatar-el">🧒</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <div class="profile-name" id="profile-name-el">Chargement…</div>
-        <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
-      </div>
-      <div class="profile-pseudo" id="profile-email-el"></div>
+      <div id="profile-identity-block"></div>
     </div>
 
     <div class="profile-stats">
@@ -1349,6 +1352,8 @@
           </tr>
         </table>
       </div>
+
+      <div id="profile-social-xp-section"></div>
 
       <div style="padding:16px;margin-top:8px;">
         <button onclick="signOut()" style="width:100%;padding:13px;background:none;border:1.5px solid #C4622D;border-radius:12px;color:#C4622D;font-size:14px;font-weight:600;cursor:pointer;">🚪 Se déconnecter</button>
@@ -1686,7 +1691,6 @@ let currentPlayer    = null;
 let currentRankingTab  = 'general';
 let rankingPage         = 0;
 let rankingSearchQuery  = '';
-let selectedTeamSize    = 0;
 let currentBook         = null;
 let currentBookParticipation = null;
 let selectedBookTeamSize = 0;
@@ -2934,14 +2938,68 @@ async function renderRewardMode() {
   showMode('reward');
 }
 
+// ── PARAMÈTRES APP (liens sociaux, XP bonus, codes — configurés dans admin.html) ──
+async function loadAppSettings() {
+  try {
+    const rows = await supaFetch('app_settings?select=key,value');
+    const map = {};
+    (rows || []).forEach(r => { map[r.key] = r.value; });
+    return map;
+  } catch (e) {
+    console.error('Erreur chargement app_settings:', e);
+    return {};
+  }
+}
+
 // ── ÉCRAN RÉCOMPENSE FINAL (après QR ou "Passer") ──
-function showFinalReward() {
+async function showFinalReward() {
   const step = currentStep();
   const durationSeconds = Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000);
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = durationSeconds % 60;
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
   const attempts = window._adventureAttempts || 0;
+
+  // XP de partage = pourcentage (configurable depuis l'admin) du XP de la dernière étape
+  const settings      = await loadAppSettings();
+  const stepXp         = step?.xp || 50;
+  const sharePercent   = parseInt(settings.share_xp_percent, 10) || 20;
+  const shareXp        = Math.round(stepXp * sharePercent / 100);
+
+  // Vérifier si déjà partagé pour cette aventure
+  const sharedAdventures = JSON.parse(localStorage.getItem('ff_shared_adventures') || '[]');
+  const alreadyShared = sharedAdventures.includes(currentAdv?.id);
+
+  const shareSection = alreadyShared ? `
+    <div style="background:#ECFDF5;border-radius:12px;padding:12px;margin:12px 0;text-align:center;font-size:13px;color:#065F46;font-weight:600;">
+      ✅ Tu as déjà partagé cette aventure !
+    </div>` : `
+    <div style="background:#FFF7F4;border:1px solid #FECACA;border-radius:14px;padding:14px;margin:12px 0;">
+      <div style="text-align:center;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;">📸 Partage ton aventure !</div>
+        <div style="font-size:12px;color:#9CA3AF;margin-top:3px;">Gagne +${shareXp} XP en partageant sur les réseaux</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button onclick="shareToInstagram(${shareXp})" style="
+          flex:1;padding:12px;background:#E1306C;color:white;
+          border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;gap:6px;">
+          📸 Instagram
+        </button>
+        <button onclick="shareToFacebook(${shareXp})" style="
+          flex:1;padding:12px;background:#1877F2;color:white;
+          border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;gap:6px;">
+          👍 Facebook
+        </button>
+      </div>
+      <button onclick="markAsShared(${shareXp})" id="btn-mark-shared" style="
+        width:100%;padding:10px;background:none;
+        border:1.5px solid #E8A020;border-radius:10px;
+        font-size:13px;font-weight:600;color:#E8A020;cursor:pointer;">
+        ✓ J'ai partagé ! Réclamer mes +${shareXp} XP
+      </button>
+    </div>`;
 
   document.getElementById('mode-reward').innerHTML = `
     <div class="reward-burst">🏆</div>
@@ -2954,6 +3012,7 @@ function showFinalReward() {
       <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
       <div style="font-size:13px;color:#6B7280;margin-top:6px;">${attempts} essai${attempts > 1 ? 's' : ''} raté${attempts > 1 ? 's' : ''}</div>
     </div>
+    ${shareSection}
     <div style="margin-top:8px;width:100%;">
       <button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>
     </div>
@@ -2964,6 +3023,80 @@ function showFinalReward() {
       </div>` : ''}`;
   showMode('reward');
 }
+
+// ── PARTAGE RAPIDE FIN D'AVENTURE ──
+async function shareToInstagram(xpAmount) {
+  try {
+    const settings = await loadAppSettings();
+    window.open(settings.instagram_url || 'https://instagram.com/recitsdaventures', '_blank');
+  } catch(e) {
+    window.open('https://instagram.com/recitsdaventures', '_blank');
+  }
+  showShareConfirmButton(xpAmount);
+}
+
+async function shareToFacebook(xpAmount) {
+  const shareText = encodeURIComponent(`Je viens de terminer "${currentAdv?.title || 'une aventure'}" avec Flavia Flint ! 🧭✨ #RecitsdAventures #FlaviaFlint`);
+  const shareUrl  = encodeURIComponent('https://flavia-flint.vercel.app');
+  // On utilise toujours la boîte de dialogue de partage Facebook (sharer.php) pointant vers
+  // l'app — l'URL de la page Facebook configurée en admin sert au bouton "Aime notre page".
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareText}`, '_blank');
+  showShareConfirmButton(xpAmount);
+}
+
+function showShareConfirmButton(xpAmount) {
+  // Le bouton "J'ai partagé" devient plus visible après avoir cliqué sur un réseau
+  const btn = document.getElementById('btn-mark-shared');
+  if (btn) {
+    btn.style.background = '#E8A020';
+    btn.style.color = 'white';
+    btn.style.borderColor = '#E8A020';
+    btn.textContent = `✓ J'ai partagé ! Réclamer mes +${xpAmount} XP`;
+  }
+}
+
+async function markAsShared(xpAmount) {
+  const xp = parseInt(xpAmount, 10) || 0;
+
+  const sharedAdventures = JSON.parse(localStorage.getItem('ff_shared_adventures') || '[]');
+  if (!currentAdv?.id || sharedAdventures.includes(currentAdv.id)) {
+    showToast('Tu as déjà partagé cette aventure !');
+    return;
+  }
+
+  // Accorder les XP si connecté (pas pour les invités)
+  if (xp && currentPlayer?.id && !isGuest()) {
+    try {
+      const fresh = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
+      const newXp = (fresh?.[0]?.total_xp || 0) + xp;
+      await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { total_xp: newXp }
+      });
+      currentPlayer.total_xp = newXp;
+    } catch(e) {
+      console.error('Erreur crédit XP partage:', e);
+    }
+  }
+
+  // Marquer comme partagé
+  sharedAdventures.push(currentAdv.id);
+  localStorage.setItem('ff_shared_adventures', JSON.stringify(sharedAdventures));
+
+  // Mettre à jour l'affichage
+  const btn = document.getElementById('btn-mark-shared');
+  if (btn) {
+    btn.closest('div[style*="FFF7F4"]').innerHTML = `
+      <div style="text-align:center;padding:8px;">
+        <div style="font-size:20px;margin-bottom:4px;">🎉</div>
+        <div style="font-size:14px;font-weight:700;color:#059669;">+${xp} XP ajoutés !</div>
+        <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Merci de partager l'aventure !</div>
+      </div>`;
+  }
+  showToast(`🎉 +${xp} XP pour le partage !`);
+}
+
 
 function showBoxHint() {
   document.getElementById('box-hint-content').style.display = 'block';
@@ -3152,19 +3285,62 @@ async function loadProfile() {
     const rank = allPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
 
     // Progression complétée + badges des steps (jointure avec l'aventure d'origine)
-    const progressData = await supaFetch(
-      `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id,steps(badge_emoji,badge_name,xp,adventure_id,adventures(title,emoji))`
-    );
+    // Isolée dans son propre try/catch : si la jointure échoue pour une raison
+    // quelconque, elle ne doit pas empêcher le reste du profil (XP, rang, historique...)
+    // de s'afficher — c'était la cause probable du "XP à 0" qui ne se mettait pas à jour.
+    let progressData = [];
+    try {
+      progressData = await supaFetch(
+        `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id,steps(badge_emoji,badge_name,xp,adventure_id,adventures(title,emoji))`
+      );
+    } catch (e) {
+      console.error('Jointure badges échouée, bascule en 2 requêtes:', e);
+      try {
+        const progress = await supaFetch(
+          `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
+        );
+        const stepIds = [...new Set(progress.map(p => p.step_id).filter(Boolean))];
+        let stepsById = {};
+        if (stepIds.length) {
+          const steps = await supaFetch(`steps?id=in.(${stepIds.join(',')})&select=id,badge_emoji,badge_name,xp,adventure_id`);
+          stepsById = Object.fromEntries(steps.map(s => [s.id, s]));
+        }
+        progressData = progress.map(p => ({ ...p, steps: stepsById[p.step_id] || null }));
+      } catch (e2) {
+        console.error('Fallback badges également en échec:', e2);
+        progressData = [];
+      }
+    }
     const uniqueAdvIds = new Set(progressData.map(p => p.adventure_id));
     const badgeList    = progressData.filter(p => p.steps?.badge_emoji);
 
     // Mise à jour UI
     document.getElementById('profile-avatar-el').textContent = currentPlayer.avatar_emoji || '🧒';
-    document.getElementById('profile-name-el').textContent   = currentPlayer.pseudo  || 'Aventurier';
-    document.getElementById('profile-email-el').textContent  = currentPlayer.email   || '';
 
     const xp    = currentPlayer.total_xp || 0;
     const xpFmt = xp.toLocaleString('fr');
+
+    // Titre principal du profil : nom d'équipe si défini, sinon pseudo
+    const pseudo   = currentPlayer.pseudo || 'Aventurier';
+    const rankLine = `${getRankIcon(xp)} ${getRankName(xp)}`;
+    const cityLine = currentPlayer.city
+      ? `<div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:4px;">📍 ${currentPlayer.city}</div>`
+      : '';
+    document.getElementById('profile-identity-block').innerHTML = currentPlayer.team_name
+      ? `
+        <div class="profile-name">🏴‍☠️ ${currentPlayer.team_name}</div>
+        <div class="profile-pseudo" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+          ${pseudo} · ${rankLine}
+          <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:20px;height:20px;color:white;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
+        </div>
+        ${cityLine}`
+      : `
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+          <div class="profile-name">${pseudo}</div>
+          <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
+        </div>
+        <div class="profile-pseudo">${rankLine}</div>
+        ${cityLine}`;
     document.getElementById('profile-stat-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-stat-xp').textContent        = xpFmt;
     document.getElementById('profile-stat-badges').textContent    = badgeList.length;
@@ -3219,8 +3395,7 @@ async function loadProfile() {
         </div>
       </div>`;
 
-    // Mon profil public — équipe & bio (éditable)
-    selectedTeamSize = currentPlayer.team_size || 0;
+    // Mon profil public — équipe, équipage & bio (éditable)
     document.getElementById('profile-bio-section').innerHTML = renderBioSectionHtml(currentPlayer);
 
     // Historique des aventures jouées
@@ -3247,6 +3422,11 @@ async function loadProfile() {
         }).join('')
       : '<div style="color:#9CA3AF;font-size:13px;padding:10px 0;">Aucune aventure terminée encore.</div>';
 
+    // XP bonus réseaux sociaux
+    document.getElementById('profile-social-xp-section').innerHTML = renderSocialXpSectionHtml();
+    updateSocialButtons();
+    loadSocialLinks();
+
   } catch (e) {
     console.error('Erreur chargement profil:', e);
   }
@@ -3254,9 +3434,17 @@ async function loadProfile() {
 
 // ── SECTION "MON PROFIL PUBLIC" (équipe & bio, éditable) ──
 function renderBioSectionHtml(player) {
-  const teamSize  = player.team_size || 0;
   const bio       = player.bio || '';
   const bioLength = bio.length;
+  const crewData  = player.crew ? (typeof player.crew === 'string' ? JSON.parse(player.crew) : player.crew) : [];
+  const crewHtml  = crewData.length > 0
+    ? crewData.map(m => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F0EDE4;">
+          <span style="font-size:11px;font-weight:600;color:#C4622D;min-width:80px;">${m.role || ''}</span>
+          <span style="font-size:13px;font-weight:600;color:#1A2A1A;">${m.name || ''}</span>
+          ${m.age ? `<span style="font-size:11px;color:#9CA3AF;margin-left:auto;">${m.age} ans</span>` : ''}
+        </div>`).join('')
+    : '<div style="font-size:13px;color:#9CA3AF;font-style:italic;">Aucun équipage défini</div>';
 
   return `
     <div style="margin:16px 16px 0;">
@@ -3276,14 +3464,14 @@ function renderBioSectionHtml(player) {
               <div style="font-size:11px;color:#9CA3AF;">Équipe</div>
               <div style="font-size:14px;font-weight:600;color:#1A2A1A;" id="profile-team-name">${player.team_name || 'Pas encore défini'}</div>
             </div>
-            <div style="margin-left:auto;text-align:right;">
-              <div style="font-size:11px;color:#9CA3AF;">Joueurs</div>
-              <div style="font-size:14px;font-weight:600;color:#1A2A1A;" id="profile-team-size">${teamSize || '—'}</div>
-            </div>
           </div>
           <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
             <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">Bio</div>
             <div style="font-size:13px;color:#4A5A4A;line-height:1.5;font-style:${bio ? 'normal' : 'italic'};" id="profile-bio">${bio || 'Ajoute une présentation pour les autres aventuriers...'}</div>
+          </div>
+          <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
+            <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">🏴‍☠️ Équipage</div>
+            <div id="profile-crew-view">${crewHtml}</div>
           </div>
         </div>
       </div>
@@ -3298,16 +3486,17 @@ function renderBioSectionHtml(player) {
               style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
           </div>
           <div>
-            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nombre de joueurs dans l'équipe</label>
-            <div style="display:flex;gap:8px;">
-              ${[1,2,3,4,5,6].map(n => `
-                <button type="button" onclick="selectTeamSize(${n})" id="team-size-btn-${n}" style="
-                  flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;
-                  border:2px solid ${teamSize === n ? '#C4622D' : '#D4C5A9'};
-                  background:${teamSize === n ? '#FFF7F4' : 'white'};
-                  color:${teamSize === n ? '#C4622D' : '#6B7280'};
-                ">${n}${n === 6 ? '+' : ''}</button>`).join('')}
-            </div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;">
+              🏴‍☠️ Mon équipage
+              <span style="font-weight:400;color:#9CA3AF;"> (max 6 membres)</span>
+            </label>
+            <div id="crew-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+            <button type="button" onclick="addCrewMember()" style="
+              width:100%;padding:10px;background:none;
+              border:1.5px dashed #D4C5A9;border-radius:10px;
+              font-size:13px;color:#9CA3AF;cursor:pointer;">
+              + Ajouter un membre
+            </button>
           </div>
           <div>
             <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Bio publique <span style="font-weight:400;color:#9CA3AF;">(visible par tous)</span></label>
@@ -3333,6 +3522,346 @@ function renderBioSectionHtml(player) {
     </div>`;
 }
 
+// ── ÉQUIPAGE PIRATES ──
+const CREW_ROLES = ['Capitaine','Navigateur','Mousse','Éclaireur','Cartographe','Vigie'];
+
+function initCrewEditor(existingCrew) {
+  const list = document.getElementById('crew-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const crew = existingCrew || [];
+  crew.forEach((member, i) => addCrewMemberRow(member, i));
+}
+
+function addCrewMember() {
+  const list = document.getElementById('crew-list');
+  if (!list) return;
+  const count = list.children.length;
+  if (count >= 6) { alert('Maximum 6 membres dans l\'équipage !'); return; }
+  addCrewMemberRow({}, count);
+}
+
+function addCrewMemberRow(member, index) {
+  const list = document.getElementById('crew-list');
+  if (!list) return;
+  const div = document.createElement('div');
+  div.id = `crew-member-${index}`;
+  div.style.cssText = 'background:#F9F7F4;border-radius:10px;padding:10px;border:1px solid #E5D9C0;';
+  div.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 80px auto;gap:8px;align-items:center;">
+      <input type="text" placeholder="Prénom" value="${member.name || ''}"
+        id="crew-name-${index}"
+        style="padding:8px 10px;border:1px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
+      <input type="number" placeholder="Âge" min="1" max="99" value="${member.age || ''}"
+        id="crew-age-${index}"
+        style="padding:8px 10px;border:1px solid #D4C5A9;border-radius:8px;font-size:13px;text-align:center;"/>
+      <button type="button" onclick="removeCrewMember(${index})" style="
+        background:#FEF2F2;border:none;border-radius:8px;
+        color:#DC2626;padding:8px 10px;cursor:pointer;font-size:14px;">🗑️</button>
+    </div>
+    <select id="crew-role-${index}" style="
+      width:100%;margin-top:8px;padding:8px 10px;
+      border:1px solid #D4C5A9;border-radius:8px;font-size:13px;">
+      ${CREW_ROLES.map(r => `<option value="${r}" ${member.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+    </select>`;
+  list.appendChild(div);
+}
+
+function removeCrewMember(index) {
+  const el = document.getElementById(`crew-member-${index}`);
+  if (el) el.remove();
+}
+
+function collectCrew() {
+  const crew = [];
+  const list = document.getElementById('crew-list');
+  if (!list) return crew;
+  list.querySelectorAll('[id^="crew-member-"]').forEach(row => {
+    const idx  = row.id.split('-')[2];
+    const name = document.getElementById(`crew-name-${idx}`)?.value?.trim();
+    const age  = parseInt(document.getElementById(`crew-age-${idx}`)?.value, 10);
+    const role = document.getElementById(`crew-role-${idx}`)?.value;
+    if (name) crew.push({ name, age: isNaN(age) ? null : age, role });
+  });
+  return crew;
+}
+
+// ══════════════════════════════════════════
+// XP RÉSEAUX SOCIAUX
+// ══════════════════════════════════════════
+// TODO : remplacer par le vrai lien "laisser un avis" de la fiche Google My Business
+// (valeur par défaut tant que 'google_review_url' n'est pas configuré dans l'admin)
+const GOOGLE_REVIEW_URL = 'https://g.page/r/TON_GOOGLE_BUSINESS_ID/review';
+
+// Met à jour les liens Instagram/Facebook/Google depuis les paramètres configurés en admin
+async function loadSocialLinks() {
+  try {
+    const settings = await loadAppSettings();
+    const igLink = document.getElementById('social-link-instagram');
+    const fbLink = document.getElementById('social-link-facebook');
+    const gLink  = document.getElementById('social-link-google');
+    if (igLink && settings.instagram_url) igLink.href = settings.instagram_url;
+    if (fbLink && settings.facebook_url) fbLink.href = settings.facebook_url;
+    if (gLink && settings.google_review_url) gLink.href = settings.google_review_url;
+  } catch (e) {
+    console.error('Erreur chargement liens sociaux:', e);
+  }
+}
+
+function renderSocialXpSectionHtml() {
+  return `
+<div style="margin:0 16px 16px;">
+  <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+    🎁 Gagner des XP bonus
+  </div>
+
+  <!-- Abonnement Instagram -->
+  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:24px;">📸</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Suis-nous sur Instagram</div>
+        <div style="font-size:12px;color:#9CA3AF;">+50 XP · Une seule fois</div>
+      </div>
+      <span style="font-size:14px;font-weight:800;color:#E8A020;">+50 XP</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="https://instagram.com/recitsdaventures" target="_blank" id="social-link-instagram" style="
+        flex:1;padding:10px;background:#E1306C;color:white;
+        border:none;border-radius:10px;font-size:13px;font-weight:600;
+        text-decoration:none;text-align:center;display:block;">
+        📸 Ouvrir Instagram
+      </a>
+      <button onclick="claimSocialXp('instagram')" id="btn-claim-instagram" style="
+        flex:1;padding:10px;background:white;
+        border:1.5px solid #E8A020;border-radius:10px;
+        font-size:13px;font-weight:600;color:#E8A020;cursor:pointer;">
+        ✓ J'ai suivi !
+      </button>
+    </div>
+  </div>
+
+  <!-- Abonnement Facebook -->
+  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:24px;">👍</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Aime notre page Facebook</div>
+        <div style="font-size:12px;color:#9CA3AF;">+50 XP · Une seule fois</div>
+      </div>
+      <span style="font-size:14px;font-weight:800;color:#E8A020;">+50 XP</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="https://facebook.com/recitsdaventures" target="_blank" id="social-link-facebook" style="
+        flex:1;padding:10px;background:#1877F2;color:white;
+        border:none;border-radius:10px;font-size:13px;font-weight:600;
+        text-decoration:none;text-align:center;display:block;">
+        👍 Ouvrir Facebook
+      </a>
+      <button onclick="claimSocialXp('facebook')" id="btn-claim-facebook" style="
+        flex:1;padding:10px;background:white;
+        border:1.5px solid #E8A020;border-radius:10px;
+        font-size:13px;font-weight:600;color:#E8A020;cursor:pointer;">
+        ✓ J'ai aimé !
+      </button>
+    </div>
+  </div>
+
+  <!-- Avis Google -->
+  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:24px;">⭐</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Laisse un avis Google</div>
+        <div style="font-size:12px;color:#9CA3AF;">+150 XP · Validation manuelle sous 48h</div>
+      </div>
+      <span style="font-size:14px;font-weight:800;color:#E8A020;">+150 XP</span>
+    </div>
+
+    <div style="background:#F0F7F0;border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px;color:#2D4A2D;line-height:1.5;">
+      1️⃣ Laisse un avis sur Google My Business<br>
+      2️⃣ Fais une capture d'écran de ton avis<br>
+      3️⃣ Uploade-la ici pour validation
+    </div>
+
+    <a href="${GOOGLE_REVIEW_URL}" target="_blank" id="social-link-google" style="
+      display:block;width:100%;padding:10px;background:#4285F4;color:white;
+      border-radius:10px;font-size:13px;font-weight:600;
+      text-decoration:none;text-align:center;margin-bottom:10px;box-sizing:border-box;">
+      ⭐ Laisser un avis Google
+    </a>
+
+    <div id="google-review-upload-section">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:#1A2A1A;">
+        Upload ta capture d'écran :
+      </label>
+      <div style="border:2px dashed #D4C5A9;border-radius:10px;padding:14px;text-align:center;cursor:pointer;position:relative;">
+        <input type="file" accept="image/*" onchange="handleGoogleReviewUpload(event)"
+          style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
+        <div id="google-review-preview" style="font-size:13px;color:#9CA3AF;">
+          📸 Clique pour choisir une image
+        </div>
+      </div>
+      <button onclick="submitGoogleReview()" id="btn-submit-google-review" style="
+        display:none;width:100%;margin-top:10px;padding:12px;
+        background:#C4622D;color:white;border:none;border-radius:10px;
+        font-size:14px;font-weight:700;cursor:pointer;">
+        📤 Envoyer pour validation
+      </button>
+    </div>
+
+    <div id="google-review-pending" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:13px;color:#92400E;font-weight:600;">⏳ Avis en cours de validation</div>
+      <div style="font-size:12px;color:#92400E;margin-top:4px;">Nous validons sous 48h et tes XP seront crédités automatiquement</div>
+    </div>
+  </div>
+
+</div>`;
+}
+
+async function claimSocialXp(platform) {
+  if (!currentPlayer?.id) return;
+
+  // Vérifier si déjà réclamé
+  const claimed = JSON.parse(localStorage.getItem('ff_social_claimed') || '{}');
+  if (claimed[platform]) {
+    alert('Tu as déjà réclamé ces XP !');
+    return;
+  }
+
+  try {
+    const settings = await loadAppSettings();
+    const socialXp = parseInt(settings.social_xp, 10) || 50;
+
+    const fresh = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
+    const currentXp = fresh?.[0]?.total_xp || 0;
+    const newXp = currentXp + socialXp;
+    await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { total_xp: newXp }
+    });
+    currentPlayer.total_xp = newXp;
+
+    // Marquer comme réclamé
+    claimed[platform] = true;
+    localStorage.setItem('ff_social_claimed', JSON.stringify(claimed));
+
+    // Mettre à jour le bouton
+    const btn = document.getElementById(`btn-claim-${platform}`);
+    if (btn) {
+      btn.textContent = `✅ +${socialXp} XP réclamés !`;
+      btn.style.background = '#ECFDF5';
+      btn.style.borderColor = '#059669';
+      btn.style.color = '#059669';
+      btn.disabled = true;
+    }
+
+    showToast(`+${socialXp} XP ajoutés ! Merci de nous suivre 🎉`);
+  } catch(e) {
+    console.error('Erreur réclamation XP social:', e);
+    alert('Erreur. Réessaie.');
+  }
+}
+
+// Au chargement du profil, griser les boutons déjà réclamés
+function updateSocialButtons() {
+  const claimed = JSON.parse(localStorage.getItem('ff_social_claimed') || '{}');
+  ['instagram', 'facebook'].forEach(platform => {
+    if (claimed[platform]) {
+      const btn = document.getElementById(`btn-claim-${platform}`);
+      if (btn) {
+        btn.textContent = '✅ Déjà réclamé';
+        btn.style.background = '#ECFDF5';
+        btn.style.borderColor = '#059669';
+        btn.style.color = '#059669';
+        btn.disabled = true;
+      }
+    }
+  });
+
+  // Avis Google déjà envoyé et en attente de validation
+  if (localStorage.getItem('ff_google_review_pending') === '1') {
+    const uploadSection = document.getElementById('google-review-upload-section');
+    const pendingSection = document.getElementById('google-review-pending');
+    if (uploadSection) uploadSection.style.display = 'none';
+    if (pendingSection) pendingSection.style.display = 'block';
+  }
+}
+
+// ── AVIS GOOGLE ──
+let googleReviewFile = null;
+
+function handleGoogleReviewUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo)'); return; }
+
+  googleReviewFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('google-review-preview').innerHTML = `
+      <img src="${e.target.result}" style="max-height:100px;border-radius:8px;"/>
+      <div style="font-size:12px;color:#059669;margin-top:6px;">✅ Image sélectionnée</div>`;
+    document.getElementById('btn-submit-google-review').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitGoogleReview() {
+  if (!googleReviewFile) { alert('Sélectionne une image d\'abord !'); return; }
+  if (!currentPlayer?.id || isGuest()) { alert('Connecte-toi pour envoyer ton avis.'); return; }
+
+  const btn = document.getElementById('btn-submit-google-review');
+  btn.textContent = '⏳ Envoi en cours...';
+  btn.disabled = true;
+
+  try {
+    // Uploader la capture dans Supabase Storage (même bucket que les images d'aventures)
+    const ext = googleReviewFile.name.split('.').pop() || 'jpg';
+    const filename = `google-reviews/${currentPlayer.id}-${Date.now()}.${ext}`;
+    const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + (localStorage.getItem('ff_access_token') || SUPA_KEY),
+        'Content-Type': googleReviewFile.type,
+        'x-upsert': 'true'
+      },
+      body: googleReviewFile
+    });
+    if (!uploadRes.ok) throw new Error('Erreur upload image');
+
+    const imageUrl = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+
+    // Enregistrer la demande de validation
+    await supaFetch('xp_validation_requests', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        player_id: currentPlayer.id,
+        type: 'google_review',
+        screenshot_url: imageUrl,
+        xp_reward: 150,
+        status: 'pending'
+      }
+    });
+
+    // Afficher l'état "en attente"
+    document.getElementById('google-review-upload-section').style.display = 'none';
+    document.getElementById('google-review-pending').style.display = 'block';
+
+    localStorage.setItem('ff_google_review_pending', '1');
+    showToast('Capture envoyée ! Validation sous 48h 🎉');
+
+  } catch(e) {
+    console.error('Erreur envoi avis Google:', e);
+    btn.textContent = '📤 Envoyer pour validation';
+    btn.disabled = false;
+    alert('Erreur envoi. Réessaie.');
+  }
+}
+
 function toggleEditProfile() {
   const viewMode = document.getElementById('profile-view-mode');
   const editMode = document.getElementById('profile-edit-mode');
@@ -3344,19 +3873,11 @@ function toggleEditProfile() {
   editMode.style.display = isEditing ? 'none'  : 'block';
   if (btn) btn.textContent = isEditing ? '✏️ Modifier' : '✕ Fermer';
 
-  // En quittant l'édition sans sauvegarder, on revient à la taille d'équipe enregistrée
-  if (isEditing) selectedTeamSize = currentPlayer?.team_size || 0;
-}
-
-function selectTeamSize(n) {
-  selectedTeamSize = n;
-  [1,2,3,4,5,6].forEach(i => {
-    const btn = document.getElementById('team-size-btn-' + i);
-    if (!btn) return;
-    btn.style.borderColor = i === n ? '#C4622D' : '#D4C5A9';
-    btn.style.background  = i === n ? '#FFF7F4' : 'white';
-    btn.style.color       = i === n ? '#C4622D' : '#6B7280';
-  });
+  // On vient d'ouvrir le mode édition : (re)initialiser l'éditeur d'équipage depuis les données enregistrées
+  if (!isEditing) {
+    const crew = currentPlayer?.crew || [];
+    initCrewEditor(typeof crew === 'string' ? JSON.parse(crew) : crew);
+  }
 }
 
 function updateBioCharCount() {
@@ -3371,7 +3892,7 @@ async function saveProfileEdits() {
   const pseudo   = document.getElementById('edit-pseudo')?.value?.trim();
   const teamName = document.getElementById('edit-team-name')?.value?.trim();
   const bio      = document.getElementById('edit-bio')?.value?.trim()?.substring(0, 150);
-  const teamSize = selectedTeamSize || null;
+  const crew     = collectCrew();
 
   if (!pseudo) { alert('Le pseudo est obligatoire'); return; }
 
@@ -3393,8 +3914,8 @@ async function saveProfileEdits() {
       body: {
         pseudo,
         team_name: teamName || null,
-        team_size: teamSize,
-        bio: bio || null
+        bio: bio || null,
+        crew: crew.length > 0 ? crew : null
       }
     });
 
@@ -3580,7 +4101,7 @@ async function loadRanking(tab = 'general') {
         weekPlayers = (rows || []).map(p => ({ ...p, total_xp: p.weekly_xp }));
       } catch {
         // Fallback : classement général si la fonction n'existe pas encore
-        weekPlayers = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc&limit=50');
+        weekPlayers = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp,team_name&order=total_xp.desc&limit=50');
       }
       const ranked = weekPlayers.map((p, i) => ({
         ...p,
@@ -3632,7 +4153,7 @@ async function renderRankingRows(userId) {
 
   try {
     // Fetch tous les joueurs triés par XP
-    let query = 'players?select=id,pseudo,avatar_emoji,total_xp&order=total_xp.desc';
+    let query = 'players?select=id,pseudo,avatar_emoji,total_xp,team_name&order=total_xp.desc';
     if (rankingSearchQuery.trim()) {
       query += `&pseudo=ilike.*${encodeURIComponent(rankingSearchQuery.trim())}*`;
     }
@@ -3782,9 +4303,9 @@ function renderRankRow(player, isMe) {
       </div>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">
-          ${player.pseudo || 'Aventurier'}${isMe ? ' <span style="color:var(--terra);font-size:11px;">← Toi</span>' : ''}
+          ${player.team_name ? `🏴‍☠️ ${player.team_name}` : (player.pseudo || 'Aventurier')}${isMe ? ' <span style="color:var(--terra);font-size:11px;">← Toi</span>' : ''}
         </div>
-        <div style="font-size:11px;color:#9CA3AF;">${player.subvalue || ''}</div>
+        <div style="font-size:11px;color:#9CA3AF;">${player.team_name ? `${player.pseudo || 'Aventurier'} · ${player.subvalue || ''}` : (player.subvalue || '')}</div>
       </div>
       <div style="font-size:14px;font-weight:800;color:var(--amber);white-space:nowrap;">${player.value}</div>
     </div>`;
@@ -4404,6 +4925,82 @@ function soundError() {
 function soundArrival() {
   playTone(880, 0.10);
   setTimeout(() => playTone(1047, 0.18), 110);
+}
+
+// ══════════════════════════════════════════
+// PWA — INSTALLATION
+// ══════════════════════════════════════════
+// Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW enregistré:', reg.scope))
+      .catch(err => console.log('SW erreur:', err));
+  });
+}
+
+// Bouton d'installation personnalisé
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallButton();
+});
+
+function showInstallButton() {
+  // Ne montrer que si pas déjà installé
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (document.getElementById('install-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:80px;left:16px;right:16px;
+    background:#2D4A2D;color:white;
+    border-radius:14px;padding:14px 16px;
+    display:flex;align-items:center;gap:12px;
+    z-index:8888;
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    animation:slideUp 0.3s ease;
+  `;
+  banner.innerHTML = `
+    <div style="font-size:32px;">🧭</div>
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:700;">Installer l'app !</div>
+      <div style="font-size:12px;opacity:0.8;">Accède à Flavia Flint depuis ton écran d'accueil</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button onclick="installApp()" style="
+        background:#C4622D;color:white;border:none;
+        border-radius:8px;padding:8px 14px;
+        font-size:13px;font-weight:700;cursor:pointer;
+        white-space:nowrap;">
+        Installer
+      </button>
+      <button onclick="dismissInstall()" style="
+        background:none;color:rgba(255,255,255,0.6);
+        border:none;font-size:12px;cursor:pointer;">
+        Plus tard
+      </button>
+    </div>`;
+  document.body.appendChild(banner);
+}
+
+async function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    showToast('🎉 App installée ! Retrouve-la sur ton écran d\'accueil');
+  }
+  deferredPrompt = null;
+  dismissInstall();
+}
+
+function dismissInstall() {
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.remove();
+  localStorage.setItem('ff_install_dismissed', Date.now());
 }
 </script>
 </body>

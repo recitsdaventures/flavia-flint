@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fond vert foncé -->
+  <rect width="512" height="512" rx="114" fill="#2D4A2D"/>
+
+  <!-- Cercle boussole -->
+  <circle cx="256" cy="256" r="180" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="8"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#8B6010" stroke-width="3"/>
+
+  <!-- Graduations -->
+  <line x1="256" y1="96" x2="256" y2="120" stroke="#8B6010" stroke-width="6"/>
+  <line x1="256" y1="416" x2="256" y2="392" stroke="#8B6010" stroke-width="6"/>
+  <line x1="96" y1="256" x2="120" y2="256" stroke="#8B6010" stroke-width="6"/>
+  <line x1="416" y1="256" x2="392" y2="256" stroke="#8B6010" stroke-width="6"/>
+
+  <!-- Lettres -->
+  <text x="256" y="148" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="bold" fill="#2D4A2D">N</text>
+  <text x="256" y="390" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="40" fill="#8B6010">S</text>
+  <text x="390" y="268" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="40" fill="#8B6010">E</text>
+  <text x="122" y="268" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="40" fill="#8B6010">O</text>
+
+  <!-- Aiguille Nord terracotta -->
+  <polygon points="256,110 236,256 256,236 276,256" fill="#C4622D"/>
+  <!-- Aiguille Sud grise -->
+  <polygon points="256,402 240,256 256,276 272,256" fill="#8B6010" opacity="0.5"/>
+
+  <!-- Centre -->
+  <circle cx="256" cy="256" r="20" fill="#2D4A2D"/>
+  <circle cx="256" cy="256" r="10" fill="#E8A020"/>
+</svg>
