@@ -1535,6 +1535,84 @@
   </div>
 
   <!-- ═══════════════════════════════════
+       ÉCRAN QUESTIONNAIRE SATISFACTION
+  ═══════════════════════════════════ -->
+  <div id="screen-satisfaction" class="screen">
+    <div style="background:var(--green-dark);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <span style="color:white;font-weight:700;flex:1;">📝 Ton avis compte !</span>
+      <button onclick="skipSatisfaction()" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:rgba(255,255,255,0.7);padding:6px 12px;cursor:pointer;font-size:13px;">Passer</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
+
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:40px;margin-bottom:8px;">🧭</div>
+        <div style="font-size:16px;font-weight:700;color:#1A2A1A;">Comment s'est passée l'aventure ?</div>
+        <div style="font-size:13px;color:#9CA3AF;margin-top:4px;">Prend 30 secondes pour nous dire !</div>
+      </div>
+
+      <!-- Question 1 : Note étoiles -->
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #E5D9C0;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">
+          Tu as aimé cette aventure ? ⭐
+        </div>
+        <div style="display:flex;justify-content:center;gap:8px;" id="star-rating">
+          <button onclick="setStarRating(1)" id="star-1" style="font-size:36px;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;transform:scale(1);">⭐</button>
+          <button onclick="setStarRating(2)" id="star-2" style="font-size:36px;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;transform:scale(1);">⭐</button>
+          <button onclick="setStarRating(3)" id="star-3" style="font-size:36px;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;transform:scale(1);">⭐</button>
+          <button onclick="setStarRating(4)" id="star-4" style="font-size:36px;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;transform:scale(1);">⭐</button>
+          <button onclick="setStarRating(5)" id="star-5" style="font-size:36px;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.15s;transform:scale(1);">⭐</button>
+        </div>
+        <div style="text-align:center;font-size:13px;color:#9CA3AF;margin-top:8px;" id="star-label">Appuie sur une étoile</div>
+      </div>
+
+      <!-- Question 2 : Tampons -->
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #E5D9C0;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:4px;">
+          🔖 Combien de tampons as-tu récupérés ?
+        </div>
+        <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px;">Dans la boîte de fin d'aventure</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
+          <button onclick="adjustStamps(-1)" style="
+            width:40px;height:40px;border-radius:50%;
+            background:#F5EDD8;border:1.5px solid #D4C5A9;
+            font-size:20px;cursor:pointer;font-weight:700;">−</button>
+          <div style="text-align:center;">
+            <div style="font-size:36px;font-weight:800;color:#2D4A2D;" id="stamps-count">0</div>
+            <div style="font-size:12px;color:#9CA3AF;">tampon(s)</div>
+          </div>
+          <button onclick="adjustStamps(1)" style="
+            width:40px;height:40px;border-radius:50%;
+            background:#2D4A2D;border:none;
+            font-size:20px;cursor:pointer;color:white;font-weight:700;">+</button>
+        </div>
+      </div>
+
+      <!-- Question 3 : Commentaire libre -->
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid #E5D9C0;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">
+          💬 Un commentaire ? (optionnel)
+        </div>
+        <textarea id="satisfaction-comment" placeholder="Ce que tu as aimé, ce qu'on pourrait améliorer..." style="
+          width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;
+          border-radius:10px;font-size:13px;resize:none;height:80px;
+          box-sizing:border-box;font-family:inherit;background:#F9F7F4;"></textarea>
+      </div>
+
+      <button onclick="submitSatisfaction()" style="
+        width:100%;padding:14px;background:#C4622D;color:white;
+        border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+        Envoyer mon avis →
+      </button>
+
+      <button onclick="skipSatisfaction()" style="
+        width:100%;padding:12px;background:none;border:none;
+        font-size:13px;color:#9CA3AF;cursor:pointer;margin-top:8px;">
+        Passer cette étape
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
        BOTTOM NAV
   ═══════════════════════════════════ -->
   <div class="bottom-nav">
@@ -4577,6 +4655,7 @@ async function scanQRFrame() {
       vibrateFeedback([200, 100, 200]);
       setTimeout(() => {
         window.open(targetUrl, '_blank');
+        window._qrValidated = true;
         closeQRScanner();
       }, 2000);
     }
@@ -4596,6 +4675,11 @@ function closeQRScanner() {
     qrScannerBookId = null;
     if (bookId) showBookDetail(bookId);
     else goToScreen('home', document.getElementById('nav-home'));
+    return;
+  }
+  if (window._qrValidated) {
+    window._qrValidated = false;
+    openSatisfactionScreen();
     return;
   }
   goToScreen('adventure', null);
@@ -4626,6 +4710,67 @@ async function handleBookQR(data) {
   qrScannerContext = 'adventure';
   qrScannerBookId = null;
   return true;
+}
+
+// ── QUESTIONNAIRE SATISFACTION (post-scan QR fin d'aventure) ──
+let currentStarRating = 0;
+let currentStampsCount = 0;
+
+function openSatisfactionScreen() {
+  currentStarRating = 0;
+  currentStampsCount = 0;
+  document.getElementById('satisfaction-comment').value = '';
+  document.getElementById('stamps-count').textContent = '0';
+  document.querySelectorAll('#star-rating button').forEach(b => {
+    b.style.opacity = '0.3';
+    b.style.transform = 'scale(1)';
+  });
+  document.getElementById('star-label').textContent = 'Appuie sur une étoile';
+  goToScreen('satisfaction', null);
+}
+
+function setStarRating(n) {
+  currentStarRating = n;
+  document.querySelectorAll('#star-rating button').forEach((b, i) => {
+    const active = i < n;
+    b.style.opacity = active ? '1' : '0.3';
+    b.style.transform = active ? 'scale(1.15)' : 'scale(1)';
+  });
+  const labels = ['', 'Dommage… 😕', 'Peut mieux faire', 'Sympa !', 'Très bien ! 😃', 'Génial ! 🤩'];
+  document.getElementById('star-label').textContent = labels[n] || '';
+}
+
+function adjustStamps(delta) {
+  currentStampsCount = Math.max(0, currentStampsCount + delta);
+  document.getElementById('stamps-count').textContent = currentStampsCount;
+}
+
+async function submitSatisfaction() {
+  const comment = document.getElementById('satisfaction-comment').value.trim();
+  try {
+    await supaFetch('satisfaction_responses', {
+      method: 'POST',
+      body: {
+        player_id: isGuest() ? null : currentPlayer?.id,
+        adventure_id: currentAdv?.id || null,
+        rating: currentStarRating || null,
+        stamps_count: currentStampsCount,
+        comment: comment || null
+      },
+      prefer: 'return=minimal'
+    });
+  } catch (e) {
+    console.error('Erreur envoi questionnaire satisfaction:', e);
+  }
+  goToScreen('adventure', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  showMode('reward');
+}
+
+function skipSatisfaction() {
+  goToScreen('adventure', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  showMode('reward');
 }
 
 function showBookStartForm(book) {

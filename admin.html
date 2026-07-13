@@ -160,6 +160,26 @@ tr:hover td { background: #FAFBFA; }
 .diff-medium { background: #FEF3C7; color: #92400E; }
 .diff-hard { background: #FEE2E2; color: #991B1B; }
 
+.b2b-tab {
+  padding:10px 20px;border:none;background:none;
+  font-size:14px;font-weight:600;color:#6B7280;
+  cursor:pointer;border-bottom:3px solid transparent;
+  margin-bottom:-2px;transition:all 0.15s;
+}
+.b2b-tab.active { color:var(--green-dark);border-bottom-color:var(--green-dark); }
+.b2b-tab:hover { color:var(--green-dark); }
+
+.status-badge {
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;
+}
+.status-prospect { background:#EFF6FF;color:#1D4ED8; }
+.status-actif { background:#ECFDF5;color:#065F46; }
+.status-inactif { background:#F3F4F6;color:#6B7280; }
+.status-en_cours { background:#FFFBEB;color:#92400E; }
+.status-solde { background:#ECFDF5;color:#065F46; }
+.status-en_retard { background:#FEF2F2;color:#991B1B; }
+
 .actions-cell { display: flex; gap: 6px; }
 
 /* ── MODAL ── */
@@ -473,6 +493,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('settings', this)">
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
+      <button class="nav-item" onclick="showPage('clients', this)">
+        <span class="nav-icon">👥</span> Fichier Clients
+      </button>
+      <button class="nav-item" onclick="showPage('b2b', this)">
+        <span class="nav-icon">🤝</span> B2B Partenaires
+      </button>
     </nav>
     <div class="sidebar-footer">
       <a href="index.html" target="_blank" style="text-decoration:none; display:block; margin-bottom:8px;">
@@ -533,6 +559,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <div class="stat-card"><div class="label">QR codes scannés</div><div class="value" id="kpi-qr">…</div><div class="sub">Validations terrain</div></div>
         <div class="stat-card"><div class="label">XP total distribué</div><div class="value" id="kpi-xp">…</div><div class="sub">Points gagnés</div></div>
         <div class="stat-card"><div class="label">Boîtes signalées</div><div class="value" id="kpi-reports">…</div><div class="sub" id="kpi-reports-sub"></div></div>
+        <div class="stat-card"><div class="label">Note moyenne</div><div class="value" id="kpi-rating">…</div><div class="sub">Sur 5 étoiles</div></div>
+        <div class="stat-card"><div class="label">Tampons moyens</div><div class="value" id="kpi-stamps">…</div><div class="sub">Par boîte</div></div>
       </div>
 
       <!-- Graphique croissance joueurs -->
@@ -697,6 +725,64 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <label>Codes valides <span class="label-hint">(séparés par des virgules)</span></label>
           <input type="text" id="setting-share-codes" placeholder="EXPLORATEUR2026, RECITS2026, FLAVIAVIP"/>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE : FICHIER CLIENTS ═══ -->
+    <div id="page-clients" class="page">
+      <div class="section-header">
+        <div class="section-title" id="clients-count">Fichier Clients</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="clients-search" placeholder="🔍 Rechercher..."
+            oninput="searchClients(this.value)"
+            style="padding:8px 12px;border:1px solid var(--gray-brd);border-radius:var(--r-sm);font-size:14px;width:200px;"/>
+          <button class="btn btn-secondary btn-sm" onclick="exportClientsCSV()">📥 Exporter CSV</button>
+          <button class="btn btn-primary" onclick="openClientModal()">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="clients-stats"></div>
+
+      <!-- Tableau -->
+      <div class="table-wrap" id="clients-table"></div>
+    </div>
+
+    <!-- ═══ PAGE : B2B PARTENAIRES ═══ -->
+    <div id="page-b2b" class="page">
+      <!-- Tabs internes -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--gray-brd);padding-bottom:0;">
+        <button class="b2b-tab active" onclick="setB2BTab('partners',this)">🤝 Partenaires</button>
+        <button class="b2b-tab" onclick="setB2BTab('depot',this)">📦 Dépôt Vente</button>
+        <button class="b2b-tab" onclick="setB2BTab('pipeline',this)">📊 Pipeline</button>
+      </div>
+
+      <!-- Sous-page partenaires -->
+      <div id="b2b-partners-section">
+        <div class="section-header">
+          <div class="section-title" id="partners-count">Partenaires</div>
+          <button class="btn btn-primary" onclick="openPartnerModal()">+ Nouveau partenaire</button>
+        </div>
+        <div class="table-wrap" id="partners-table"></div>
+      </div>
+
+      <!-- Sous-page dépôt vente -->
+      <div id="b2b-depot-section" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">Dépôts Vente</div>
+          <button class="btn btn-primary" onclick="openDepotModal()">+ Nouveau dépôt</button>
+        </div>
+        <!-- KPI dépôt vente -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="depot-stats"></div>
+        <div class="table-wrap" id="depot-table"></div>
+      </div>
+
+      <!-- Sous-page pipeline -->
+      <div id="b2b-pipeline-section" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">Pipeline Commercial</div>
+        </div>
+        <div id="pipeline-content"></div>
       </div>
     </div>
 
@@ -1022,7 +1108,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'xp-validations':'Validations XP', settings:'Paramètres' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
@@ -1030,6 +1116,8 @@ function showPage(name, btn) {
   if (name === 'professor') loadBooksPage();
   if (name === 'xp-validations') loadXpValidations();
   if (name === 'settings') loadAppSettings();
+  if (name === 'clients') loadClientsPage();
+  if (name === 'b2b') loadB2BPage();
 }
 
 // ══════════════════════════════════════════
@@ -1060,6 +1148,7 @@ async function loadDashboard() {
     const launchesSince   = since ? `&launched_at=gte.${since}`  : '';
     const completionsSince = since ? `&completed_at=gte.${since}` : '';
     const reportsSince    = since ? `&reported_at=gte.${since}`  : '';
+    const responsesSince  = since ? `&responded_at=gte.${since}` : '';
 
     // Charger toutes les données en parallèle
     const [
@@ -1069,7 +1158,8 @@ async function loadDashboard() {
       completions,
       reports,
       recentPlayers,
-      cities
+      cities,
+      responses
     ] = await Promise.all([
       supa('GET', 'players', null, '?select=id,created_at,total_xp,city'),
       supa('GET', 'players', null, `?select=id,created_at${playersSince}`),
@@ -1077,7 +1167,8 @@ async function loadDashboard() {
       supa('GET', 'adventure_completions', null, `?select=adventure_id,total_xp_earned,adventures(title,emoji)${completionsSince}`),
       supa('GET', 'box_reports', null, `?select=*,adventures(title)${reportsSince}&order=reported_at.desc&limit=5`),
       supa('GET', 'players', null, '?select=pseudo,avatar_emoji,city,total_xp,created_at&order=created_at.desc&limit=10'),
-      supa('GET', 'players', null, '?select=city&city=not.is.null')
+      supa('GET', 'players', null, '?select=city&city=not.is.null'),
+      supa('GET', 'satisfaction_responses', null, `?select=rating,stamps_count${responsesSince}`)
     ]);
 
     // KPI simples
@@ -1094,11 +1185,21 @@ async function loadDashboard() {
     const totalXp = completions.reduce((sum, c) => sum + (c.total_xp_earned || 0), 0);
     document.getElementById('kpi-xp').textContent = totalXp.toLocaleString();
 
-    // Pas de table de tracking des scans QR pour l'instant — affiché en attente
-    document.getElementById('kpi-qr').textContent = '—';
+    document.getElementById('kpi-qr').textContent = responses.length;
 
     document.getElementById('kpi-reports').textContent = reports.length;
     document.getElementById('kpi-reports-sub').textContent = reports.length > 0 ? 'À vérifier !' : 'Aucun signalement';
+
+    // Satisfaction : note moyenne et tampons moyens
+    const ratedResponses = responses.filter(r => r.rating != null);
+    const avgRating = ratedResponses.length > 0
+      ? (ratedResponses.reduce((sum, r) => sum + r.rating, 0) / ratedResponses.length).toFixed(1)
+      : '—';
+    const avgStamps = responses.length > 0
+      ? (responses.reduce((sum, r) => sum + (r.stamps_count || 0), 0) / responses.length).toFixed(1)
+      : '—';
+    document.getElementById('kpi-rating').textContent = avgRating !== '—' ? `${avgRating} ⭐` : '—';
+    document.getElementById('kpi-stamps').textContent = avgStamps;
 
     // Joueurs actifs ce mois
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
@@ -1718,6 +1819,732 @@ async function saveAppSettings() {
   } catch(e) {
     showToast('Erreur sauvegarde : ' + e.message, true);
   }
+}
+
+// ══════════════════════════════════════════
+// FICHIER CLIENTS
+// ══════════════════════════════════════════
+let allClients = [];
+
+async function loadClientsPage() {
+  setLoading(true);
+  try {
+    // Charger joueurs depuis players + clients manuels
+    const [players, manualClients] = await Promise.all([
+      supa('GET', 'players', null, '?select=id,pseudo,email,city,total_xp,created_at&order=created_at.desc'),
+      supa('GET', 'clients', null, '?order=created_at.desc')
+    ]);
+
+    // Compter aventures par joueur
+    const completions = await supa('GET', 'adventure_completions', null, '?select=player_id');
+    const countMap = {};
+    (completions || []).forEach(c => { countMap[c.player_id] = (countMap[c.player_id] || 0) + 1; });
+
+    // Fusionner
+    const appClients = (players || []).map(p => ({
+      id: p.id, name: p.pseudo, email: p.email,
+      city: p.city, xp: p.total_xp,
+      adventures: countMap[p.id] || 0,
+      source: 'App', created_at: p.created_at, type: 'player'
+    }));
+    const manual = (manualClients || []).map(c => ({
+      id: c.id, name: `${c.first_name||''} ${c.last_name||''}`.trim(),
+      email: c.email, phone: c.phone, city: c.city,
+      source: c.source, created_at: c.created_at, type: 'manual', notes: c.notes
+    }));
+
+    allClients = [...appClients, ...manual].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Stats
+    document.getElementById('clients-stats').innerHTML = `
+      <div class="stat-card"><div class="label">Total clients</div><div class="value">${allClients.length}</div></div>
+      <div class="stat-card"><div class="label">Via l'app</div><div class="value">${appClients.length}</div></div>
+      <div class="stat-card"><div class="label">Manuels</div><div class="value">${manual.length}</div></div>
+      <div class="stat-card"><div class="label">Avec email</div><div class="value">${allClients.filter(c=>c.email).length}</div></div>`;
+
+    document.getElementById('clients-count').textContent = `${allClients.length} clients`;
+    renderClientsTable(allClients);
+  } catch(e) {
+    showToast('Erreur chargement clients : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderClientsTable(clients) {
+  const el = document.getElementById('clients-table');
+  if (!clients.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Aucun client</div></div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>Nom / Pseudo</th><th>Email</th><th>Téléphone</th><th>Ville</th>
+      <th>Source</th><th>Aventures</th><th>XP</th><th>Date</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${clients.map(c => `
+      <tr>
+        <td><strong>${c.name || '—'}</strong></td>
+        <td>${c.email ? `<a href="mailto:${c.email}" style="color:var(--green-dark);">${c.email}</a>` : '—'}</td>
+        <td>${c.phone || '—'}</td>
+        <td>${c.city || '—'}</td>
+        <td><span class="status-badge status-actif">${c.source}</span></td>
+        <td><strong>${c.adventures || 0}</strong></td>
+        <td>${c.xp || 0}</td>
+        <td style="font-size:12px;color:#9CA3AF;">${new Date(c.created_at).toLocaleDateString('fr-FR')}</td>
+        <td><div class="actions-cell">
+          ${c.type === 'manual' ? `<button onclick="editClient('${c.id}')" class="btn btn-secondary btn-sm">✏️</button>
+          <button onclick="deleteClient('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>` : ''}
+          ${c.email ? `<a href="mailto:${c.email}" class="btn btn-secondary btn-sm">✉️</a>` : ''}
+        </div></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function searchClients(query) {
+  const q = query.toLowerCase();
+  const filtered = allClients.filter(c =>
+    (c.name||'').toLowerCase().includes(q) ||
+    (c.email||'').toLowerCase().includes(q) ||
+    (c.city||'').toLowerCase().includes(q)
+  );
+  renderClientsTable(filtered);
+}
+
+function exportClientsCSV() {
+  const headers = ['Nom', 'Email', 'Téléphone', 'Ville', 'Source', 'Aventures', 'XP', 'Date'];
+  const rows = allClients.map(c => [
+    c.name||'', c.email||'', c.phone||'', c.city||'',
+    c.source||'', c.adventures||0, c.xp||0,
+    new Date(c.created_at).toLocaleDateString('fr-FR')
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
+  const blob = new Blob(['﻿'+csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `clients-flavia-flint-${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.csv`;
+  a.click();
+  showToast('Export CSV téléchargé ✓');
+}
+
+function openClientModal(clientData) {
+  const c = clientData || {};
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'client-modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-header">
+        <h2>${c.id ? 'Modifier le client' : 'Nouveau client'}</h2>
+        <button class="modal-close" onclick="document.getElementById('client-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Prénom</label><input type="text" id="c-firstname" value="${c.first_name||''}"/></div>
+          <div class="form-group"><label>Nom</label><input type="text" id="c-lastname" value="${c.last_name||''}"/></div>
+          <div class="form-group full"><label>Email</label><input type="email" id="c-email" value="${c.email||''}"/></div>
+          <div class="form-group"><label>Téléphone</label><input type="text" id="c-phone" value="${c.phone||''}"/></div>
+          <div class="form-group"><label>Ville</label><input type="text" id="c-city" value="${c.city||''}"/></div>
+          <div class="form-group"><label>Source</label>
+            <select id="c-source">
+              <option value="manual" ${c.source==='manual'?'selected':''}>Manuel</option>
+              <option value="camping" ${c.source==='camping'?'selected':''}>Camping</option>
+              <option value="mairie" ${c.source==='mairie'?'selected':''}>Mairie</option>
+              <option value="reseau" ${c.source==='reseau'?'selected':''}>Réseau</option>
+            </select>
+          </div>
+          <div class="form-group full"><label>Notes</label><textarea id="c-notes" rows="3">${c.notes||''}</textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('client-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveClient('${c.id||''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveClient(clientId) {
+  const data = {
+    first_name: document.getElementById('c-firstname').value,
+    last_name: document.getElementById('c-lastname').value,
+    email: document.getElementById('c-email').value,
+    phone: document.getElementById('c-phone').value,
+    city: document.getElementById('c-city').value,
+    source: document.getElementById('c-source').value,
+    notes: document.getElementById('c-notes').value
+  };
+  try {
+    if (clientId) {
+      await supa('PATCH', 'clients', data, `?id=eq.${clientId}`);
+    } else {
+      await supa('POST', 'clients', data);
+    }
+    document.getElementById('client-modal').remove();
+    showToast('Client sauvegardé ✓');
+    loadClientsPage();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function deleteClient(id) {
+  if (!confirm('Supprimer ce client ?')) return;
+  try {
+    await supa('DELETE', 'clients', null, `?id=eq.${id}`);
+    showToast('Client supprimé');
+    loadClientsPage();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function editClient(id) {
+  try {
+    const clients = await supa('GET', 'clients', null, `?id=eq.${id}`);
+    if (clients[0]) openClientModal(clients[0]);
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// B2B PARTENAIRES
+// ══════════════════════════════════════════
+function setB2BTab(tab, btn) {
+  document.querySelectorAll('.b2b-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('b2b-partners-section').style.display = tab === 'partners' ? 'block' : 'none';
+  document.getElementById('b2b-depot-section').style.display = tab === 'depot' ? 'block' : 'none';
+  document.getElementById('b2b-pipeline-section').style.display = tab === 'pipeline' ? 'block' : 'none';
+  if (tab === 'partners') loadPartnersTable();
+  if (tab === 'depot') loadDepotTable();
+  if (tab === 'pipeline') loadPipeline();
+}
+
+async function loadB2BPage() {
+  await loadPartnersTable();
+}
+
+async function loadPartnersTable() {
+  try {
+    const partners = await supa('GET', 'partners', null, '?order=created_at.desc');
+    document.getElementById('partners-count').textContent = `${partners.length} partenaires`;
+    const el = document.getElementById('partners-table');
+    el.innerHTML = partners.length ? `
+      <table>
+        <thead><tr>
+          <th>Nom</th><th>Type</th><th>Contact</th><th>Ville</th>
+          <th>Statut</th><th>Dernier contact</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${partners.map(p => `
+          <tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.type}</td>
+            <td>
+              <div>${p.contact_name||'—'}</div>
+              ${p.contact_email ? `<div><a href="mailto:${p.contact_email}" style="color:var(--green-dark);font-size:12px;">${p.contact_email}</a></div>` : ''}
+              ${p.contact_phone ? `<div style="font-size:12px;color:#9CA3AF;">${p.contact_phone}</div>` : ''}
+            </td>
+            <td>${p.city||'—'}</td>
+            <td><span class="status-badge status-${p.status}">${p.status}</span></td>
+            <td style="font-size:12px;color:#9CA3AF;">${p.last_contact_at ? new Date(p.last_contact_at).toLocaleDateString('fr-FR') : '—'}</td>
+            <td><div class="actions-cell">
+              <button onclick="openPartnerDetail('${p.id}')" class="btn btn-secondary btn-sm">📋 Détail</button>
+              <button onclick="editPartner('${p.id}')" class="btn btn-secondary btn-sm">✏️</button>
+              <button onclick="deletePartner('${p.id}')" class="btn btn-danger btn-sm">🗑️</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody></table>`
+      : '<div class="empty-state"><div class="empty-icon">🤝</div><div class="empty-title">Aucun partenaire</div><div class="empty-sub">Ajoute ton premier partenaire B2B !</div></div>';
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+function openPartnerModal(partnerData) {
+  const p = partnerData || {};
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'partner-modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h2>${p.id ? 'Modifier le partenaire' : 'Nouveau partenaire'}</h2>
+        <button class="modal-close" onclick="document.getElementById('partner-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Nom du partenaire *</label><input type="text" id="p-name" value="${p.name||''}" placeholder="Ex : Camping Les Palmiers"/></div>
+          <div class="form-group"><label>Type</label>
+            <select id="p-type">
+              <option value="camping" ${p.type==='camping'?'selected':''}>🏕️ Camping</option>
+              <option value="mairie" ${p.type==='mairie'?'selected':''}>🏛️ Mairie</option>
+              <option value="office_tourisme" ${p.type==='office_tourisme'?'selected':''}>🗺️ Office Tourisme</option>
+              <option value="ecole" ${p.type==='ecole'?'selected':''}>🏫 École</option>
+              <option value="autre" ${p.type==='autre'?'selected':''}>📁 Autre</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Statut</label>
+            <select id="p-status">
+              <option value="prospect" ${p.status==='prospect'?'selected':''}>Prospect</option>
+              <option value="actif" ${p.status==='actif'?'selected':''}>Actif</option>
+              <option value="inactif" ${p.status==='inactif'?'selected':''}>Inactif</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Nom du contact</label><input type="text" id="p-contact-name" value="${p.contact_name||''}"/></div>
+          <div class="form-group"><label>Email contact</label><input type="email" id="p-contact-email" value="${p.contact_email||''}"/></div>
+          <div class="form-group"><label>Téléphone contact</label><input type="text" id="p-contact-phone" value="${p.contact_phone||''}"/></div>
+          <div class="form-group"><label>Ville</label><input type="text" id="p-city" value="${p.city||''}"/></div>
+          <div class="form-group full"><label>Adresse</label><input type="text" id="p-address" value="${p.address||''}"/></div>
+          <div class="form-group full"><label>Notes</label><textarea id="p-notes" rows="3">${p.notes||''}</textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('partner-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="savePartner('${p.id||''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function savePartner(partnerId) {
+  const data = {
+    name: document.getElementById('p-name').value,
+    type: document.getElementById('p-type').value,
+    status: document.getElementById('p-status').value,
+    contact_name: document.getElementById('p-contact-name').value,
+    contact_email: document.getElementById('p-contact-email').value,
+    contact_phone: document.getElementById('p-contact-phone').value,
+    city: document.getElementById('p-city').value,
+    address: document.getElementById('p-address').value,
+    notes: document.getElementById('p-notes').value
+  };
+  if (!data.name) { alert('Le nom est obligatoire'); return; }
+  try {
+    if (partnerId) {
+      await supa('PATCH', 'partners', data, `?id=eq.${partnerId}`);
+    } else {
+      await supa('POST', 'partners', data);
+    }
+    document.getElementById('partner-modal').remove();
+    showToast('Partenaire sauvegardé ✓');
+    loadPartnersTable();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function deletePartner(id) {
+  if (!confirm('Supprimer ce partenaire ?')) return;
+  try {
+    await supa('DELETE', 'partners', null, `?id=eq.${id}`);
+    showToast('Partenaire supprimé');
+    loadPartnersTable();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function editPartner(id) {
+  try {
+    const partners = await supa('GET', 'partners', null, `?id=eq.${id}`);
+    if (partners[0]) openPartnerModal(partners[0]);
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function openPartnerDetail(partnerId) {
+  let partner, depots, interactions;
+  try {
+    [partner, depots, interactions] = await Promise.all([
+      supa('GET', 'partners', null, `?id=eq.${partnerId}`),
+      supa('GET', 'depot_vente', null, `?partner_id=eq.${partnerId}&order=delivery_date.desc`),
+      supa('GET', 'partner_interactions', null, `?partner_id=eq.${partnerId}&order=date.desc&limit=10`)
+    ]);
+  } catch(e) { showToast('Erreur : ' + e.message, true); return; }
+
+  const p = partner[0];
+  if (!p) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'partner-detail-modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>📋 ${p.name}</h2>
+        <button class="modal-close" onclick="document.getElementById('partner-detail-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+
+        <!-- Infos partenaire -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div style="background:var(--gray-bg);border-radius:var(--r-md);padding:14px;">
+            <div style="font-size:12px;color:#6B7280;margin-bottom:8px;font-weight:600;text-transform:uppercase;">Contact</div>
+            <div style="font-size:14px;font-weight:600;">${p.contact_name||'—'}</div>
+            ${p.contact_email ? `<div><a href="mailto:${p.contact_email}" style="color:var(--green-dark);font-size:13px;">${p.contact_email}</a></div>` : ''}
+            ${p.contact_phone ? `<div style="font-size:13px;color:#6B7280;">${p.contact_phone}</div>` : ''}
+          </div>
+          <div style="background:var(--gray-bg);border-radius:var(--r-md);padding:14px;">
+            <div style="font-size:12px;color:#6B7280;margin-bottom:8px;font-weight:600;text-transform:uppercase;">Dépôts vente</div>
+            <div style="font-size:22px;font-weight:800;">${depots.length}</div>
+            <div style="font-size:13px;color:#6B7280;">
+              ${depots.reduce((s,d)=>s+d.scenarios_sold,0)} scénarios vendus
+            </div>
+          </div>
+        </div>
+
+        <!-- Dépôts vente -->
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:700;">📦 Dépôts Vente</div>
+            <button onclick="openDepotModal('${partnerId}')" class="btn btn-secondary btn-sm">+ Nouveau dépôt</button>
+          </div>
+          ${depots.length ? `
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead style="background:var(--gray-bg);">
+                <tr>
+                  <th style="padding:8px;text-align:left;">Date</th>
+                  <th style="padding:8px;text-align:center;">Livrés</th>
+                  <th style="padding:8px;text-align:center;">Vendus</th>
+                  <th style="padding:8px;text-align:center;">En cours</th>
+                  <th style="padding:8px;text-align:right;">Montant dû</th>
+                  <th style="padding:8px;text-align:center;">Statut</th>
+                  <th style="padding:8px;text-align:center;">Contrat</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${depots.map(d => `
+                  <tr style="border-bottom:1px solid var(--gray-brd);">
+                    <td style="padding:8px;">${d.delivery_date ? new Date(d.delivery_date).toLocaleDateString('fr-FR') : '—'}</td>
+                    <td style="padding:8px;text-align:center;">${d.scenarios_delivered}</td>
+                    <td style="padding:8px;text-align:center;color:var(--success);font-weight:700;">${d.scenarios_sold}</td>
+                    <td style="padding:8px;text-align:center;">${d.scenarios_delivered - d.scenarios_sold - (d.scenarios_returned||0)}</td>
+                    <td style="padding:8px;text-align:right;font-weight:700;color:var(--green-dark);">${d.amount_due}€</td>
+                    <td style="padding:8px;text-align:center;"><span class="status-badge status-${d.status}">${d.status}</span></td>
+                    <td style="padding:8px;text-align:center;">
+                      ${d.contract_url
+                        ? `<a href="${d.contract_url}" target="_blank" class="btn btn-secondary btn-sm">📄 Voir</a>`
+                        : `<button onclick="uploadContract('${d.id}')" class="btn btn-secondary btn-sm">📸 Upload</button>`}
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>` : '<div style="color:#9CA3AF;font-size:13px;padding:10px 0;">Aucun dépôt vente</div>'}
+        </div>
+
+        <!-- Interactions -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:700;">💬 Historique des échanges</div>
+            <button onclick="openInteractionModal('${partnerId}')" class="btn btn-secondary btn-sm">+ Ajouter</button>
+          </div>
+          ${interactions.length ? interactions.map(i => `
+            <div style="padding:10px 0;border-bottom:1px solid var(--gray-brd);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span style="font-size:16px;">${i.type==='email'?'✉️':i.type==='appel'?'📞':i.type==='visite'?'🚗':i.type==='livraison'?'📦':'🔔'}</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:600;">${i.summary||'—'}</div>
+                    ${i.next_action ? `<div style="font-size:12px;color:#C4622D;margin-top:2px;">→ ${i.next_action} ${i.next_action_date ? '('+new Date(i.next_action_date).toLocaleDateString('fr-FR')+')' : ''}</div>` : ''}
+                  </div>
+                </div>
+                <div style="font-size:11px;color:#9CA3AF;white-space:nowrap;">${new Date(i.date).toLocaleDateString('fr-FR')}</div>
+              </div>
+            </div>`).join('')
+          : '<div style="color:#9CA3AF;font-size:13px;padding:10px 0;">Aucun échange enregistré</div>'}
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function openDepotModal(partnerId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'depot-modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:550px;">
+      <div class="modal-header">
+        <h2>📦 Nouveau dépôt vente</h2>
+        <button class="modal-close" onclick="document.getElementById('depot-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Partenaire</label>
+            <select id="d-partner-id">
+              <option value="${partnerId||''}">${partnerId ? 'Partenaire sélectionné' : 'Choisir...'}</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Date de livraison</label><input type="date" id="d-delivery-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+          <div class="form-group"><label>Statut</label>
+            <select id="d-status">
+              <option value="en_cours">En cours</option>
+              <option value="solde">Soldé</option>
+              <option value="en_retard">En retard</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Scénarios livrés</label><input type="number" id="d-delivered" value="0" min="0" oninput="updateDepotCalc()"/></div>
+          <div class="form-group"><label>Scénarios vendus</label><input type="number" id="d-sold" value="0" min="0" oninput="updateDepotCalc()"/></div>
+          <div class="form-group"><label>Scénarios retournés</label><input type="number" id="d-returned" value="0" min="0" oninput="updateDepotCalc()"/></div>
+          <div class="form-group"><label>Prix unitaire (€)</label><input type="number" id="d-price" value="0" step="0.01" oninput="updateDepotCalc()"/></div>
+          <div class="form-group"><label>Commission partenaire (%)</label><input type="number" id="d-commission" value="30" min="0" max="100" oninput="updateDepotCalc()"/></div>
+
+          <!-- Calcul automatique -->
+          <div class="form-group full">
+            <div style="background:#F0F7F0;border-radius:var(--r-md);padding:14px;border:1px solid #C6E0C6;">
+              <div style="font-size:12px;font-weight:700;color:#2D4A2D;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Calcul automatique</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
+                <div>
+                  <div style="font-size:18px;font-weight:800;color:#2D4A2D;" id="calc-total">0€</div>
+                  <div style="font-size:11px;color:#6B7280;">Total ventes</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:800;color:#C4622D;" id="calc-commission">0€</div>
+                  <div style="font-size:11px;color:#6B7280;">Commission partenaire</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:800;color:#059669;" id="calc-due">0€</div>
+                  <div style="font-size:11px;color:#6B7280;">Montant dû</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full"><label>Notes</label><textarea id="d-notes" rows="2"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('depot-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveDepot('${partnerId||''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Charger les partenaires dans le select
+  supa('GET', 'partners', null, '?order=name.asc').then(partners => {
+    const sel = document.getElementById('d-partner-id');
+    if (sel) sel.innerHTML = partners.map(p => `<option value="${p.id}" ${p.id===partnerId?'selected':''}>${p.name}</option>`).join('');
+  }).catch(e => console.error('Erreur chargement partenaires:', e));
+}
+
+function updateDepotCalc() {
+  const sold = parseFloat(document.getElementById('d-sold')?.value) || 0;
+  const price = parseFloat(document.getElementById('d-price')?.value) || 0;
+  const commission = parseFloat(document.getElementById('d-commission')?.value) || 0;
+  const total = sold * price;
+  const commissionAmt = total * commission / 100;
+  const due = total - commissionAmt;
+  const calcTotal = document.getElementById('calc-total');
+  const calcComm = document.getElementById('calc-commission');
+  const calcDue = document.getElementById('calc-due');
+  if (calcTotal) calcTotal.textContent = total.toFixed(2) + '€';
+  if (calcComm) calcComm.textContent = commissionAmt.toFixed(2) + '€';
+  if (calcDue) calcDue.textContent = due.toFixed(2) + '€';
+}
+
+async function saveDepot(defaultPartnerId) {
+  const partnerId = document.getElementById('d-partner-id')?.value || defaultPartnerId;
+  const sold = parseFloat(document.getElementById('d-sold').value) || 0;
+  const price = parseFloat(document.getElementById('d-price').value) || 0;
+  const commission = parseFloat(document.getElementById('d-commission').value) || 30;
+  const total = sold * price;
+  const due = total * (1 - commission/100);
+
+  const data = {
+    partner_id: partnerId,
+    delivery_date: document.getElementById('d-delivery-date').value,
+    scenarios_delivered: parseInt(document.getElementById('d-delivered').value) || 0,
+    scenarios_sold: sold,
+    scenarios_returned: parseInt(document.getElementById('d-returned').value) || 0,
+    price_per_unit: price,
+    commission_rate: commission,
+    total_amount: total,
+    amount_due: due,
+    status: document.getElementById('d-status').value,
+    notes: document.getElementById('d-notes').value
+  };
+
+  try {
+    await supa('POST', 'depot_vente', data);
+    document.getElementById('depot-modal').remove();
+    // Fermer aussi le modal détail et le rouvrir
+    const detailModal = document.getElementById('partner-detail-modal');
+    if (detailModal) { detailModal.remove(); openPartnerDetail(partnerId); }
+    showToast('Dépôt vente enregistré ✓');
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function uploadContract(depotId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast('Upload du contrat en cours...');
+    try {
+      const filename = `contracts/${depotId}-${Date.now()}.jpg`;
+      const token = localStorage.getItem('ff_access_token');
+      await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + (token || SUPA_KEY),
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+      const url = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+      await supa('PATCH', 'depot_vente', { contract_url: url }, `?id=eq.${depotId}`);
+      showToast('Contrat uploadé ✓');
+    } catch(err) { showToast('Erreur upload : ' + err.message, true); }
+  };
+  input.click();
+}
+
+function openInteractionModal(partnerId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'interaction-modal';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-header">
+        <h2>💬 Nouvel échange</h2>
+        <button class="modal-close" onclick="document.getElementById('interaction-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Type d'échange</label>
+            <select id="i-type">
+              <option value="email">✉️ Email</option>
+              <option value="appel">📞 Appel</option>
+              <option value="visite">🚗 Visite</option>
+              <option value="livraison">📦 Livraison</option>
+              <option value="relance">🔔 Relance</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Date</label><input type="date" id="i-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+          <div class="form-group full"><label>Résumé *</label><textarea id="i-summary" rows="3" placeholder="Résumé de l'échange..."></textarea></div>
+          <div class="form-group full"><label>Prochaine action</label><input type="text" id="i-next-action" placeholder="Ex : Rappeler pour suivi commande"/></div>
+          <div class="form-group"><label>Date prochaine action</label><input type="date" id="i-next-date"/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('interaction-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveInteraction('${partnerId}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveInteraction(partnerId) {
+  const dateVal = document.getElementById('i-date').value;
+  const data = {
+    partner_id: partnerId,
+    type: document.getElementById('i-type').value,
+    date: dateVal ? new Date(dateVal).toISOString() : new Date().toISOString(),
+    summary: document.getElementById('i-summary').value,
+    next_action: document.getElementById('i-next-action').value,
+    next_action_date: document.getElementById('i-next-date').value || null
+  };
+  if (!data.summary) { alert('Le résumé est obligatoire'); return; }
+  try {
+    await supa('POST', 'partner_interactions', data);
+    // Mettre à jour last_contact_at du partenaire
+    await supa('PATCH', 'partners', { last_contact_at: data.date }, `?id=eq.${partnerId}`);
+    document.getElementById('interaction-modal').remove();
+    showToast('Échange enregistré ✓');
+    // Recharger le détail
+    const detailModal = document.getElementById('partner-detail-modal');
+    if (detailModal) { detailModal.remove(); openPartnerDetail(partnerId); }
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function loadDepotTable() {
+  try {
+    const depots = await supa('GET', 'depot_vente', null,
+      '?select=*,partners(name)&order=delivery_date.desc');
+
+    // Stats
+    const totalSold = depots.reduce((s,d) => s+d.scenarios_sold, 0);
+    const totalDue = depots.reduce((s,d) => s+d.amount_due, 0);
+    const totalDelivered = depots.reduce((s,d) => s+d.scenarios_delivered, 0);
+    const inProgress = depots.filter(d => d.status === 'en_cours').length;
+
+    document.getElementById('depot-stats').innerHTML = `
+      <div class="stat-card"><div class="label">Dépôts actifs</div><div class="value">${inProgress}</div></div>
+      <div class="stat-card"><div class="label">Scénarios livrés</div><div class="value">${totalDelivered}</div></div>
+      <div class="stat-card"><div class="label">Scénarios vendus</div><div class="value">${totalSold}</div></div>
+      <div class="stat-card"><div class="label">Montant total dû</div><div class="value">${totalDue.toFixed(0)}€</div></div>`;
+
+    const el = document.getElementById('depot-table');
+    el.innerHTML = depots.length ? `
+      <table>
+        <thead><tr>
+          <th>Partenaire</th><th>Date</th><th>Livrés</th><th>Vendus</th>
+          <th>En cours</th><th>Dû</th><th>Statut</th><th>Contrat</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${depots.map(d => `
+          <tr>
+            <td><strong>${d.partners?.name||'—'}</strong></td>
+            <td>${d.delivery_date ? new Date(d.delivery_date).toLocaleDateString('fr-FR') : '—'}</td>
+            <td>${d.scenarios_delivered}</td>
+            <td style="color:var(--success);font-weight:700;">${d.scenarios_sold}</td>
+            <td>${d.scenarios_delivered - d.scenarios_sold - (d.scenarios_returned||0)}</td>
+            <td style="font-weight:700;color:var(--green-dark);">${parseFloat(d.amount_due||0).toFixed(2)}€</td>
+            <td><span class="status-badge status-${d.status}">${d.status}</span></td>
+            <td>${d.contract_url
+              ? `<a href="${d.contract_url}" target="_blank" class="btn btn-secondary btn-sm">📄 Voir</a>`
+              : `<button onclick="uploadContract('${d.id}')" class="btn btn-secondary btn-sm">📸</button>`}</td>
+            <td><div class="actions-cell">
+              <button onclick="editDepot('${d.id}')" class="btn btn-secondary btn-sm">✏️</button>
+              <button onclick="deleteDepot('${d.id}')" class="btn btn-danger btn-sm">🗑️</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody></table>`
+      : '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Aucun dépôt vente</div></div>';
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function editDepot(id) {
+  showToast('Modifier un dépôt existant n\'est pas encore disponible — supprime et recrée-le si besoin.', true);
+}
+
+async function deleteDepot(id) {
+  if (!confirm('Supprimer ce dépôt ?')) return;
+  try {
+    await supa('DELETE', 'depot_vente', null, `?id=eq.${id}`);
+    showToast('Dépôt supprimé');
+    loadDepotTable();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function loadPipeline() {
+  try {
+    const partners = await supa('GET', 'partners', null, '?order=status.asc,name.asc');
+    const groups = {
+      prospect: partners.filter(p => p.status === 'prospect'),
+      actif: partners.filter(p => p.status === 'actif'),
+      inactif: partners.filter(p => p.status === 'inactif')
+    };
+
+    document.getElementById('pipeline-content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        ${Object.entries(groups).map(([status, items]) => `
+          <div style="background:var(--gray-bg);border-radius:var(--r-lg);padding:16px;">
+            <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+              ${status === 'prospect' ? '🔵 Prospects' : status === 'actif' ? '🟢 Actifs' : '⚫ Inactifs'}
+              <span style="background:white;border-radius:20px;padding:2px 8px;font-size:11px;margin-left:6px;">${items.length}</span>
+            </div>
+            ${items.map(p => `
+              <div onclick="openPartnerDetail('${p.id}')" style="
+                background:white;border-radius:var(--r-md);padding:12px;
+                margin-bottom:8px;cursor:pointer;border:1px solid var(--gray-brd);
+                transition:transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.01)'"
+                onmouseout="this.style.transform='scale(1)'">
+                <div style="font-size:14px;font-weight:600;">${p.name}</div>
+                <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">${p.type} · ${p.city||'—'}</div>
+                ${p.last_contact_at ? `<div style="font-size:11px;color:#C4622D;margin-top:4px;">Dernier contact : ${new Date(p.last_contact_at).toLocaleDateString('fr-FR')}</div>` : ''}
+              </div>`).join('')}
+            ${!items.length ? `<div style="color:#9CA3AF;font-size:13px;text-align:center;padding:20px;">Aucun</div>` : ''}
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { showToast('Erreur pipeline : ' + e.message, true); }
 }
 
 // ── CHARGER DEPUIS SUPABASE ──
@@ -2454,7 +3281,7 @@ async function checkAdminRole() {
       // Auteur — masquer tableau de bord, joueurs, auteurs, badges
       document.querySelectorAll('.nav-item').forEach(btn => {
         const text = btn.textContent.trim();
-        if (text.includes('Tableau') || text.includes('Joueurs') || text.includes('Auteurs') || text.includes('Badges') || text.includes('Professeur') || text.includes('Validations') || text.includes('Paramètres')) {
+        if (text.includes('Tableau') || text.includes('Joueurs') || text.includes('Auteurs') || text.includes('Badges') || text.includes('Professeur') || text.includes('Validations') || text.includes('Paramètres') || text.includes('Clients') || text.includes('B2B')) {
           btn.style.display = 'none';
         }
       });
