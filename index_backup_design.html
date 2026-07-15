@@ -580,27 +580,31 @@
     text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
   }
 
-  /* ── CARROUSEL — boucle CSS infinie, aucun JS de défilement ── */
-  .carousel-wrapper {
-    overflow: hidden;
-    width: 100%;
-    margin: 0 -16px;
-    padding: 4px 16px;
-    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  /* ── CARROUSEL ── */
+  .carousel-wrap { overflow: hidden; margin: 0 -16px; padding: 4px 16px; }
+  .carousel-track { display: flex; gap: 12px; transition: transform 0.42s ease; will-change: transform; }
+  .carousel-card {
+    flex-shrink: 0; width: 185px; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+    background: white; border: 1px solid #E5D9C0;
+    transition: transform 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .carousel-track {
-    display: flex;
-    gap: 12px;
-    width: max-content;
-    animation: scroll-infinite 20s linear infinite;
+  .carousel-card:active { transform: scale(0.97); }
+  .carousel-banner {
+    height: 110px; position: relative; background: #3D6B3D;
+    display: flex; align-items: center; justify-content: center; font-size: 44px;
   }
-  .carousel-track:hover { animation-play-state: paused; }
-  .carousel-track .carousel-item { width: 180px; flex-shrink: 0; cursor: pointer; }
-  @keyframes scroll-infinite {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  .carousel-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .carousel-banner-emoji { position: relative; z-index: 1; }
+  .carousel-diff {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
   }
+  .carousel-body  { padding: 10px 12px 12px; }
+  .carousel-title { font-size: 13px; font-weight: 700; color: #1A2A1A; line-height: 1.3; margin-bottom: 3px; }
+  .carousel-meta  { font-size: 11px; color: #4A5A4A; }
+  .carousel-dots  { display: flex; justify-content: center; gap: 6px; margin: 14px 0 4px; }
+  .carousel-dot   { width: 7px; height: 7px; border-radius: 50%; background: rgba(26,42,26,0.18); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+  .carousel-dot.active { background: #C4622D; transform: scale(1.28); }
 
   /* ── LISTE AVENTURES ── */
   .home-adv-list { padding: 4px 0 20px; }
@@ -1059,16 +1063,15 @@
       <!-- Carrousel Nouveautés -->
       <div class="home-section-new">
         <div class="home-section-label">Nouveautés</div>
-        <div class="carousel-wrapper">
+        <div class="carousel-wrap">
           <div class="carousel-track" id="carousel-track">
-            <div class="carousel-item" style="opacity:0.35;pointer-events:none;">
-              <div class="adv-card">
-                <div class="adv-card-banner" style="position:relative;height:100px;"><span style="position:relative;z-index:1;font-size:32px;">⏳</span></div>
-                <div class="adv-card-body"><div class="adv-card-title" style="font-size:13px;">Chargement…</div></div>
-              </div>
+            <div class="carousel-card" style="opacity:0.35;pointer-events:none;">
+              <div class="carousel-banner"><span class="carousel-banner-emoji">⏳</span></div>
+              <div class="carousel-body"><div class="carousel-title">Chargement…</div></div>
             </div>
           </div>
         </div>
+        <div class="carousel-dots" id="carousel-dots"></div>
       </div>
 
       <!-- Toutes les aventures -->
@@ -1782,7 +1785,6 @@ let geoWatcher       = null;
 let gpsAutoUnlocked  = false;
 let currentHintLevel = 0;   // 0=aucun, 1/2/3=niveaux révélés
 let hintXpPenalty    = 0;   // XP déduit par les indices demandés
-window._adventureInProgress = false; // true uniquement quand l'écran aventure est actif
 let _audioCtx        = null;
 
 const DIFF_COLORS = { 'Facile': '#3D6B3D', 'Intermédiaire': '#C4622D', 'Expert': '#7C3AED' };
@@ -2228,47 +2230,60 @@ function skipTutorial() {
 }
 
 // ══════════════════════════════════════════
-// CARROUSEL — boucle CSS infinie (aucun JS de défilement, tout est fait par @keyframes)
+// CARROUSEL
 // ══════════════════════════════════════════
-function buildCarouselCard(adv) {
-  const imgHtml = adv.cover_image_url
-    ? `<img src="${adv.cover_image_url}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
-    : '';
-  const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
-  return `
-    <div class="carousel-item" onclick="selectAdventureFromCard('${adv.id}')">
-      <div class="adv-card">
-        <div class="adv-card-banner" style="position:relative;height:100px;">
-          ${imgHtml}
-          <span style="position:relative;z-index:1;font-size:32px;">${adv.emoji || '🗺️'}</span>
-          <div class="adv-card-diff ${diffClass}" style="position:absolute;top:8px;right:8px;">${adv.difficulty || ''}</div>
-        </div>
-        <div class="adv-card-body">
-          <div class="adv-card-title" style="font-size:13px;">${adv.title}</div>
-          <div class="adv-card-meta" style="font-size:11px;">
-            <span>📍 ${adv.location || ''}</span>
-          </div>
-        </div>
-      </div>
-    </div>`;
-}
+let carouselIdx   = 0;
+let carouselTimer = null;
 
 function renderCarousel() {
   const track = document.getElementById('carousel-track');
+  const dots  = document.getElementById('carousel-dots');
   if (!track || !adventures.length) return;
+  carouselIdx = 0;
 
-  // Doubler les cartes : la boucle CSS translate à -50%, donc la 2e moitié
-  // prend le relais exactement où la 1re s'arrête, sans aucun calcul JS.
-  const cardsHtml = adventures.map(adv => buildCarouselCard(adv)).join('');
-  track.innerHTML = cardsHtml + cardsHtml;
+  track.innerHTML = adventures.map(adv => {
+    const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
+    const imgHtml   = adv.intro_image_url ? `<img src="${adv.intro_image_url}" alt="">` : '';
+    return `
+      <div class="carousel-card" onclick="selectAdventureFromCard('${adv.id}')">
+        <div class="carousel-banner">
+          ${imgHtml}
+          <span class="carousel-banner-emoji">${adv.emoji || '🗺️'}</span>
+          <div class="carousel-diff ${diffClass}">${adv.difficulty || ''}</div>
+        </div>
+        <div class="carousel-body">
+          <div class="carousel-title">${adv.title}</div>
+          <div class="carousel-meta">📍 ${adv.location || ''} · ${adv.duration || ''}</div>
+        </div>
+      </div>`;
+  }).join('');
 
-  // Ajuster la durée selon le nombre de cartes (plus de cartes = plus lent, vitesse constante)
-  const duration = Math.max(15, adventures.length * 4);
-  track.style.animationDuration = duration + 's';
+  dots.innerHTML = adventures.map((_, i) =>
+    `<div class="carousel-dot${i === 0 ? ' active' : ''}" onclick="goCarousel(${i})"></div>`
+  ).join('');
 
-  // Pause de l'animation pendant un toucher (sans réimplémenter le défilement)
-  track.ontouchstart = () => { track.style.animationPlayState = 'paused'; };
-  track.ontouchend   = () => { track.style.animationPlayState = 'running'; };
+  // Swipe tactile
+  let touchX = 0;
+  const wrap = track.parentElement;
+  wrap.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; clearTimeout(carouselTimer); }, { passive: true });
+  wrap.addEventListener('touchend',   e => { const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 36) goCarousel(carouselIdx + (dx < 0 ? 1 : -1)); else startCarouselAuto(); }, { passive: true });
+
+  startCarouselAuto();
+}
+
+function goCarousel(idx) {
+  const n = adventures.length; if (!n) return;
+  carouselIdx = ((idx % n) + n) % n;
+  const track = document.getElementById('carousel-track');
+  if (track) track.style.transform = `translateX(calc(-${carouselIdx} * (204px)))`;
+  document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === carouselIdx));
+  clearTimeout(carouselTimer);
+  carouselTimer = setTimeout(() => goCarousel(carouselIdx + 1), 3000);
+}
+
+function startCarouselAuto() {
+  clearTimeout(carouselTimer);
+  carouselTimer = setTimeout(() => goCarousel(carouselIdx + 1), 3000);
 }
 
 // ══════════════════════════════════════════
@@ -2530,53 +2545,6 @@ function startGlobalGPS() {
 }
 
 // ══════════════════════════════════════════
-// SAUVEGARDE LOCALE DE PROGRESSION (reprise en cas de sortie accidentelle)
-// ══════════════════════════════════════════
-function saveCurrentProgress() {
-  if (!currentAdv || !window._adventureInProgress) return;
-  localStorage.setItem('ff_current_adventure', JSON.stringify({
-    adventure_id: currentAdv.id,
-    step_index: currentStepIndex,
-    step_id: window._currentStepId,
-    start_time: window._adventureStartTime,
-    attempts: window._adventureAttempts || 0,
-    saved_at: Date.now()
-  }));
-}
-
-function checkResumeAdventure(adv) {
-  const saved = localStorage.getItem('ff_current_adventure');
-  if (!saved) return false;
-
-  let progress;
-  try { progress = JSON.parse(saved); } catch (e) { localStorage.removeItem('ff_current_adventure'); return false; }
-
-  // Vérifier que c'est la même aventure et que c'est récent (moins de 24h)
-  const isRecent = Date.now() - (progress.saved_at || 0) < 24 * 60 * 60 * 1000;
-  if (progress.adventure_id !== adv.id || !isRecent) {
-    localStorage.removeItem('ff_current_adventure');
-    return false;
-  }
-
-  // Proposer de reprendre
-  const resume = confirm(
-    `🧭 Reprendre l'aventure ?\n\nTu avais commencé "${adv.title}" et tu en étais à l'étape ${(progress.step_index || 0) + 1}.\n\nTu veux reprendre où tu t'étais arrêté ?`
-  );
-
-  if (resume) {
-    currentStepIndex            = progress.step_index || 0;
-    window._currentStepId       = progress.step_id || adv.steps[0]?.id || null;
-    window._adventureStartTime  = progress.start_time || Date.now();
-    window._adventureAttempts   = progress.attempts || 0;
-    window._adventureTotalXp    = 0;
-    return true;
-  } else {
-    localStorage.removeItem('ff_current_adventure');
-    return false;
-  }
-}
-
-// ══════════════════════════════════════════
 // LANCER L'AVENTURE (avec reprise de progression)
 // ══════════════════════════════════════════
 async function startAdventure() {
@@ -2600,37 +2568,27 @@ async function startAdventure() {
 
   // Trier les étapes par order_num (important pour les scénarios à embranchements)
   currentAdv.steps.sort((a, b) => a.order_num - b.order_num);
+  currentStepIndex = 0;
 
-  // Reprise locale (sortie accidentelle) — prioritaire sur la reprise serveur
-  const resumedLocally = checkResumeAdventure(currentAdv);
+  // Chrono et compteur d'essais
+  window._adventureStartTime = Date.now();
+  window._adventureAttempts  = 0;
+  window._adventureTotalXp   = 0;
+  window._currentStepId      = currentAdv.steps[0]?.id || null;
 
-  if (!resumedLocally) {
-    currentStepIndex = 0;
-
-    // Chrono et compteur d'essais
-    window._adventureStartTime = Date.now();
-    window._adventureAttempts  = 0;
-    window._adventureTotalXp   = 0;
-    window._currentStepId      = currentAdv.steps[0]?.id || null;
-
-    // Reprise à la dernière étape non complétée
-    if (currentPlayer && currentAdv.steps?.length) {
-      try {
-        const progress = await supaFetch(
-          `player_progress?player_id=eq.${currentPlayer.id}&adventure_id=eq.${currentAdv.id}&completed=eq.true&select=step_id`
-        );
-        const doneIds  = new Set(progress.map(p => p.step_id));
-        const resumeIdx = currentAdv.steps.findIndex(s => !doneIds.has(s.id));
-        currentStepIndex = resumeIdx >= 0 ? resumeIdx : 0;
-        window._currentStepId = currentAdv.steps[currentStepIndex]?.id || window._currentStepId;
-      } catch (e) {
-        console.error('Erreur reprise:', e);
-      }
+  // Reprise à la dernière étape non complétée
+  if (currentPlayer && currentAdv.steps?.length) {
+    try {
+      const progress = await supaFetch(
+        `player_progress?player_id=eq.${currentPlayer.id}&adventure_id=eq.${currentAdv.id}&completed=eq.true&select=step_id`
+      );
+      const doneIds  = new Set(progress.map(p => p.step_id));
+      const resumeIdx = currentAdv.steps.findIndex(s => !doneIds.has(s.id));
+      currentStepIndex = resumeIdx >= 0 ? resumeIdx : 0;
+    } catch (e) {
+      console.error('Erreur reprise:', e);
     }
   }
-
-  // L'écran aventure devient actif : la protection anti-sortie peut s'activer
-  window._adventureInProgress = true;
 
   ['story','compass','enigme','reward'].forEach(m => {
     const el = document.getElementById('mode-' + m);
@@ -2639,10 +2597,8 @@ async function startAdventure() {
 
   document.getElementById('adv-title').textContent = currentAdv.title;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
-  saveCurrentProgress();
   renderStoryMode();
   goToScreen('adventure', null);
-  window._adventureInProgress = true;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 }
 
@@ -2711,7 +2667,6 @@ function renderStoryMode() {
       <button class="btn-primary" onclick="renderCompassMode()">Aller au prochain lieu →</button>
     </div>`;
   showMode('story');
-  saveCurrentProgress();
 }
 
 // ── BOUSSOLE ──
@@ -2750,7 +2705,6 @@ function renderCompassMode() {
     </div>`;
   showMode('compass');
   startGeolocation(step.lat, step.lng, step.radius_meters || 20);
-  saveCurrentProgress();
 }
 
 // ── GÉOLOCALISATION ──
@@ -2853,7 +2807,6 @@ function renderEnigmeMode() {
         <div style="margin-top:14px;">${choicesHtml}</div>
       </div>`;
     showMode('enigme');
-    saveCurrentProgress();
     return;
   }
 
@@ -2874,7 +2827,6 @@ function renderEnigmeMode() {
     </div>`;
   showMode('enigme');
   renderHintSection();
-  saveCurrentProgress();
 }
 
 // ── INDICES PROGRESSIFS ──
@@ -2935,12 +2887,6 @@ async function renderRewardMode() {
   const step     = currentStep();
   const isLast   = currentStepIndex >= (currentAdv?.steps.length || 1) - 1;
   const earnedXp = Math.max(0, (step?.xp || 0) - hintXpPenalty);
-
-  // Aventure terminée : la sauvegarde locale de reprise n'a plus lieu d'être
-  if (isLast) {
-    window._adventureInProgress = false;
-    localStorage.removeItem('ff_current_adventure');
-  }
 
   // Sauvegarde en arrière-plan (XP réel après déduction indices)
   saveProgress(step, earnedXp);
@@ -4989,26 +4935,6 @@ function showMode(mode) {
 }
 
 function goToScreen(name, btn) {
-  // Avertir si on quitte une aventure en cours (uniquement si l'écran aventure est réellement actif)
-  if (window._adventureInProgress &&
-      name !== 'adventure' &&
-      name !== 'qr-scanner' &&
-      name !== 'satisfaction' &&
-      name !== 'book-detail') {
-    const confirmed = confirm(
-      '⚠️ Attention !\n\nTu es en pleine aventure. Si tu changes de page, ta progression sera perdue.\n\nTu veux vraiment quitter ?'
-    );
-    if (!confirmed) return; // Annuler la navigation
-    window._adventureInProgress  = false;
-    currentAdv                   = null;
-    currentStepIndex              = 0;
-    window._currentStepId         = null;
-    window._adventureStartTime    = null;
-    window._adventureAttempts     = 0;
-    localStorage.removeItem('ff_current_adventure');
-    if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
-  }
-
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
@@ -5038,8 +4964,6 @@ function goToScreen(name, btn) {
 }
 
 function goBack() {
-  window._adventureInProgress = false;
-  localStorage.removeItem('ff_current_adventure');
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
   goToScreen('home', document.getElementById('nav-home'));
 }
@@ -5174,24 +5098,10 @@ window.addEventListener('beforeinstallprompt', e => {
   showInstallButton();
 });
 
-// Quand l'app est effectivement installée, mémoriser l'état pour ne plus jamais reproposer la bannière
-window.addEventListener('appinstalled', () => {
-  localStorage.setItem('ff_app_installed', '1');
-  dismissInstall();
-  showToast('🎉 App installée ! Retrouve-la sur ton écran d\'accueil');
-});
-
 function showInstallButton() {
-  // Ne pas afficher si déjà installé en mode standalone
+  // Ne montrer que si pas déjà installé
   if (window.matchMedia('(display-mode: standalone)').matches) return;
   if (document.getElementById('install-banner')) return;
-
-  // Ne pas afficher si l'utilisateur a déjà refusé récemment (7 jours)
-  const dismissed = localStorage.getItem('ff_install_dismissed');
-  if (dismissed && Date.now() - parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) return;
-
-  // Ne pas afficher si déjà installé
-  if (localStorage.getItem('ff_app_installed')) return;
 
   const banner = document.createElement('div');
   banner.id = 'install-banner';
