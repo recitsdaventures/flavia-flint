@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Les Aventures de Flavia Flint</title>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2RKTDQXXNR"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-2RKTDQXXNR');
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -287,6 +295,37 @@
   }
   .step-dot.done    { background: var(--amber); color: var(--green-dark); border-color: var(--amber); }
   .step-dot.current { background: white; color: var(--green-dark); border-color: white; }
+
+  /* ── TIMER NARRATIF (affiché pendant l'aventure) ── */
+  #adventure-timer {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #1A2A1A;
+    padding: 8px 16px;
+    text-align: center;
+  }
+  .timer-display {
+    font-size: 22px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: 2px;
+    font-family: 'Courier Prime', monospace;
+  }
+  .timer-display.warning { color: #E8A020; animation: pulse-timer 1s ease-in-out infinite; }
+  .timer-display.danger  { color: #DC2626; animation: pulse-timer 0.5s ease-in-out infinite; }
+  @keyframes pulse-timer {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+  }
+  .timer-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
 
   .adv-scroll { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -1289,6 +1328,11 @@
       <div class="step-dots" id="step-dots"></div>
     </div>
 
+    <div id="adventure-timer">
+      <div class="timer-label">⏱ Temps restant</div>
+      <div class="timer-display" id="timer-display">00:00</div>
+    </div>
+
     <div class="adv-scroll" id="adv-scroll">
       <div id="mode-story"></div>
       <div id="mode-compass" style="display:none;"></div>
@@ -1909,6 +1953,7 @@ async function handleSignup() {
     errEl.className      = 'auth-error success';
     errEl.textContent    = '✓ Compte créé ! Connecte-toi maintenant.';
     errEl.style.display  = 'block';
+    if (typeof gtag === 'function') gtag('event', 'sign_up', { method: 'email' });
     setTimeout(() => showAuthTab('login'), 1800);
   } catch (e) {
     btn.textContent      = 'Créer mon compte →';
@@ -1956,6 +2001,7 @@ async function handleLogin() {
 
     btn.textContent      = '✓ Connecté !';
     btn.style.background = '#2D4A2D';
+    if (typeof gtag === 'function') gtag('event', 'login', { method: 'email' });
 
     await loadCurrentPlayer(data.user);
     document.getElementById('app').classList.remove('auth-mode');
@@ -2577,6 +2623,133 @@ function checkResumeAdventure(adv) {
 }
 
 // ══════════════════════════════════════════
+// TIMER NARRATIF (timer global d'aventure + timer par étape)
+// ══════════════════════════════════════════
+let globalTimerInterval = null;
+let stepTimerInterval   = null;
+let globalTimeRemaining = 0;
+let stepTimeRemaining   = 0;
+let currentStepTimerId  = null; // évite de redémarrer le même timer d'étape à chaque re-render
+
+// Démarrer le timer global au début de l'aventure
+function startGlobalTimer() {
+  if (!currentAdv?.has_global_timer || !currentAdv?.global_timer_seconds) return;
+
+  globalTimeRemaining = currentAdv.global_timer_seconds;
+  const isVisible = currentAdv.global_timer_visible !== false;
+
+  if (isVisible) {
+    document.getElementById('adventure-timer').style.display = 'block';
+  }
+
+  clearInterval(globalTimerInterval);
+  globalTimerInterval = setInterval(() => {
+    globalTimeRemaining--;
+    updateTimerDisplay(globalTimeRemaining);
+
+    if (globalTimeRemaining <= 0) {
+      clearInterval(globalTimerInterval);
+      handleTimerExpired('global');
+    }
+  }, 1000);
+}
+
+// Démarrer le timer d'une étape (appelé à chaque nouvelle étape ; ne redémarre pas si déjà en cours pour la même étape)
+function startStepTimer(step) {
+  if (!step?.has_step_timer || !step?.step_timer_seconds) {
+    clearInterval(stepTimerInterval);
+    stepTimerInterval  = null;
+    currentStepTimerId = null;
+    return;
+  }
+
+  if (currentStepTimerId === step.id && stepTimerInterval) return; // déjà en cours pour cette étape
+
+  clearInterval(stepTimerInterval);
+  currentStepTimerId = step.id;
+  stepTimeRemaining   = step.step_timer_seconds;
+  const isVisible     = step.step_timer_visible !== false;
+
+  if (isVisible) {
+    document.getElementById('adventure-timer').style.display = 'block';
+  }
+
+  stepTimerInterval = setInterval(() => {
+    stepTimeRemaining--;
+    updateTimerDisplay(stepTimeRemaining);
+
+    if (stepTimeRemaining <= 0) {
+      clearInterval(stepTimerInterval);
+      handleTimerExpired('step');
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay(seconds) {
+  const mins = Math.floor(Math.max(0, seconds) / 60);
+  const secs = Math.max(0, seconds) % 60;
+  const display = document.getElementById('timer-display');
+  if (!display) return;
+
+  display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  // Changer couleur selon urgence
+  display.className = 'timer-display';
+  if (seconds <= 30) display.classList.add('danger');
+  else if (seconds <= 60) display.classList.add('warning');
+
+  // Vibration à 60s et 30s restantes
+  if (seconds === 60 || seconds === 30) vibrateFeedback([80, 40, 80]);
+}
+
+function handleTimerExpired(type) {
+  vibrateFeedback([200, 100, 200, 100, 200]); // Vibration triple — temps écoulé
+
+  const failStepOrder = type === 'global'
+    ? currentAdv?.timer_fail_step_order
+    : currentStep()?.timer_fail_step_order;
+
+  const timerEl = document.getElementById('adventure-timer');
+  const display = document.getElementById('timer-display');
+
+  if (failStepOrder) {
+    // Rediriger vers l'étape "scénario B"
+    const failStep = currentAdv.steps.find(s => s.order_num === failStepOrder);
+    if (failStep) {
+      if (timerEl) timerEl.style.background = '#DC2626';
+      if (display) display.textContent = 'TEMPS ÉCOULÉ !';
+
+      setTimeout(() => {
+        window._currentStepId = failStep.id;
+        currentStepIndex = currentAdv.steps.findIndex(s => s.id === failStep.id);
+        buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
+        renderStoryMode();
+        stopAllTimers();
+        if (timerEl) timerEl.style.background = '#1A2A1A';
+      }, 2000);
+      return;
+    }
+  }
+
+  // Pas de scénario B (ou étape introuvable) — afficher un message puis masquer le timer
+  if (display) {
+    display.textContent = 'TEMPS ÉCOULÉ !';
+    display.className = 'timer-display danger';
+  }
+  setTimeout(() => { if (timerEl) timerEl.style.display = 'none'; }, 3000);
+}
+
+function stopAllTimers() {
+  clearInterval(globalTimerInterval);
+  clearInterval(stepTimerInterval);
+  globalTimerInterval = null;
+  stepTimerInterval   = null;
+  currentStepTimerId  = null;
+  const timerEl = document.getElementById('adventure-timer');
+  if (timerEl) { timerEl.style.display = 'none'; timerEl.style.background = '#1A2A1A'; }
+}
+
+// ══════════════════════════════════════════
 // LANCER L'AVENTURE (avec reprise de progression)
 // ══════════════════════════════════════════
 async function startAdventure() {
@@ -2593,6 +2766,15 @@ async function startAdventure() {
         player_id: currentPlayer?.id || null
       }
     }).catch(() => {});
+  }
+
+  // Google Analytics
+  if (typeof gtag === 'function') {
+    gtag('event', 'adventure_started', {
+      adventure_id: currentAdv?.id,
+      adventure_title: currentAdv?.title,
+      adventure_location: currentAdv?.location
+    });
   }
 
   gpsAutoUnlocked  = false;
@@ -2644,6 +2826,10 @@ async function startAdventure() {
   goToScreen('adventure', null);
   window._adventureInProgress = true;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  // Timer narratif : (re)démarrage propre du timer global de l'aventure
+  stopAllTimers();
+  startGlobalTimer();
 }
 
 // ══════════════════════════════════════════
@@ -2664,14 +2850,24 @@ function buildStepDots(total, current) {
 }
 
 function currentStep() {
-  if (!currentAdv) return null;
-  if (currentAdv.scenario_type === 'linear') {
-    return currentAdv.steps[currentStepIndex] || null;
-  }
+  if (!currentAdv?.steps) return null;
+
+  // Toujours retrier par order_num — protège contre un ordre incohérent
+  // si les steps ont été rechargés/réassignés sans re-tri.
+  currentAdv.steps.sort((a, b) => a.order_num - b.order_num);
+
+  // Recherche par ID en priorité, quel que soit scenario_type : window._currentStepId
+  // est maintenu à jour aussi bien en navigation linéaire qu'en embranchement
+  // (voir nextStep()/goToNextStep()), donc s'y fier en premier est plus fiable
+  // qu'un simple index de tableau (qui peut se désynchroniser en cas d'order_num
+  // dupliqués entre deux branches différentes).
   if (window._currentStepId) {
-    return currentAdv.steps.find(s => s.id === window._currentStepId) || null;
+    const byId = currentAdv.steps.find(s => s.id === window._currentStepId);
+    if (byId) return byId;
   }
-  return currentAdv.steps[0] || null;
+
+  // Repli sur l'index (scénario purement linéaire ou window._currentStepId absent)
+  return currentAdv.steps[currentStepIndex] || currentAdv.steps[0] || null;
 }
 
 // ── STORY ──
@@ -2719,6 +2915,7 @@ function renderCompassMode() {
   const step = currentStep();
   if (!step) return;
   gpsAutoUnlocked = false;
+  startStepTimer(step);
 
   document.getElementById('mode-compass').innerHTML = `
     <div class="bubble-row" style="margin-bottom:12px;">
@@ -2818,6 +3015,8 @@ function renderEnigmeMode() {
   hintXpPenalty    = 0;
   const step = currentStep();
   if (!step) return;
+  // Ne redémarre pas le timer si celui de cette étape est déjà en cours (ex: lancé depuis renderCompassMode)
+  startStepTimer(step);
   // Parser choices si Supabase le renvoie en string JSON
   let choices = step.choices;
   if (typeof choices === 'string') {
@@ -2940,6 +3139,18 @@ async function renderRewardMode() {
   if (isLast) {
     window._adventureInProgress = false;
     localStorage.removeItem('ff_current_adventure');
+    stopAllTimers();
+
+    // Google Analytics — placé ici plutôt que dans showFinalReward() car ce bloc
+    // s'exécute pour TOUTE fin d'aventure (avec ou sans QR/satisfaction_url),
+    // alors que showFinalReward() n'est appelé que dans le flux QR.
+    if (typeof gtag === 'function') {
+      gtag('event', 'adventure_completed', {
+        adventure_id: currentAdv?.id,
+        adventure_title: currentAdv?.title,
+        duration_seconds: Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000)
+      });
+    }
   }
 
   // Sauvegarde en arrière-plan (XP réel après déduction indices)
@@ -3202,6 +3413,17 @@ async function markAsShared(xpAmount) {
     return;
   }
 
+  // Google Analytics — placé dans markAsShared() (confirmation du partage) plutôt que dans
+  // une fonction shareAdventure() inexistante : ce fichier utilise shareToInstagram()/
+  // shareToFacebook() pour ouvrir les réseaux, puis markAsShared() pour confirmer le partage.
+  if (typeof gtag === 'function') {
+    gtag('event', 'share', {
+      method: 'social',
+      content_type: 'adventure',
+      item_id: currentAdv?.id
+    });
+  }
+
   // Accorder les XP si connecté (pas pour les invités)
   if (xp && currentPlayer?.id && !isGuest()) {
     try {
@@ -3279,13 +3501,21 @@ async function sendBoxReport() {
 
 // ── SAUVEGARDE PROGRESSION ──
 async function saveProgress(step, xpOverride) {
-  if (!currentPlayer || !step?.id) return;
+  if (!currentPlayer) { console.log('[saveProgress] Pas de currentPlayer — XP non sauvegardé'); return; }
+  if (!step?.id)      { console.log('[saveProgress] Pas de step.id — XP non sauvegardé', step); return; }
+
+  const xpToAdd = xpOverride !== undefined ? xpOverride : (step.xp || 0);
+  console.log('[saveProgress] step:', step.id, '| xpOverride:', xpOverride, '| xpToAdd:', xpToAdd, '| player:', currentPlayer.id);
+
   try {
     // Évite les doublons
     const existing = await supaFetch(
       `player_progress?player_id=eq.${currentPlayer.id}&step_id=eq.${step.id}&select=id`
     );
-    if (existing.length) return;
+    if (existing.length) {
+      console.log('[saveProgress] Étape déjà marquée complétée pour ce joueur — XP non réattribué (anti-doublon)', step.id);
+      return;
+    }
 
     await supaFetch('player_progress', {
       method: 'POST',
@@ -3299,12 +3529,12 @@ async function saveProgress(step, xpOverride) {
       }
     });
 
-    const xpToAdd = xpOverride !== undefined ? xpOverride : (step.xp || 0);
     if (xpToAdd > 0) {
       // Repartir du XP réellement en base (évite un total_xp figé/désynchronisé)
       const playerData = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
       const currentXp  = playerData[0]?.total_xp || 0;
       const newXp      = currentXp + xpToAdd;
+      console.log('[saveProgress] XP en base:', currentXp, '→ nouveau total:', newXp);
 
       await supaFetch(`players?id=eq.${currentPlayer.id}`, {
         method: 'PATCH',
@@ -3313,9 +3543,12 @@ async function saveProgress(step, xpOverride) {
       });
       currentPlayer.total_xp = newXp;
       window._adventureTotalXp = (window._adventureTotalXp || 0) + xpToAdd;
+      console.log('[saveProgress] XP sauvegardé avec succès pour', currentPlayer.id);
+    } else {
+      console.log('[saveProgress] xpToAdd <= 0, aucune mise à jour de total_xp (étape sans XP configuré)');
     }
   } catch (e) {
-    console.error('Erreur sauvegarde progression:', e);
+    console.error('[saveProgress] Erreur sauvegarde progression:', e);
   }
 }
 
@@ -3334,22 +3567,36 @@ function goToNextStep(choiceIndex) {
   if (!step) return;
 
   if (step.step_type === 'decision' && step.choices && choiceIndex !== undefined) {
-    const choice = step.choices[choiceIndex];
-    if (!choice) return;
+    // Parsing défensif : au cas où choices n'aurait pas déjà été normalisé en tableau
+    let choices = step.choices;
+    if (typeof choices === 'string') {
+      try { choices = JSON.parse(choices); } catch (e) { choices = []; }
+      step.choices = choices;
+    }
+    if (!Array.isArray(choices)) choices = [];
 
+    const choice = choices[choiceIndex];
+    if (!choice) { console.error('goToNextStep: choice introuvable pour index', choiceIndex, choices); return; }
+
+    console.log('goToNextStep: navigation vers order_num', choice.next_step_order);
     // Trouver l'étape cible par order_num
     const nextStep = currentAdv.steps.find(s => s.order_num === choice.next_step_order);
     if (!nextStep) {
-      console.error('Étape introuvable pour order_num:', choice.next_step_order);
+      console.error('goToNextStep: étape introuvable pour order_num:', choice.next_step_order,
+        '— order_num disponibles:', currentAdv.steps.map(s => s.order_num));
       return;
     }
     window._currentStepId = nextStep.id;
     currentStepIndex = currentAdv.steps.findIndex(s => s.id === nextStep.id);
+    console.log('goToNextStep: nouvel index', currentStepIndex, '— étape:', nextStep.title);
   } else {
     // Navigation linéaire
     currentStepIndex++;
     const next = currentAdv.steps[currentStepIndex];
-    if (next) window._currentStepId = next.id;
+    if (next) {
+      window._currentStepId = next.id;
+      console.log('goToNextStep: navigation linéaire vers', next.title);
+    }
   }
 
   gpsAutoUnlocked = false;
@@ -3359,10 +3606,27 @@ function goToNextStep(choiceIndex) {
 
 function handleChoice(choiceIndex) {
   const step = currentStep();
-  if (!step || !step.choices) return;
+  console.log('handleChoice: choix cliqué', choiceIndex, '| étape courante:', step?.title, step?.id);
 
-  const choice = step.choices[choiceIndex];
-  if (!choice) return;
+  if (!step || !step.choices) { console.error('handleChoice: pas de step ou pas de choices', step); return; }
+
+  // Parsing défensif : au cas où choices n'aurait pas déjà été normalisé en tableau
+  let choices = step.choices;
+  if (typeof choices === 'string') {
+    try { choices = JSON.parse(choices); } catch (e) { choices = []; }
+    step.choices = choices;
+  }
+  if (!Array.isArray(choices)) choices = [];
+  console.log('handleChoice: step.choices', choices);
+
+  const choice = choices[choiceIndex];
+  console.log('handleChoice: choice sélectionné', choice, '| next_step_order:', choice?.next_step_order);
+  if (!choice) {
+    console.error('handleChoice: choice introuvable pour index', choiceIndex);
+    return;
+  }
+
+  console.log('handleChoice: steps disponibles', currentAdv?.steps?.map(s => ({ order: s.order_num, title: s.title, id: s.id })));
 
   // Animation boutons
   const buttons = document.querySelectorAll('#mode-enigme button[onclick^="handleChoice"]');
@@ -3383,6 +3647,10 @@ function handleChoice(choiceIndex) {
     if (isEnd) {
       renderRewardMode();
     } else {
+      // Bug corrigé : avant, une étape de décision qui menait à une autre étape
+      // (pas la fin de l'aventure) ne passait jamais par renderRewardMode(), donc
+      // saveProgress() n'était jamais appelé pour elle — ni XP ni badge enregistrés.
+      saveProgress(step, step.xp || 0);
       goToNextStep(choiceIndex);
     }
   }, 600);
@@ -5006,6 +5274,7 @@ function goToScreen(name, btn) {
     window._adventureStartTime    = null;
     window._adventureAttempts     = 0;
     localStorage.removeItem('ff_current_adventure');
+    stopAllTimers();
     if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
   }
 
@@ -5040,6 +5309,7 @@ function goToScreen(name, btn) {
 function goBack() {
   window._adventureInProgress = false;
   localStorage.removeItem('ff_current_adventure');
+  stopAllTimers();
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
   goToScreen('home', document.getElementById('nav-home'));
 }

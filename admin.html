@@ -832,6 +832,34 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <option value="hybrid">🔀📍 Hybride — mélange des deux</option>
           </select>
         </div>
+        <div class="form-group full">
+          <label style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="f-has-global-timer" onchange="toggleGlobalTimer()"/>
+            ⏱️ Activer un timer pour toute l'aventure
+          </label>
+          <div id="global-timer-options" style="display:none;margin-top:12px;background:#FFF7EE;border:1px solid #FDE68A;border-radius:10px;padding:14px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:12px;">Durée (minutes)</label>
+                <input type="number" id="f-global-timer-minutes" placeholder="Ex: 90" min="1" max="300"/>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:12px;">Timer visible par le joueur ?</label>
+                <select id="f-global-timer-visible">
+                  <option value="true">👁️ Visible</option>
+                  <option value="false">🙈 Caché</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:12px;">Si timer expiré → étape n°</label>
+                <input type="number" id="f-global-timer-fail" placeholder="Ex: 5" min="1"/>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#92400E;margin-top:8px;">
+              ⚠️ Si le timer expire, le joueur est redirigé vers l'étape indiquée (scénario B).
+            </div>
+          </div>
+        </div>
         <div class="form-group">
           <label>Tranche d'âge</label>
           <input type="text" id="f-age" placeholder="Ex : 5–12 ans" value="5–12 ans" />
@@ -2634,6 +2662,19 @@ function openModal(id) {
     document.getElementById('f-satisfaction-url').value = adv.satisfaction_url || '';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
     document.getElementById('f-box-solution').value = adv.box_solution || '';
+    // Timer global
+    const hasGlobalTimer = adv.has_global_timer || false;
+    document.getElementById('f-has-global-timer').checked = hasGlobalTimer;
+    document.getElementById('global-timer-options').style.display = hasGlobalTimer ? 'block' : 'none';
+    if (hasGlobalTimer) {
+      document.getElementById('f-global-timer-minutes').value = adv.global_timer_seconds ? Math.round(adv.global_timer_seconds / 60) : '';
+      document.getElementById('f-global-timer-visible').value = adv.global_timer_visible !== false ? 'true' : 'false';
+      document.getElementById('f-global-timer-fail').value = adv.timer_fail_step_order || '';
+    } else {
+      document.getElementById('f-global-timer-minutes').value = '';
+      document.getElementById('f-global-timer-visible').value = 'true';
+      document.getElementById('f-global-timer-fail').value = '';
+    }
     generateQRCode(adv.satisfaction_url || '');
     updatePreview('intro'); updatePreview('outro');
     // Cover
@@ -2674,6 +2715,11 @@ function openModal(id) {
     document.getElementById('f-satisfaction-url').value = '';
     document.getElementById('f-box-hint').value = '';
     document.getElementById('f-box-solution').value = '';
+    document.getElementById('f-has-global-timer').checked = false;
+    document.getElementById('global-timer-options').style.display = 'none';
+    document.getElementById('f-global-timer-minutes').value = '';
+    document.getElementById('f-global-timer-visible').value = 'true';
+    document.getElementById('f-global-timer-fail').value = '';
     document.getElementById('qr-preview-section').style.display = 'none';
     document.getElementById('qr-code-display').innerHTML = '';
     showStepsEmpty();
@@ -2799,6 +2845,32 @@ function addStep(data) {
           <input type="text" id="s${n}-badgeName" placeholder="Ex : Gardien de la Fontaine" value="${d.badge_name||d.badgeName||''}"/>
         </div>
       </div>
+      <div class="step-section-label">⏱️ Timer de cette étape</div>
+      <div style="margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="s${n}-has-timer" onchange="toggleStepTimer(${n})"/>
+          Activer un timer pour cette étape
+        </label>
+      </div>
+      <div id="s${n}-timer-options" style="display:none;background:#FFF7EE;border:1px solid #FDE68A;border-radius:10px;padding:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Durée (minutes)</label>
+            <input type="number" id="s${n}-timer-minutes" placeholder="Ex: 10" min="1" max="120"/>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Timer visible ?</label>
+            <select id="s${n}-timer-visible">
+              <option value="true">👁️ Visible</option>
+              <option value="false">🙈 Caché</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Si expiré → étape n°</label>
+            <input type="number" id="s${n}-timer-fail" placeholder="Ex: 5" min="1"/>
+          </div>
+        </div>
+      </div>
       <div class="step-section-label">🔀 Type d'étape</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div class="form-group" style="margin:0;">
@@ -2845,6 +2917,19 @@ function addStep(data) {
   if (d.is_endpoint) {
     document.getElementById('s'+n+'-is-endpoint').value = 'true';
   }
+
+  // Charger les valeurs timer existantes de l'étape
+  if (d.has_step_timer) {
+    const timerCheck = document.getElementById('s'+n+'-has-timer');
+    if (timerCheck) {
+      timerCheck.checked = true;
+      document.getElementById('s'+n+'-timer-options').style.display = 'block';
+      document.getElementById('s'+n+'-timer-minutes').value = d.step_timer_seconds ? Math.round(d.step_timer_seconds / 60) : '';
+      document.getElementById('s'+n+'-timer-visible').value = d.step_timer_visible !== false ? 'true' : 'false';
+      document.getElementById('s'+n+'-timer-fail').value = d.timer_fail_step_order || '';
+    }
+  }
+
   if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
 }
 
@@ -2958,7 +3043,13 @@ function collectSteps() {
       badge_name:    document.getElementById('s'+i+'-badgeName')?.value || '',
       step_type:     document.getElementById('s'+i+'-step-type')?.value || 'standard',
       is_endpoint:   document.getElementById('s'+i+'-is-endpoint')?.value === 'true',
-      choices:       collectChoices(i)
+      choices:       collectChoices(i),
+      has_step_timer:      document.getElementById('s'+i+'-has-timer')?.checked || false,
+      step_timer_seconds:  document.getElementById('s'+i+'-has-timer')?.checked
+        ? (parseInt(document.getElementById('s'+i+'-timer-minutes')?.value) || 0) * 60
+        : null,
+      step_timer_visible:  document.getElementById('s'+i+'-timer-visible')?.value === 'true',
+      timer_fail_step_order: parseInt(document.getElementById('s'+i+'-timer-fail')?.value) || null
     });
   }
   return steps;
@@ -2984,6 +3075,12 @@ async function saveAdventure(asDraft) {
     satisfaction_url: document.getElementById('f-satisfaction-url').value,
     box_hint:         document.getElementById('f-box-hint').value,
     box_solution:     document.getElementById('f-box-solution').value,
+    has_global_timer: document.getElementById('f-has-global-timer')?.checked || false,
+    global_timer_seconds: document.getElementById('f-has-global-timer')?.checked
+      ? (parseInt(document.getElementById('f-global-timer-minutes')?.value) || 0) * 60
+      : null,
+    global_timer_visible: document.getElementById('f-global-timer-visible')?.value === 'true',
+    timer_fail_step_order: parseInt(document.getElementById('f-global-timer-fail')?.value) || null,
   };
 
   const btnSave = document.querySelector('.modal-footer .btn-primary');
@@ -3073,6 +3170,16 @@ function showToast(msg, isError = false) {
 
 // ── BRANCHEMENTS ──
 function onScenarioTypeChange() {}
+
+function toggleGlobalTimer() {
+  const checked = document.getElementById('f-has-global-timer').checked;
+  document.getElementById('global-timer-options').style.display = checked ? 'block' : 'none';
+}
+
+function toggleStepTimer(n) {
+  const checked = document.getElementById(`s${n}-has-timer`).checked;
+  document.getElementById(`s${n}-timer-options`).style.display = checked ? 'block' : 'none';
+}
 
 function onStepTypeChange(n) {
   const type = document.getElementById('s'+n+'-step-type').value;
