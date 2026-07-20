@@ -136,6 +136,24 @@
       <div style="font-size:28px;">⚠️</div>
       <div>Impossible de charger les données de la carte pour le moment.</div>
     </div>
+    <div id="map-gesture-hint" style="
+      display:none;
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      background:rgba(0,0,0,0.7);
+      color:white;
+      padding:12px 20px;
+      border-radius:10px;
+      font-size:14px;
+      font-family:Georgia,serif;
+      text-align:center;
+      z-index:1000;
+      pointer-events:none;
+    ">
+      🖐️ Utilisez deux doigts<br>pour déplacer la carte
+    </div>
   </div>
 </div>
 
@@ -202,6 +220,39 @@
       maxZoom: 19
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Intégration iframe mobile : n'autoriser le déplacement de la carte qu'à deux doigts,
+    // pour ne pas piéger le scroll de la page qui embarque l'iframe sous un seul doigt.
+    // (Le drag à la souris reste actif sur desktop — seul le tactile est concerné ici,
+    // puisque les événements touchstart/touchend ne se déclenchent que sur écran tactile.)
+    map.scrollWheelZoom.disable();
+
+    const gestureHint = document.getElementById('map-gesture-hint');
+    let hintTimeout = null;
+
+    map.on('touchstart', function (e) {
+      const touches = e.originalEvent.touches.length;
+      if (touches >= 2) {
+        map.dragging.enable();
+        if (gestureHint) gestureHint.style.display = 'none';
+        clearTimeout(hintTimeout);
+      } else {
+        map.dragging.disable();
+        if (gestureHint) {
+          gestureHint.style.display = 'block';
+          clearTimeout(hintTimeout);
+          hintTimeout = setTimeout(() => { gestureHint.style.display = 'none'; }, 1500);
+        }
+      }
+    });
+
+    map.on('touchend', function (e) {
+      const remaining = e.originalEvent.touches.length;
+      if (remaining >= 2) return; // encore au moins deux doigts posés, ne rien changer
+      map.dragging.disable();
+      clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(() => { if (gestureHint) gestureHint.style.display = 'none'; }, 500);
+    });
 
     try {
       const [adventures, books] = await Promise.all([
