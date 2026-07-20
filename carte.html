@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Carte des aventures — Récits d'Aventures</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --green-dark:  #1A2A1A;
+    --green-mid:   #2D4A2D;
+    --beige-light: #F5EDD8;
+    --beige-mid:   #EDE0C4;
+    --beige-dark:  #D4C5A9;
+    --gold:        #E8A020;
+    --gold-dark:   #C4841A;
+    --blue-book:   #2D5A8E;
+    --text-dark:   #1A2A1A;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    font-family: 'Segoe UI', Georgia, serif;
+    background: var(--green-dark);
+    overflow: hidden;
+  }
+
+  #app-shell {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%;
+  }
+
+  /* ── EN-TÊTE ── */
+  #map-header {
+    flex-shrink: 0;
+    background: linear-gradient(180deg, var(--green-dark) 0%, var(--green-mid) 100%);
+    color: var(--beige-light);
+    padding: 14px 18px 12px;
+    border-bottom: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  #map-header h1 {
+    margin: 0; font-size: 16px; font-weight: 800; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #map-header h1 .compass-emoji { font-size: 20px; }
+  #map-legend {
+    display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: rgba(245,237,216,0.85);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; flex-shrink: 0; }
+  .legend-dot.flavia { background: var(--gold); }
+  .legend-dot.book   { background: var(--blue-book); }
+
+  /* ── CARTE ── */
+  #map-wrap { flex: 1; position: relative; min-height: 0; }
+  #map { width: 100%; height: 100%; background: var(--beige-mid); }
+
+  #map-loading {
+    position: absolute; inset: 0; z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px;
+    background: var(--beige-mid); color: var(--text-dark);
+    font-size: 14px; font-weight: 600;
+  }
+  #map-loading .spin {
+    font-size: 30px; animation: spin-compass 1.4s linear infinite;
+  }
+  @keyframes spin-compass { to { transform: rotate(360deg); } }
+
+  #map-error {
+    display: none;
+    position: absolute; inset: 0; z-index: 500;
+    align-items: center; justify-content: center; text-align: center;
+    flex-direction: column; gap: 8px; padding: 24px;
+    background: var(--beige-mid); color: #7A2E2E; font-size: 14px; font-weight: 600;
+  }
+
+  /* ── POPUPS LEAFLET (thème sombre / beige / or) ── */
+  .leaflet-popup-content-wrapper {
+    background: var(--beige-light);
+    color: var(--text-dark);
+    border-radius: 14px;
+    border: 1.5px solid var(--gold);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  }
+  .leaflet-popup-tip { background: var(--beige-light); border: 1.5px solid var(--gold); }
+  .leaflet-popup-content { margin: 12px 14px; min-width: 200px; }
+  .leaflet-popup-close-button { color: var(--green-mid) !important; }
+
+  .popup-cover {
+    width: 100%; height: 100px; object-fit: cover; border-radius: 10px;
+    margin-bottom: 8px; display: block;
+  }
+  .popup-emoji-banner {
+    width: 100%; height: 70px; border-radius: 10px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 34px;
+  }
+  .popup-badge {
+    display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 3px 8px; border-radius: 20px; margin-bottom: 6px;
+    color: white;
+  }
+  .popup-badge.flavia { background: var(--gold-dark); }
+  .popup-badge.book   { background: var(--blue-book); }
+  .popup-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; line-height: 1.3; }
+  .popup-meta  { font-size: 12px; color: #4A5A4A; line-height: 1.5; }
+  .popup-meta div { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+
+  .leaflet-control-zoom a {
+    background: var(--beige-light) !important; color: var(--green-dark) !important;
+    border-color: var(--gold) !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(245,237,216,0.85) !important; font-size: 10px !important;
+  }
+</style>
+</head>
+<body>
+
+<div id="app-shell">
+  <div id="map-header">
+    <h1><span class="compass-emoji">🧭</span> La Carte des Explorateurs — Récits d'Aventures</h1>
+    <div id="map-legend">
+      <div class="legend-item"><span class="legend-dot flavia"></span> Aventures Flavia Flint</div>
+      <div class="legend-item"><span class="legend-dot book"></span> Livrets Professeur Flint</div>
+    </div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="map-loading"><div class="spin">🧭</div>Chargement de la carte…</div>
+    <div id="map-error">
+      <div style="font-size:28px;">⚠️</div>
+      <div>Impossible de charger les données de la carte pour le moment.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Même projet / même clé publique (anon) que dans index.html
+  const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
+
+  const DIFF_LABELS = { 'Facile': '🟢 Facile', 'Intermédiaire': '🟠 Intermédiaire', 'Expert': '🔴 Expert' };
+
+  async function supaGet(endpoint) {
+    const res = await fetch(`${SUPA_URL}/rest/v1/${endpoint}`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      }
+    });
+    if (!res.ok) throw new Error('Erreur Supabase (' + res.status + ') sur ' + endpoint);
+    return res.json();
+  }
+
+  function escapeHtml(str) {
+    return (str || '').toString()
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function buildAdventurePopup(adv) {
+    const cover = adv.cover_image_url
+      ? `<img class="popup-cover" src="${adv.cover_image_url}" alt=""/>`
+      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#2D4A2D,#3D6B3D);">${adv.emoji || '🗺️'}</div>`;
+    return `
+      <div>
+        ${cover}
+        <div class="popup-badge flavia">🧭 Aventure Flavia Flint</div>
+        <div class="popup-title">${escapeHtml(adv.emoji || '🗺️')} ${escapeHtml(adv.title)}</div>
+        <div class="popup-meta">
+          ${adv.location ? `<div>📍 ${escapeHtml(adv.location)}</div>` : ''}
+          ${adv.duration ? `<div>⏱ ${escapeHtml(adv.duration)}</div>` : ''}
+          ${adv.difficulty ? `<div>${DIFF_LABELS[adv.difficulty] || escapeHtml(adv.difficulty)}</div>` : ''}
+          ${adv.age_range ? `<div>👶 ${escapeHtml(adv.age_range)}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function buildBookPopup(book) {
+    const cover = book.cover_image_url
+      ? `<img class="popup-cover" src="${book.cover_image_url}" alt=""/>`
+      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);">${book.emoji || '📖'}</div>`;
+    return `
+      <div>
+        ${cover}
+        <div class="popup-badge book">📖 Livret Professeur Flint</div>
+        <div class="popup-title">${escapeHtml(book.emoji || '📖')} ${escapeHtml(book.title)}</div>
+        <div class="popup-meta">
+          ${book.location ? `<div>📍 ${escapeHtml(book.location)}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  async function initCarte() {
+    const map = L.map('map', { zoomControl: false }).setView([43.4, 6.2], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    try {
+      const [adventures, books] = await Promise.all([
+        supaGet('adventures?select=*,steps(*)&status=eq.published&order=created_at.asc'),
+        supaGet('professor_flint_books?select=*&status=eq.published&order=created_at.asc').catch(() => [])
+      ]);
+
+      (adventures || []).forEach(adv => {
+        const steps = (adv.steps || []).slice().sort((a, b) => a.order_num - b.order_num);
+        const firstStep = steps[0];
+        if (!firstStep?.lat || !firstStep?.lng) return;
+
+        const marker = L.circleMarker([firstStep.lat, firstStep.lng], {
+          radius: 14, fillColor: '#E8A020', color: 'white', weight: 2.5, fillOpacity: 0.92
+        }).addTo(map);
+        marker.bindPopup(buildAdventurePopup(adv), { maxWidth: 260, className: 'ff-popup' });
+      });
+
+      (books || []).forEach(book => {
+        if (!book.lat || !book.lng) return;
+        const marker = L.circleMarker([book.lat, book.lng], {
+          radius: 14, fillColor: '#2D5A8E', color: 'white', weight: 2.5, fillOpacity: 0.92
+        }).addTo(map);
+        marker.bindPopup(buildBookPopup(book), { maxWidth: 260, className: 'ff-popup' });
+      });
+
+      document.getElementById('map-loading').style.display = 'none';
+    } catch (e) {
+      console.error('Erreur chargement carte:', e);
+      document.getElementById('map-loading').style.display = 'none';
+      document.getElementById('map-error').style.display = 'flex';
+    }
+  }
+
+  initCarte();
+</script>
+</body>
+</html>
