@@ -819,6 +819,7 @@
     animation: fadeHint 0.3s ease;
   }
   @keyframes fadeHint { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+  @keyframes scaleIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
   @keyframes slideDown {
     from { transform: translateX(-50%) translateY(-20px); opacity:0; }
     to   { transform: translateX(-50%) translateY(0);    opacity:1; }
@@ -1377,6 +1378,10 @@
         <div style="grid-column:1/-1; color:var(--text-light); font-size:13px; padding:10px 0;">Chargement…</div>
       </div>
 
+      <div id="profile-partner-badges"></div>
+
+      <div id="profile-titles-section"></div>
+
       <div class="section-title" style="margin-top:4px;">Mes aventures</div>
       <div id="profile-history-list" style="margin-bottom:20px;">
         <div style="color:var(--text-light); font-size:13px; padding:10px 0;">Chargement…</div>
@@ -1701,6 +1706,16 @@
 // HISTOIRE DE FLAVIA FLINT — MONNAIE BOUSSOLES
 // ══════════════════════════════════════════
 const COMPASS_PER_ADVENTURE = 10; // Boussoles gagnées par scénario terminé
+
+// Icône boussole fixe (remplace les anciens emojis choisis par aventure/livre)
+function compassIconSVG(size = 32, color = '#FFFFFF') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;">
+    <circle cx="12" cy="12" r="9.4" stroke="${color}" stroke-width="1.4" opacity="0.9"/>
+    <path d="M12 3.6L14 12L12 12L10 12Z" fill="${color}"/>
+    <path d="M12 20.4L14 12L12 12L10 12Z" fill="${color}" opacity="0.5"/>
+    <circle cx="12" cy="12" r="1.3" fill="${color}"/>
+  </svg>`;
+}
 
 // ══════════════════════════════════════════
 // SUPABASE REST — SANS SDK
@@ -2286,7 +2301,7 @@ function buildCarouselCard(adv) {
       <div class="adv-card">
         <div class="adv-card-banner" style="position:relative;height:100px;">
           ${imgHtml}
-          <span style="position:relative;z-index:1;font-size:32px;">${adv.emoji || '🗺️'}</span>
+          <span style="position:relative;z-index:1;">${compassIconSVG(28)}</span>
           <div class="adv-card-diff ${diffClass}" style="position:absolute;top:8px;right:8px;">${adv.difficulty || ''}</div>
         </div>
         <div class="adv-card-body">
@@ -2337,7 +2352,7 @@ function renderAdventureCards() {
       <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')">
         <div class="adv-card-banner">
           ${imgHtml}
-          <span>${adv.emoji || '🗺️'}</span>
+          <span>${compassIconSVG(32)}</span>
           <div class="adv-card-diff ${diffClass}">${adv.difficulty || ''}</div>
         </div>
         <div class="adv-card-body">
@@ -2376,7 +2391,7 @@ function renderProfessorBooksSection() {
           <div class="adv-card" onclick="showBookDetail('${b.id}')">
             <div class="adv-card-banner" style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);">
               ${imgHtml}
-              <span>${b.emoji || '📖'}</span>
+              <span>${compassIconSVG(32)}</span>
             </div>
             <div class="adv-card-body">
               <div class="adv-card-title">${b.title}</div>
@@ -2438,10 +2453,21 @@ function renderMapMarkers() {
   map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
   if (playerPos) updatePlayerMarker(playerPos.lat, playerPos.lng);
   adventures.forEach(adv => {
-    const firstStep = adv.steps?.[0];
-    if (!firstStep?.lat) return;
+    // Aventure à 1 seul lieu — utiliser les coordonnées principales de l'aventure
+    let lat, lng;
+    if (adv.locations_count === 1 && adv.main_lat) {
+      lat = adv.main_lat;
+      lng = adv.main_lng;
+    } else {
+      // Comportement existant — coordonnées de la première étape
+      const firstStep = adv.steps?.[0];
+      if (!firstStep?.lat) return;
+      lat = firstStep.lat;
+      lng = firstStep.lng;
+    }
+    if (!lat || !lng) return;
     const color = DIFF_COLORS[adv.difficulty] || '#C4622D';
-    const marker = L.circleMarker([firstStep.lat, firstStep.lng], {
+    const marker = L.circleMarker([lat, lng], {
       radius: 14, fillColor: color, color: 'white', weight: 2.5, fillOpacity: 0.9
     }).addTo(map);
     marker.on('click', () => showPopup(adv));
@@ -2500,7 +2526,7 @@ async function showBookDetail(bookId) {
   const coverUrl = book.cover_image_url || '';
   const coverHtml = coverUrl
     ? `<img src="${coverUrl}" style="width:100%;height:160px;object-fit:cover;border-radius:14px;margin-bottom:14px;" alt=""/>`
-    : `<div style="width:100%;height:160px;border-radius:14px;margin-bottom:14px;background:linear-gradient(135deg,#1A3A5C,#2D5A8E);display:flex;align-items:center;justify-content:center;font-size:48px;">${book.emoji || '📖'}</div>`;
+    : `<div style="width:100%;height:160px;border-radius:14px;margin-bottom:14px;background:linear-gradient(135deg,#1A3A5C,#2D5A8E);display:flex;align-items:center;justify-content:center;">${compassIconSVG(48)}</div>`;
 
   let actionHtml = '';
   if (isGuest()) {
@@ -2615,6 +2641,7 @@ function checkResumeAdventure(adv) {
     window._adventureStartTime  = progress.start_time || Date.now();
     window._adventureAttempts   = progress.attempts || 0;
     window._adventureTotalXp    = 0;
+    window._adventureHintPenalty = 0;
     return true;
   } else {
     localStorage.removeItem('ff_current_adventure');
@@ -2793,6 +2820,7 @@ async function startAdventure() {
     window._adventureStartTime = Date.now();
     window._adventureAttempts  = 0;
     window._adventureTotalXp   = 0;
+    window._adventureHintPenalty = 0;
     window._currentStepId      = currentAdv.steps[0]?.id || null;
 
     // Reprise à la dernière étape non complétée
@@ -2914,6 +2942,13 @@ function renderStoryMode() {
 function renderCompassMode() {
   const step = currentStep();
   if (!step) return;
+
+  // Aventure à 1 seul lieu — pas de navigation GPS entre étapes, on passe direct à l'énigme
+  if (currentAdv?.locations_count === 1 || currentAdv?.steps?.length === 1) {
+    renderEnigmeMode();
+    return;
+  }
+
   gpsAutoUnlocked = false;
   startStepTimer(step);
 
@@ -3103,6 +3138,7 @@ function renderHintSection() {
 
 function revealHint(level, penalty) {
   hintXpPenalty   += penalty;
+  window._adventureHintPenalty = (window._adventureHintPenalty || 0) + penalty;
   currentHintLevel = level;
   renderHintSection();
 }
@@ -3133,7 +3169,11 @@ function checkAnswer() {
 async function renderRewardMode() {
   const step     = currentStep();
   const isLast   = currentStepIndex >= (currentAdv?.steps.length || 1) - 1;
-  const earnedXp = Math.max(0, (step?.xp || 0) - hintXpPenalty);
+  // L'XP est désormais une valeur unique définie au niveau du scénario (plus par étape) :
+  // elle n'est attribuée qu'à la toute fin, une fois déduits les indices utilisés sur l'ensemble de l'aventure.
+  const earnedXp = isLast
+    ? Math.max(0, (currentAdv?.xp_reward || 0) - (window._adventureHintPenalty || 0))
+    : 0;
 
   // Aventure terminée : la sauvegarde locale de reprise n'a plus lieu d'être
   if (isLast) {
@@ -3169,7 +3209,7 @@ async function renderRewardMode() {
       box-shadow:0 4px 15px rgba(0,0,0,0.2);
       animation:slideDown 0.3s ease;
     `;
-    toast.innerHTML = `${step?.badge_emoji || '⭐'} +${step?.xp || 0} XP · ${step?.badge_name || 'Étape débloquée'} !`;
+    toast.innerHTML = `⭐ Étape débloquée !`;
     document.body.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
@@ -3202,6 +3242,9 @@ async function renderRewardMode() {
 
       // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
       awardCompasses(userId, COMPASS_PER_ADVENTURE);
+
+      // Vérifier si ce scénario terminé débloque un nouveau titre
+      checkAndAwardTitles();
     }
   }
 
@@ -3254,8 +3297,9 @@ async function renderRewardMode() {
     ? `<img src="${currentAdv.outro_image_url}" style="width:100%;border-radius:12px;margin-bottom:8px;object-fit:cover;max-height:200px;" alt=""/>`
     : '';
 
+  const totalHintPenalty = window._adventureHintPenalty || 0;
   const xpLabel = earnedXp > 0
-    ? `<div class="xp-pill">⭐ +${earnedXp} XP gagnés${hintXpPenalty > 0 ? ` <span style="font-size:11px;opacity:.7;">(−${hintXpPenalty} indices)</span>` : ''}</div>`
+    ? `<div class="xp-pill">⭐ +${earnedXp} XP gagnés${totalHintPenalty > 0 ? ` <span style="font-size:11px;opacity:.7;">(−${totalHintPenalty} indices)</span>` : ''}</div>`
     : '';
 
   document.getElementById('mode-reward').innerHTML = `
@@ -3267,8 +3311,9 @@ async function renderRewardMode() {
       <div class="bubble flavia">${flaviaMsg}</div>
     </div>
     ${xpLabel}
-    ${step?.badge_emoji ? `<div class="badge-hex">${step.badge_emoji}</div>
-      <div class="badge-name">Badge : ${step.badge_name || ''}</div>` : ''}
+    ${isLast && currentAdv?.badge_name ? `
+      <div class="badge-hex">${currentAdv.badge_image_url ? `<img src="${currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
+      <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
     <div style="margin-top:16px;width:100%;">
       ${isLast ? `
         <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
@@ -3302,18 +3347,22 @@ async function loadAppSettings() {
 
 // ── ÉCRAN RÉCOMPENSE FINAL (après QR ou "Passer") ──
 async function showFinalReward() {
-  const step = currentStep();
+  // Sécurité : la vérification des titres a déjà lieu au moment de l'enregistrement
+  // de la fin d'aventure (renderRewardMode), mais on la rejoue ici pour ce chemin
+  // spécifique (idempotent — n'attribue jamais deux fois le même titre).
+  checkAndAwardTitles();
+
   const durationSeconds = Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000);
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = durationSeconds % 60;
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
   const attempts = window._adventureAttempts || 0;
 
-  // XP de partage = pourcentage (configurable depuis l'admin) du XP de la dernière étape
+  // XP de partage = pourcentage (configurable depuis l'admin) de l'XP total du scénario
   const settings      = await loadAppSettings();
-  const stepXp         = step?.xp || 50;
+  const scenarioXp     = currentAdv?.xp_reward || 50;
   const sharePercent   = parseInt(settings.share_xp_percent, 10) || 20;
-  const shareXp        = Math.round(stepXp * sharePercent / 100);
+  const shareXp        = Math.round(scenarioXp * sharePercent / 100);
 
   // Vérifier si déjà partagé pour cette aventure
   const sharedAdventures = JSON.parse(localStorage.getItem('ff_shared_adventures') || '[]');
@@ -3354,8 +3403,10 @@ async function showFinalReward() {
     <div class="reward-burst">🏆</div>
     <div class="reward-title">Bravo, aventurier !</div>
     <div class="reward-sub">${currentAdv?.outro_text || 'Flavia est fière de toi !'}</div>
-    ${step?.xp ? `<div class="xp-pill">⭐ +${step.xp} XP gagnés</div>` : ''}
-    ${step?.badge_emoji ? `<div class="badge-hex">${step.badge_emoji}</div><div class="badge-name">Badge : ${step.badge_name || ''}</div>` : ''}
+    ${currentAdv?.xp_reward ? `<div class="xp-pill">⭐ +${currentAdv.xp_reward} XP gagnés</div>` : ''}
+    ${currentAdv?.badge_name ? `
+      <div class="badge-hex">${currentAdv.badge_image_url ? `<img src="${currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
+      <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
     <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin:16px 0;text-align:center;">
       <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
       <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
@@ -3649,8 +3700,9 @@ function handleChoice(choiceIndex) {
     } else {
       // Bug corrigé : avant, une étape de décision qui menait à une autre étape
       // (pas la fin de l'aventure) ne passait jamais par renderRewardMode(), donc
-      // saveProgress() n'était jamais appelé pour elle — ni XP ni badge enregistrés.
-      saveProgress(step, step.xp || 0);
+      // saveProgress() n'était jamais appelé pour elle. L'XP n'est plus par étape :
+      // on marque simplement la progression, l'XP du scénario sera attribué à la toute fin.
+      saveProgress(step, 0);
       goToNextStep(choiceIndex);
     }
   }, 600);
@@ -3690,35 +3742,39 @@ async function loadProfile() {
     const allPlayers = await supaFetch('players?select=id,total_xp&order=total_xp.desc');
     const rank = allPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
 
-    // Progression complétée + badges des steps (jointure avec l'aventure d'origine)
-    // Isolée dans son propre try/catch : si la jointure échoue pour une raison
-    // quelconque, elle ne doit pas empêcher le reste du profil (XP, rang, historique...)
-    // de s'afficher — c'était la cause probable du "XP à 0" qui ne se mettait pas à jour.
+    // Vérifier/attribuer les titres mérités AVANT de les afficher, pour que le joueur
+    // voie tout de suite un titre débloqué en arrivant sur son profil (et pas seulement
+    // après sa prochaine aventure terminée).
+    await checkAndAwardTitles();
+
+    // Titres débloqués (collection + titre équipé affiché sous le pseudo)
+    let playerTitles = [];
+    try {
+      playerTitles = await supaFetch(
+        `player_titles?player_id=eq.${currentPlayer.id}&select=*,titles(name,category,level,icon,image_url,description)&order=unlocked_at.desc`
+      );
+      console.log('Titres joueur:', playerTitles);
+    } catch (e) {
+      console.error('Erreur chargement titres:', e);
+    }
+    const equippedTitle = playerTitles.find(t => t.is_equipped);
+    const equippedTitleHtml = equippedTitle
+      ? `<div style="color:#E8A020;font-size:13px;margin-top:4px;">${equippedTitle.titles?.name || ''}</div>`
+      : '';
+
+    // Progression complétée (sert à compter les scénarios distincts commencés/terminés).
+    // Le badge et l'XP ne sont plus stockés par étape mais au niveau de l'aventure —
+    // voir plus bas la requête sur adventure_completions.
     let progressData = [];
     try {
       progressData = await supaFetch(
-        `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id,steps(badge_emoji,badge_name,xp,adventure_id,adventures(title,emoji))`
+        `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
       );
     } catch (e) {
-      console.error('Jointure badges échouée, bascule en 2 requêtes:', e);
-      try {
-        const progress = await supaFetch(
-          `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
-        );
-        const stepIds = [...new Set(progress.map(p => p.step_id).filter(Boolean))];
-        let stepsById = {};
-        if (stepIds.length) {
-          const steps = await supaFetch(`steps?id=in.(${stepIds.join(',')})&select=id,badge_emoji,badge_name,xp,adventure_id`);
-          stepsById = Object.fromEntries(steps.map(s => [s.id, s]));
-        }
-        progressData = progress.map(p => ({ ...p, steps: stepsById[p.step_id] || null }));
-      } catch (e2) {
-        console.error('Fallback badges également en échec:', e2);
-        progressData = [];
-      }
+      console.error('Erreur chargement progression:', e);
+      progressData = [];
     }
     const uniqueAdvIds = new Set(progressData.map(p => p.adventure_id));
-    const badgeList    = progressData.filter(p => p.steps?.badge_emoji);
 
     // Mise à jour UI
     document.getElementById('profile-avatar-el').textContent = currentPlayer.avatar_emoji || '🧒';
@@ -3739,31 +3795,122 @@ async function loadProfile() {
           ${pseudo} · ${rankLine}
           <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:20px;height:20px;color:white;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
         </div>
-        ${cityLine}`
+        ${cityLine}
+        ${equippedTitleHtml}`
       : `
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
           <div class="profile-name">${pseudo}</div>
           <button onclick="editPseudo()" title="Modifier le pseudo" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✏️</button>
         </div>
         <div class="profile-pseudo">${rankLine}</div>
-        ${cityLine}`;
+        ${cityLine}
+        ${equippedTitleHtml}`;
     document.getElementById('profile-stat-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-stat-xp').textContent        = xpFmt;
-    document.getElementById('profile-stat-badges').textContent    = badgeList.length;
 
     document.getElementById('profile-tbl-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-tbl-xp').textContent        = xpFmt;
     document.getElementById('profile-tbl-rank').textContent      = rank ? '#' + rank : '–';
 
-    // Grille badges
+    // Grille badges — un badge par scénario terminé (image du badge si définie, sinon 🏅)
+    let scenarioBadges = [];
+    try {
+      scenarioBadges = await supaFetch(
+        `adventure_completions?player_id=eq.${currentPlayer.id}&select=adventure_id,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`
+      );
+    } catch (e) {
+      console.error('Erreur chargement badges scénarios:', e);
+    }
+    // Un seul badge par aventure, même si rejouée plusieurs fois
+    const seenAdvIds = new Set();
+    const uniqueScenarioBadges = (scenarioBadges || []).filter(c => {
+      if (!c.adventure_id || seenAdvIds.has(c.adventure_id)) return false;
+      seenAdvIds.add(c.adventure_id);
+      return true;
+    });
+    document.getElementById('profile-stat-badges').textContent = uniqueScenarioBadges.length;
+
     const grid = document.getElementById('profile-badges-grid');
-    grid.innerHTML = badgeList.length
-      ? badgeList.map(p => `
+    grid.innerHTML = uniqueScenarioBadges.length
+      ? uniqueScenarioBadges.map(c => `
         <div class="badge-item">
-          <div class="badge-hex-sm" style="background:var(--green-dark);">${p.steps.badge_emoji}</div>
-          <div class="badge-label">${p.steps.badge_name || ''}</div>
+          <div class="badge-hex-sm" style="background:var(--green-dark);">${
+            c.adventures?.badge_image_url
+              ? `<img src="${c.adventures.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+              : '🏅'
+          }</div>
+          <div class="badge-label">${c.adventures?.badge_name || c.adventures?.title || 'Badge'}</div>
         </div>`).join('')
       : '<div style="grid-column:1/-1; color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
+
+    // Badges partenaires (QR codes collector scannés chez nos partenaires)
+    try {
+      const partnerBadges = await supaFetch(
+        `player_partner_badges?player_id=eq.${currentPlayer.id}&select=*,partner_qr_codes(badge_name,partner_name,badge_image_url,xp_reward)&order=scanned_at.desc`
+      );
+      const partnerEl = document.getElementById('profile-partner-badges');
+      if (partnerEl) {
+        partnerEl.innerHTML = partnerBadges.length > 0 ? `
+          <div style="margin:16px 0;">
+            <div class="section-title" style="margin-bottom:12px;">🏅 Badges Partenaires</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+              ${partnerBadges.map(b => `
+                <div style="background:white;border-radius:12px;padding:10px;text-align:center;border:1px solid #E5D9C0;">
+                  <div style="font-size:32px;margin-bottom:4px;">🏅</div>
+                  <div style="font-size:11px;font-weight:700;color:#1A2A1A;line-height:1.2;">${b.partner_qr_codes?.badge_name || '?'}</div>
+                  <div style="font-size:10px;color:#9CA3AF;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
+                </div>`).join('')}
+            </div>
+          </div>` : '';
+      }
+    } catch (e) {
+      console.error('Erreur chargement badges partenaires:', e);
+    }
+
+    // Section "Mes Titres"
+    const titlesSectionEl = document.getElementById('profile-titles-section');
+    const titlesHtml = playerTitles.length > 0 ? `
+      <div style="margin:16px 0;">
+        <div class="section-title" style="margin-bottom:12px;">🎖️ Mes Titres</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${playerTitles.map(t => `
+            <div style="
+              background:${t.is_equipped ? '#FFF7F4' : 'white'};
+              border:${t.is_equipped ? '2px solid #C4622D' : '1px solid #E5D9C0'};
+              border-radius:12px;padding:10px 14px;
+              display:flex;align-items:center;gap:10px;
+            ">
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${t.titles?.name || ''}</div>
+                <div style="font-size:11px;color:#9CA3AF;">${t.titles?.description || ''}</div>
+              </div>
+              ${t.is_equipped
+                ? `<span style="font-size:11px;background:#C4622D;color:white;border-radius:20px;padding:3px 10px;font-weight:600;">Équipé</span>`
+                : `<button onclick="equipTitle('${t.id}')" style="
+                    font-size:11px;background:none;border:1px solid #D4C5A9;
+                    border-radius:20px;padding:3px 10px;cursor:pointer;color:#6B7280;">
+                    Équiper
+                  </button>`
+              }
+            </div>`).join('')}
+        </div>
+      </div>` : `
+      <div style="margin:16px 0;">
+        <div class="section-title" style="margin-bottom:12px;">🎖️ Mes Titres</div>
+        <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:white;border:1px solid #E5D9C0;border-radius:12px;">
+          Termine des aventures pour débloquer tes premiers titres !
+        </div>
+      </div>`;
+    const showAllTitlesBtnHtml = `
+      <div style="margin:0 0 12px;">
+        <button onclick="showAllTitles()" style="
+          width:100%;padding:12px;background:none;
+          border:1.5px solid #2D4A2D;border-radius:12px;
+          font-size:14px;font-weight:600;color:#2D4A2D;cursor:pointer;">
+          🎖️ Voir tous les titres disponibles
+        </button>
+      </div>`;
+    if (titlesSectionEl) titlesSectionEl.innerHTML = showAllTitlesBtnHtml + titlesHtml;
 
     // Barre de progression vers le rang suivant
     const currentRank  = getPlayerRank(xp);
@@ -3806,7 +3953,7 @@ async function loadProfile() {
 
     // Historique des aventures jouées
     const completions = await supaFetch(
-      `adventure_completions?player_id=eq.${currentPlayer.id}&select=*,adventures(title,emoji)&order=completed_at.desc&limit=5`
+      `adventure_completions?player_id=eq.${currentPlayer.id}&select=*,adventures(title)&order=completed_at.desc&limit=5`
     );
     const historyEl = document.getElementById('profile-history-list');
     historyEl.innerHTML = completions.length
@@ -3817,7 +3964,7 @@ async function loadProfile() {
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--beige-mid);">
               <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:20px;">${c.adventures?.emoji || '🗺️'}</span>
+                ${compassIconSVG(18, '#2D4A2D')}
                 <span style="font-size:13px;font-weight:600;color:var(--text-dark);">${c.adventures?.title || 'Aventure'}</span>
               </div>
               <div style="text-align:right;">
@@ -3835,6 +3982,194 @@ async function loadProfile() {
 
   } catch (e) {
     console.error('Erreur chargement profil:', e);
+  }
+}
+
+// ── ÉQUIPER UN TITRE ──
+async function equipTitle(playerTitleId) {
+  if (!currentPlayer?.id) return;
+  try {
+    // Déséquiper tous les titres du joueur, puis équiper celui sélectionné
+    await supaFetch(`player_titles?player_id=eq.${currentPlayer.id}`, {
+      method: 'PATCH',
+      body: { is_equipped: false },
+      prefer: 'return=minimal'
+    });
+    await supaFetch(`player_titles?id=eq.${playerTitleId}`, {
+      method: 'PATCH',
+      body: { is_equipped: true },
+      prefer: 'return=minimal'
+    });
+    showToast('Titre équipé ✓');
+    loadProfile();
+  } catch(e) {
+    console.error('Erreur équipement titre:', e);
+    showToast('Erreur : ' + e.message);
+  }
+}
+
+// ── MODAL "TOUS LES TITRES DISPONIBLES" (collection complète + comment les obtenir) ──
+async function showAllTitles() {
+  if (!currentPlayer?.id) return;
+
+  let titles = [];
+  let playerTitles = [];
+  try {
+    [titles, playerTitles] = await Promise.all([
+      supaFetch('titles?is_active=eq.true&order=category.asc,level.asc&select=*'),
+      supaFetch(`player_titles?player_id=eq.${currentPlayer.id}&select=title_id`)
+    ]);
+  } catch (e) {
+    console.error('Erreur chargement de tous les titres:', e);
+    showToast('Impossible de charger les titres pour le moment');
+    return;
+  }
+  const ownedIds = new Set(playerTitles.map(t => t.title_id));
+
+  const categories = {
+    exploration: 'Exploration',
+    vitesse: 'Vitesse',
+    partenaires: 'Partenaires',
+    fidelite: 'Fidélité',
+    enigmes: 'Énigmes',
+    historique: 'Historique'
+  };
+
+  const grouped = {};
+  titles.forEach(t => {
+    if (!grouped[t.category]) grouped[t.category] = [];
+    grouped[t.category].push(t);
+  });
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;';
+  modal.innerHTML = `
+    <div style="
+      background:#F5EDD8;min-height:100%;
+      max-width:500px;margin:0 auto;padding:0 0 40px;
+    ">
+      <!-- Header -->
+      <div style="background:#2D4A2D;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:1;">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="
+          background:rgba(255,255,255,0.1);border:none;border-radius:8px;
+          color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
+        <span style="color:white;font-weight:700;flex:1;">Tous les titres</span>
+      </div>
+
+      <div style="padding:16px;">
+        <p style="font-size:13px;color:#6B7280;margin-bottom:20px;line-height:1.5;">
+          Débloque des titres en progressant dans tes aventures.
+          Équipe ton titre préféré pour l'afficher sous ton pseudo !
+        </p>
+
+        ${titles.length ? Object.entries(grouped).map(([cat, items]) => `
+          <div style="margin-bottom:20px;">
+            <div style="font-size:12px;font-weight:700;color:#6B7280;
+              text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;
+              padding-bottom:6px;border-bottom:1px solid #D4C5A9;">
+              ${categories[cat] || cat}
+            </div>
+            ${items.map(t => {
+              const owned = ownedIds.has(t.id);
+              return `
+                <div style="
+                  background:${owned ? 'white' : '#F0EDE6'};
+                  border:1px solid ${owned ? '#C4622D' : '#D4C5A9'};
+                  border-radius:10px;padding:12px 14px;margin-bottom:8px;
+                  display:flex;align-items:center;gap:12px;
+                  opacity:${owned ? '1' : '0.7'};
+                ">
+                  <div style="
+                    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+                    background:${owned ? '#C4622D' : '#D4C5A9'};
+                  "></div>
+                  <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:700;color:#1A2A1A;">
+                      ${t.name}
+                      ${owned ? '<span style="font-size:11px;color:#C4622D;font-weight:600;margin-left:6px;">✓ Débloqué</span>' : ''}
+                    </div>
+                    <div style="font-size:12px;color:#6B7280;margin-top:2px;">${t.description || ''}</div>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#9CA3AF;
+                    background:#F5EDD8;border-radius:20px;padding:3px 10px;
+                    white-space:nowrap;">
+                    Niv. ${t.level ?? '—'}
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>`).join('') : `
+          <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:white;border:1px solid #E5D9C0;border-radius:12px;">
+            Aucun titre disponible pour le moment.
+          </div>`}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ── ATTRIBUTION AUTOMATIQUE DES TITRES (appelée après chaque aventure terminée) ──
+async function checkAndAwardTitles() {
+  const userId = currentPlayer?.id;
+  if (!userId) return;
+
+  try {
+    const [allTitles, playerTitlesData, completions, partnerBadges, playerRows] = await Promise.all([
+      supaFetch('titles?is_active=eq.true&select=*'),
+      supaFetch(`player_titles?player_id=eq.${userId}&select=title_id`),
+      supaFetch(`adventure_completions?player_id=eq.${userId}&select=*`),
+      supaFetch(`player_partner_badges?player_id=eq.${userId}&select=*`),
+      supaFetch(`players?id=eq.${userId}&select=created_at,total_xp`)
+    ]);
+
+    const ownedTitleIds   = new Set(playerTitlesData.map(t => t.title_id));
+    const scenariosCount  = completions.length;
+    const partnerCount    = partnerBadges.length;
+    const monthsSinceJoin = playerRows[0]
+      ? Math.floor((Date.now() - new Date(playerRows[0].created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+      : 0;
+
+    const newTitles = [];
+
+    for (const title of allTitles) {
+      if (ownedTitleIds.has(title.id)) continue;
+
+      let earned = false;
+
+      switch (title.condition_type) {
+        case 'scenarios_count':
+          earned = scenariosCount >= title.condition_value;
+          break;
+        case 'partner_badges':
+          earned = partnerCount >= title.condition_value;
+          break;
+        case 'seniority_months':
+          earned = monthsSinceJoin >= title.condition_value;
+          break;
+        case 'speed_rank':
+          // Vérifier si l'un des scénarios terminés place le joueur dans le top N (classement par durée)
+          for (const comp of completions) {
+            const rank = await supaFetch(
+              `adventure_completions?adventure_id=eq.${comp.adventure_id}&total_duration_seconds=lte.${comp.total_duration_seconds}&select=id`
+            );
+            if (rank.length <= title.condition_value) { earned = true; break; }
+          }
+          break;
+      }
+
+      if (earned) newTitles.push(title);
+    }
+
+    // Attribuer les nouveaux titres
+    for (const title of newTitles) {
+      await supaFetch('player_titles', {
+        method: 'POST',
+        body: { player_id: userId, title_id: title.id },
+        prefer: 'return=minimal'
+      });
+      showToast(`🎖️ Nouveau titre débloqué : ${title.name} !`);
+    }
+
+  } catch(e) {
+    console.error('Erreur vérification titres:', e);
   }
 }
 
@@ -4647,7 +4982,7 @@ async function renderAdventureRankings() {
   if (!el) return;
 
   try {
-    const advs = await supaFetch('adventures?select=id,title,emoji&status=eq.published&order=created_at.asc');
+    const advs = await supaFetch('adventures?select=id,title&status=eq.published&order=created_at.asc');
     if (!advs.length) { el.innerHTML = ''; return; }
 
     el.innerHTML = `
@@ -4659,7 +4994,7 @@ async function renderAdventureRankings() {
             background:white;border:1px solid #E5D9C0;border-radius:12px;
             padding:12px 14px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <span style="font-size:22px;">${adv.emoji || '🗺️'}</span>
+              ${compassIconSVG(20, '#2D4A2D')}
               <span style="font-size:13px;font-weight:600;color:#1A2A1A;">${adv.title}</span>
             </div>
             <button onclick="showAdventureRanking('${adv.id}','${(adv.title || '').replace(/'/g,"\\'")}')" style="
@@ -4965,9 +5300,12 @@ async function scanQRFrame() {
     clearInterval(qrScanInterval);
     stopQRStream();
 
-    // Détecter en premier les QR codes de livres Professeur Flint
+    // Vérifier dans l'ordre : livre Professeur Flint → badge partenaire → fin d'aventure Flavia Flint
     const isBookQR = await handleBookQR(code.data);
     if (isBookQR) return;
+
+    const isPartnerQR = await handlePartnerQR(code.data);
+    if (isPartnerQR) return;
 
     const expectedUrl = currentAdv?.satisfaction_url;
     const targetUrl = (expectedUrl && code.data === expectedUrl) ? expectedUrl
@@ -5032,6 +5370,93 @@ async function handleBookQR(data) {
   qrScannerContext = 'adventure';
   qrScannerBookId = null;
   return true;
+}
+
+// ── QR CODES PARTENAIRES (badges collector chez nos partenaires) ──
+async function handlePartnerQR(qrData) {
+  try {
+    const results = await supaFetch(`partner_qr_codes?qr_code=eq.${encodeURIComponent((qrData || '').trim())}&is_active=eq.true&select=*`);
+    if (!results.length) return false;
+
+    const partnerQR = results[0];
+    const userId = currentPlayer?.id;
+
+    if (!userId || isGuest()) {
+      showToast('Connecte-toi pour collecter ce badge !');
+      return true;
+    }
+
+    // Vérifier si déjà collecté
+    const existing = await supaFetch(
+      `player_partner_badges?player_id=eq.${userId}&partner_qr_id=eq.${partnerQR.id}&select=id`
+    );
+
+    if (existing.length > 0) {
+      showPartnerBadgeResult(partnerQR, true);
+      return true;
+    }
+
+    // Enregistrer le badge
+    await supaFetch('player_partner_badges', {
+      method: 'POST',
+      body: { player_id: userId, partner_qr_id: partnerQR.id },
+      prefer: 'return=minimal'
+    });
+
+    // Ajouter les XP
+    const newXp = (currentPlayer.total_xp || 0) + (partnerQR.xp_reward || 0);
+    await supaFetch(`players?id=eq.${userId}`, {
+      method: 'PATCH',
+      body: { total_xp: newXp },
+      prefer: 'return=minimal'
+    });
+    currentPlayer.total_xp = newXp;
+
+    showPartnerBadgeResult(partnerQR, false);
+    return true;
+
+  } catch(e) {
+    console.error('Erreur QR partenaire:', e);
+    return false;
+  }
+}
+
+function showPartnerBadgeResult(partnerQR, alreadyCollected) {
+  goToScreen('adventure', null);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    z-index:9999;display:flex;align-items:center;justify-content:center;
+  `;
+  overlay.innerHTML = `
+    <div style="
+      background:#F5EDD8;border-radius:20px;padding:30px 24px;
+      text-align:center;max-width:300px;width:90%;
+      animation:scaleIn 0.3s ease;
+    ">
+      ${alreadyCollected
+        ? `<div style="font-size:40px;margin-bottom:12px;">✅</div>
+           <div style="font-size:18px;font-weight:800;color:#1A2A1A;margin-bottom:8px;">Déjà collecté !</div>
+           <div style="font-size:13px;color:#6B7280;">Tu as déjà ce badge dans ta collection.</div>`
+        : `<div style="font-size:56px;margin-bottom:12px;">🏅</div>
+           <div style="font-size:11px;font-weight:700;color:#C4622D;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Nouveau badge collector !</div>
+           <div style="font-size:20px;font-weight:800;color:#1A2A1A;margin-bottom:6px;">${partnerQR.badge_name}</div>
+           <div style="font-size:13px;color:#6B7280;margin-bottom:12px;">${partnerQR.partner_name}</div>
+           <div style="background:#2D4A2D;color:white;border-radius:20px;padding:6px 16px;display:inline-block;font-size:13px;font-weight:700;margin-bottom:16px;">
+             +${partnerQR.xp_reward} XP
+           </div>`
+      }
+      <button onclick="this.closest('[style*=fixed]').remove()" style="
+        width:100%;padding:12px;background:#C4622D;color:white;
+        border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;">
+        ${alreadyCollected ? 'Fermer' : 'Super !'}
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  if (!alreadyCollected) vibrateFeedback([200, 100, 200]);
 }
 
 // ── QUESTIONNAIRE SATISFACTION (post-scan QR fin d'aventure) ──

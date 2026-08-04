@@ -240,16 +240,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
 .step-card {
   border: 1px solid var(--gray-brd); border-radius: var(--r-md);
-  margin-bottom: 12px; overflow: hidden;
+  margin-bottom: 8px; overflow: hidden;
 }
 .step-card-header {
-  background: var(--gray-bg); padding: 12px 16px;
+  background: var(--gray-bg); padding: 10px 14px;
   display: flex; align-items: center; gap: 10px; cursor: pointer;
 }
 .step-num {
-  width: 26px; height: 26px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--green-dark); color: white;
-  font-size: 12px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .step-card-title { font-size: 14px; font-weight: 600; flex: 1; }
@@ -257,7 +257,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .step-toggle { font-size: 18px; color: var(--gray-txt); transition: transform 0.2s; }
 .step-toggle.open { transform: rotate(180deg); }
 
-.step-card-body { padding: 16px; display: none; border-top: 1px solid var(--gray-brd); }
+.step-card-body { padding: 12px; display: none; border-top: 1px solid var(--gray-brd); }
 .step-card-body.open { display: block; }
 
 /* ── ARBRE DE NAVIGATION ── */
@@ -330,12 +330,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .step-section-label {
   font-size: 11px; font-weight: 700; color: var(--terra);
   text-transform: uppercase; letter-spacing: 1px;
-  margin: 14px 0 8px; padding-bottom: 6px;
+  margin: 10px 0 6px; padding-bottom: 4px;
   border-bottom: 1px solid var(--beige-mid);
 }
 .step-section-label:first-child { margin-top: 0; }
 
-.gps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.gps-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
 .step-delete {
   background: none; border: none; color: var(--danger); cursor: pointer;
@@ -486,6 +486,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       </button>
       <button class="nav-item" onclick="showPage('professor', this)">
         <span class="nav-icon">📖</span> Professeur Flint
+      </button>
+      <button class="nav-item" onclick="showPage('partner-qr', this)">
+        <span class="nav-icon">🏅</span> QR Partenaires
+      </button>
+      <button class="nav-item" onclick="showPage('titles', this)">
+        <span class="nav-icon">🎖️</span> Titres
       </button>
       <button class="nav-item" onclick="showPage('xp-validations', this)">
         <span class="nav-icon">⭐</span> Validations XP
@@ -659,6 +665,23 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <div class="table-wrap" id="books-table"></div>
     </div>
 
+    <!-- ═══ PAGE : QR PARTENAIRES ═══ -->
+    <div id="page-partner-qr" class="page">
+      <div class="section-header">
+        <div class="section-title">QR Codes Partenaires</div>
+        <button class="btn btn-primary" onclick="openPartnerQRModal()">+ Nouveau QR</button>
+      </div>
+      <div id="partner-qr-list" class="table-wrap"></div>
+    </div>
+
+    <!-- ═══ PAGE : TITRES ═══ -->
+    <div id="page-titles" class="page">
+      <div class="section-header">
+        <div class="section-title">Titres & Récompenses</div>
+      </div>
+      <div id="titles-list"></div>
+    </div>
+
     <!-- ═══ PAGE : VALIDATIONS XP ═══ -->
     <div id="page-xp-validations" class="page">
       <div class="section-header">
@@ -790,7 +813,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 </div>
 
 <!-- ══ MODAL AVENTURE ══ -->
-<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+<div class="modal-overlay" id="modal-overlay">
   <div class="modal" id="modal">
     <div class="modal-header">
       <h2 id="modal-title">Nouvelle aventure</h2>
@@ -832,6 +855,36 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <option value="hybrid">🔀📍 Hybride — mélange des deux</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Nombre de lieux <span class="label-hint">(1 = un seul endroit, pas de navigation GPS entre étapes)</span></label>
+          <select id="f-locations-count" onchange="onLocationsCountChange()">
+            <option value="1">1 lieu unique</option>
+            <option value="2">2 lieux</option>
+            <option value="3">3 lieux</option>
+            <option value="4">4 lieux</option>
+            <option value="5">5 lieux et plus</option>
+          </select>
+          <div id="single-location-info" style="display:none;background:#F0F7F0;border-radius:8px;padding:10px 12px;font-size:12px;color:#2D4A2D;margin-top:6px;">
+            ℹ️ Avec 1 lieu unique, les coordonnées GPS ne sont saisies qu'une seule fois sur l'aventure principale. Les étapes servent uniquement à structurer le storytelling et les énigmes.
+          </div>
+        </div>
+        <div class="form-group full" id="single-location-gps" style="display:none;">
+          <div class="step-section-label">📍 Coordonnées du lieu</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:12px;">Latitude</label>
+              <input type="text" id="f-main-lat" placeholder="43.5089"/>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:12px;">Longitude</label>
+              <input type="text" id="f-main-lng" placeholder="6.4558"/>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:12px;">Rayon (m)</label>
+              <input type="number" id="f-main-radius" value="50" min="10" max="500"/>
+            </div>
+          </div>
+        </div>
         <div class="form-group full">
           <label style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;">
             <input type="checkbox" id="f-has-global-timer" onchange="toggleGlobalTimer()"/>
@@ -871,10 +924,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <option value="published">Publié</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Emoji de l'aventure</label>
-          <input type="text" id="f-emoji" placeholder="Ex : 🏛️" value="🗺️" style="font-size:20px;" />
-        </div>
         <div class="form-group full">
           <label>Image de couverture <span class="label-hint">(affichée sur la card joueur)</span></label>
           <div class="img-preview" id="cover-img-preview" style="display:none;">
@@ -908,6 +957,35 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <div id="qr-code-display"></div>
             <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide la fin de l'aventure et redirige vers ton questionnaire</div>
             <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:4px;">
+        <div class="step-section-label">🏅 Récompense du scénario</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>XP total du scénario <span class="label-hint">(attribué au joueur à la fin de l'aventure)</span></label>
+            <input type="number" id="f-xp-reward" placeholder="Ex : 100" value="50" min="0" max="2000"/>
+          </div>
+          <div class="form-group">
+            <label>Nom du badge <span class="label-hint">(affiché dans la collection du joueur)</span></label>
+            <input type="text" id="f-badge-name" placeholder="Ex : Gardien de Tourtour, Héros de Fréjus..."/>
+          </div>
+          <div class="form-group full">
+            <label>Image du badge <span class="label-hint">(JPG/PNG · recommandé : 512x512px)</span></label>
+            <div class="img-preview" id="badge-img-preview" style="display:none;">
+              <img id="badge-img-tag" src="" alt="" style="height:120px;width:120px;object-fit:cover;border-radius:50%;"/>
+              <button class="img-preview-remove" onclick="removeImg('badge')">✕</button>
+            </div>
+            <div class="img-upload-zone" id="badge-upload-zone">
+              <input type="file" accept="image/*" onchange="handleImg(event,'badge')"/>
+              <div class="img-upload-icon">🏅</div>
+              <div class="img-upload-label">
+                <strong>Clique pour choisir</strong> l'image du badge
+                <span class="formats">JPG, PNG · Max 5 Mo · Recommandé : 512x512px rond</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1011,7 +1089,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <div class="steps-label">📍 Étapes de l'aventure</div>
           <div style="display:flex;gap:8px;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="toggleTreeView()">🌳 Voir l'arbre</button>
-            <button class="btn btn-secondary btn-sm" onclick="addStep()">+ Ajouter une étape</button>
           </div>
         </div>
         <div id="tree-view" style="display:none;background:#F8F9FA;border:1px solid #E2E8E2;border-radius:12px;padding:16px;margin-bottom:16px;overflow-x:auto;">
@@ -1026,6 +1103,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <div class="empty-title" style="font-size:14px;">Aucune étape encore</div>
             <div class="empty-sub" style="font-size:13px;">Clique sur "+ Ajouter une étape" pour commencer.</div>
           </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="addStep()" style="width:100%;">+ Ajouter une étape</button>
         </div>
       </div>
 
@@ -1136,12 +1216,14 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
   if (name === 'authors') loadAuthorsPage();
   if (name === 'professor') loadBooksPage();
+  if (name === 'partner-qr') loadPartnerQRPage();
+  if (name === 'titles') loadTitlesPage();
   if (name === 'xp-validations') loadXpValidations();
   if (name === 'settings') loadAppSettings();
   if (name === 'clients') loadClientsPage();
@@ -1191,8 +1273,8 @@ async function loadDashboard() {
     ] = await Promise.all([
       supa('GET', 'players', null, '?select=id,created_at,total_xp,city'),
       supa('GET', 'players', null, `?select=id,created_at${playersSince}`),
-      supa('GET', 'adventure_launches', null, `?select=adventure_id,adventures(title,emoji)${launchesSince}`),
-      supa('GET', 'adventure_completions', null, `?select=adventure_id,total_xp_earned,adventures(title,emoji)${completionsSince}`),
+      supa('GET', 'adventure_launches', null, `?select=adventure_id,adventures(title)${launchesSince}`),
+      supa('GET', 'adventure_completions', null, `?select=adventure_id,total_xp_earned,adventures(title)${completionsSince}`),
       supa('GET', 'box_reports', null, `?select=*,adventures(title)${reportsSince}&order=reported_at.desc&limit=5`),
       supa('GET', 'players', null, '?select=pseudo,avatar_emoji,city,total_xp,created_at&order=created_at.desc&limit=10'),
       supa('GET', 'players', null, '?select=city&city=not.is.null'),
@@ -1240,7 +1322,7 @@ async function loadDashboard() {
     const scenarioCounts = {};
     launches.forEach(l => {
       const key = l.adventure_id;
-      if (!scenarioCounts[key]) scenarioCounts[key] = { title: l.adventures?.title || '?', emoji: l.adventures?.emoji || '🗺️', launches: 0, completions: 0 };
+      if (!scenarioCounts[key]) scenarioCounts[key] = { title: l.adventures?.title || '?', launches: 0, completions: 0 };
       scenarioCounts[key].launches++;
     });
     completions.forEach(c => {
@@ -1252,7 +1334,7 @@ async function loadDashboard() {
     document.getElementById('kpi-scenarios-list').innerHTML = sortedScenarios.length
       ? sortedScenarios.map(s => `
           <div class="kpi-bar-row">
-            <div class="kpi-bar-label">${s.emoji} ${s.title}</div>
+            <div class="kpi-bar-label">${s.title}</div>
             <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.round(s.launches/maxLaunches*100)}%"></div></div>
             <div class="kpi-bar-value">${s.launches}</div>
           </div>`).join('')
@@ -1479,7 +1561,7 @@ function buildBooksTable(data) {
     </tr></thead>
     <tbody>` + data.map(b => `
       <tr>
-        <td><div class="adv-name">${b.emoji || '📖'} ${b.title}</div><div class="adv-sub">${b.duration || ''}</div></td>
+        <td><div class="adv-name">${b.title}</div><div class="adv-sub">${b.duration || ''}</div></td>
         <td>${b.location || '—'}</td>
         <td><span class="diff-pill ${b.difficulty === 'Facile' ? 'diff-easy' : b.difficulty === 'Intermédiaire' ? 'diff-medium' : 'diff-hard'}">${b.difficulty || '—'}</span></td>
         <td><strong>${b.xp_reward || 0}</strong></td>
@@ -1502,7 +1584,8 @@ function openBookModal(id) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
   overlay.id = 'book-modal-overlay';
-  overlay.onclick = (e) => { if (e.target === overlay) closeBookModal(); };
+  // Pas de fermeture au clic en dehors de la modale : uniquement via ✕ ou Annuler,
+  // pour éviter de perdre les données saisies par erreur.
   overlay.innerHTML = `
     <div class="modal" style="max-width:600px;">
       <div class="modal-header">
@@ -1518,10 +1601,6 @@ function openBookModal(id) {
           <div class="form-group full">
             <label>Description</label>
             <textarea id="bf-desc" rows="3" placeholder="Résumé du livre...">${book?.description || ''}</textarea>
-          </div>
-          <div class="form-group">
-            <label>Emoji</label>
-            <input type="text" id="bf-emoji" value="${book?.emoji || '📖'}" maxlength="4"/>
           </div>
           <div class="form-group">
             <label>Statut</label>
@@ -1550,13 +1629,24 @@ function openBookModal(id) {
             <label>Récompense XP</label>
             <input type="number" id="bf-xp" value="${book?.xp_reward ?? 50}" min="0"/>
           </div>
-          <div class="form-group">
-            <label>Latitude</label>
-            <input type="number" id="bf-lat" value="${book?.lat ?? ''}" step="0.000001"/>
+          <div class="form-group full">
+            <label>Localisation GPS <span class="label-hint">(recherche une ville / zone — remplit automatiquement les coordonnées)</span></label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="bf-geo-search" value="${book?.location ? book.location.replace(/"/g,'&quot;') : ''}" placeholder="Ex : Vieux-Port, Marseille"
+                style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchBookLocation();}"/>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="searchBookLocation()">🔍 Rechercher</button>
+            </div>
+            <div id="bf-geo-results" style="display:none;margin-top:6px;border:1px solid var(--gray-brd);border-radius:var(--r-sm);max-height:180px;overflow-y:auto;background:white;"></div>
+            <div id="bf-geo-selected" style="font-size:12px;margin-top:6px;color:${book?.lat ? 'var(--success)' : 'var(--gray-txt)'};">
+              ${book?.lat ? `📍 Coordonnées sélectionnées : ${Number(book.lat).toFixed(6)}, ${Number(book.lng).toFixed(6)}` : 'Aucune coordonnée sélectionnée pour l’instant — recherche un lieu ci-dessus.'}
+            </div>
+            <input type="hidden" id="bf-lat" value="${book?.lat ?? ''}"/>
+            <input type="hidden" id="bf-lng" value="${book?.lng ?? ''}"/>
           </div>
           <div class="form-group">
-            <label>Longitude</label>
-            <input type="number" id="bf-lng" value="${book?.lng ?? ''}" step="0.000001"/>
+            <label>Rayon de validation <span class="label-hint">(km)</span></label>
+            <input type="number" id="bf-radius-km" value="${book?.validation_radius_km ?? 0.3}" min="0.02" max="20" step="0.05" placeholder="0.3"/>
+            <div style="font-size:11px;color:var(--gray-txt);margin-top:3px;">Le joueur devra être dans ce rayon autour du point choisi — pas besoin d’être exact.</div>
           </div>
           <div class="form-group full">
             <label>URL image de couverture <span class="label-hint">(optionnel)</span></label>
@@ -1578,6 +1668,55 @@ function closeBookModal() {
   editingBookId = null;
 }
 
+// ── GÉOCODAGE VILLE/ZONE (Nominatim / OpenStreetMap, gratuit) ──
+let bookGeoResults = [];
+
+async function searchBookLocation() {
+  const query = document.getElementById('bf-geo-search').value.trim();
+  const resultsBox = document.getElementById('bf-geo-results');
+  if (!query) return;
+  resultsBox.style.display = 'block';
+  resultsBox.innerHTML = '<div style="padding:10px;font-size:13px;color:#6B7280;">⏳ Recherche en cours…</div>';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(query)}`, {
+      headers: { 'Accept-Language': 'fr' }
+    });
+    if (!res.ok) throw new Error('Service de recherche indisponible');
+    const data = await res.json();
+    bookGeoResults = data || [];
+    if (!bookGeoResults.length) {
+      resultsBox.innerHTML = '<div style="padding:10px;font-size:13px;color:#6B7280;">Aucun résultat. Essaie une recherche plus précise (ville, quartier, adresse…).</div>';
+      return;
+    }
+    resultsBox.innerHTML = bookGeoResults.map((r, i) => `
+      <div onclick="selectBookLocation(${i})"
+        style="padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--gray-brd);"
+        onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='white'">
+        📍 ${r.display_name}
+      </div>`).join('');
+  } catch(e) {
+    resultsBox.innerHTML = '<div style="padding:10px;font-size:13px;color:var(--danger);">Erreur de recherche : ' + e.message + '</div>';
+  }
+}
+
+function selectBookLocation(i) {
+  const r = bookGeoResults[i];
+  if (!r) return;
+  document.getElementById('bf-lat').value = parseFloat(r.lat);
+  document.getElementById('bf-lng').value = parseFloat(r.lon);
+  document.getElementById('bf-geo-search').value = r.display_name;
+  document.getElementById('bf-geo-results').style.display = 'none';
+  document.getElementById('bf-geo-results').innerHTML = '';
+  const sel = document.getElementById('bf-geo-selected');
+  sel.style.color = 'var(--success)';
+  sel.textContent = `📍 Coordonnées sélectionnées : ${parseFloat(r.lat).toFixed(6)}, ${parseFloat(r.lon).toFixed(6)}`;
+  // Pré-remplit aussi le champ "Lieu" affiché au joueur, s'il est vide
+  const locField = document.getElementById('bf-location');
+  if (locField && !locField.value.trim()) {
+    locField.value = (r.address?.city || r.address?.town || r.address?.village || r.name || r.display_name.split(',')[0]);
+  }
+}
+
 async function saveBook() {
   const title = document.getElementById('bf-title').value.trim();
   if (!title) { alert('Le titre est obligatoire'); return; }
@@ -1585,7 +1724,6 @@ async function saveBook() {
   const payload = {
     title,
     description: document.getElementById('bf-desc').value.trim(),
-    emoji: document.getElementById('bf-emoji').value.trim() || '📖',
     status: document.getElementById('bf-status').value,
     location: document.getElementById('bf-location').value.trim(),
     duration: document.getElementById('bf-duration').value.trim(),
@@ -1593,6 +1731,7 @@ async function saveBook() {
     xp_reward: parseInt(document.getElementById('bf-xp').value, 10) || 0,
     lat: document.getElementById('bf-lat').value ? parseFloat(document.getElementById('bf-lat').value) : null,
     lng: document.getElementById('bf-lng').value ? parseFloat(document.getElementById('bf-lng').value) : null,
+    validation_radius_km: document.getElementById('bf-radius-km').value ? parseFloat(document.getElementById('bf-radius-km').value) : 0.3,
     cover_image_url: document.getElementById('bf-cover').value.trim() || null
   };
 
@@ -1630,7 +1769,7 @@ function generateBookQR(id) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
   overlay.id = 'book-qr-modal-overlay';
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Fermer.
   overlay.innerHTML = `
     <div class="modal" style="max-width:520px;">
       <div class="modal-header">
@@ -1672,7 +1811,7 @@ async function showBookParticipations(id) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay open';
   overlay.id = 'book-participations-overlay';
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕.
   overlay.innerHTML = `
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
@@ -1712,6 +1851,250 @@ async function showBookParticipations(id) {
     document.getElementById('book-participations-body').innerHTML =
       `<div style="color:var(--danger,#DC2626);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
   }
+}
+
+// ══════════════════════════════════════════
+// QR CODES PARTENAIRES (badges collector)
+// ══════════════════════════════════════════
+async function loadPartnerQRPage() {
+  setLoading(true);
+  try {
+    const qrCodes = await supa('GET', 'partner_qr_codes', null, '?order=created_at.desc');
+    const el = document.getElementById('partner-qr-list');
+
+    el.innerHTML = qrCodes.length ? `
+      <table>
+        <thead><tr>
+          <th>Partenaire</th><th>Badge</th><th>QR Code</th><th>XP</th><th>Statut</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${qrCodes.map(q => `
+            <tr>
+              <td><strong>${q.partner_name}</strong><br><small style="color:var(--gray-txt);">${q.partner_type || ''}</small></td>
+              <td>${q.badge_name}</td>
+              <td style="font-family:monospace;font-size:12px;">${q.qr_code}</td>
+              <td>+${q.xp_reward || 0} XP</td>
+              <td><span class="status-pill ${q.is_active ? 'status-published' : 'status-draft'}">${q.is_active ? 'Actif' : 'Inactif'}</span></td>
+              <td><div class="actions-cell">
+                <button onclick="generatePartnerQR('${q.id}')" class="btn btn-secondary btn-sm">🔳 QR</button>
+                <button onclick="togglePartnerQR('${q.id}',${!q.is_active})" class="btn btn-secondary btn-sm">${q.is_active ? 'Désactiver' : 'Activer'}</button>
+                <button onclick="deletePartnerQR('${q.id}')" class="btn btn-danger btn-sm">🗑️</button>
+              </div></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`
+      : '<div class="empty-state"><div class="empty-icon">🏅</div><div class="empty-title">Aucun QR partenaire</div><div class="empty-sub">Crée ton premier QR code collector !</div></div>';
+  } catch(e) {
+    document.getElementById('partner-qr-list').innerHTML =
+      `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openPartnerQRModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'partner-qr-modal';
+  // Pas de fermeture au clic en dehors : uniquement via ✕ ou Annuler.
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-header">
+        <h2>🏅 Nouveau QR Code Partenaire</h2>
+        <button class="modal-close" onclick="document.getElementById('partner-qr-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Nom du partenaire *</label><input type="text" id="pqr-partner" placeholder="Ex : Club d'Échecs de Draguignan"/></div>
+          <div class="form-group"><label>Type</label>
+            <select id="pqr-type">
+              <option value="association">Association</option>
+              <option value="club_sportif">Club sportif</option>
+              <option value="musee">Musée</option>
+              <option value="ecole">École</option>
+              <option value="commerce">Commerce</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="form-group"><label>XP récompense</label><input type="number" id="pqr-xp" value="50" min="10" max="500"/></div>
+          <div class="form-group full"><label>Nom du badge *</label><input type="text" id="pqr-badge" placeholder="Ex : Chevalier des Échecs"/></div>
+          <div class="form-group full"><label>Description</label><textarea id="pqr-desc" rows="2" placeholder="Ex : Badge obtenu lors d'une séance d'essai au Club d'Échecs de Draguignan"></textarea></div>
+          <div class="form-group full"><label>Code QR unique <span class="label-hint">(généré automatiquement)</span></label>
+            <input type="text" id="pqr-code" placeholder="Sera généré automatiquement" readonly style="background:#F5F5F5;cursor:not-allowed;"/>
+            <button type="button" onclick="generateUniqueCode()" class="btn btn-secondary btn-sm" style="margin-top:6px;">🔄 Générer un code</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('partner-qr-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="savePartnerQR()">✓ Créer le QR code</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  generateUniqueCode();
+}
+
+function generateUniqueCode() {
+  const code = 'RA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+  const el = document.getElementById('pqr-code');
+  if (el) el.value = code;
+}
+
+async function savePartnerQR() {
+  const data = {
+    partner_name: document.getElementById('pqr-partner').value.trim(),
+    partner_type: document.getElementById('pqr-type').value,
+    xp_reward: parseInt(document.getElementById('pqr-xp').value, 10) || 50,
+    badge_name: document.getElementById('pqr-badge').value.trim(),
+    description: document.getElementById('pqr-desc').value.trim(),
+    qr_code: document.getElementById('pqr-code').value,
+    is_active: true
+  };
+  if (!data.partner_name || !data.badge_name) { alert('Remplis les champs obligatoires'); return; }
+
+  try {
+    await supa('POST', 'partner_qr_codes', data);
+    document.getElementById('partner-qr-modal').remove();
+    showToast('QR code créé ✓');
+    loadPartnerQRPage();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function togglePartnerQR(id, newStatus) {
+  try {
+    await supa('PATCH', 'partner_qr_codes', { is_active: newStatus }, `?id=eq.${id}`);
+    showToast(newStatus ? 'QR activé ✓' : 'QR désactivé');
+    loadPartnerQRPage();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function deletePartnerQR(id) {
+  if (!confirm('Supprimer ce QR code ? Cette action est irréversible.')) return;
+  try {
+    await supa('DELETE', 'partner_qr_codes', null, `?id=eq.${id}`);
+    showToast('QR supprimé');
+    loadPartnerQRPage();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function generatePartnerQR(id) {
+  let qr;
+  try {
+    qr = (await supa('GET', 'partner_qr_codes', null, `?id=eq.${id}&select=*`))[0];
+  } catch(e) { showToast('Erreur : ' + e.message, true); return; }
+  if (!qr) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'partner-qr-print-overlay';
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Fermer.
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h2>🏅 ${qr.partner_name}</h2>
+        <button class="modal-close" onclick="document.getElementById('partner-qr-print-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${qr.badge_name}</div>
+        <div style="font-size:12px;color:var(--gray-txt);margin-bottom:16px;">Scanne ce QR code avec l'app Récits d'Aventures !</div>
+        <div id="partner-qr-display" style="display:flex;justify-content:center;"></div>
+        <div style="font-size:11px;color:var(--gray-txt);margin-top:12px;font-family:monospace;">${qr.qr_code}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimer</button>
+        <button class="btn btn-primary" onclick="document.getElementById('partner-qr-print-overlay').remove()">Fermer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  new QRCode(document.getElementById('partner-qr-display'), {
+    text: qr.qr_code, width: 220, height: 220,
+    colorDark: '#2D4A2D', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+// ══════════════════════════════════════════
+// TITRES & RÉCOMPENSES (attribués automatiquement côté joueur)
+// ══════════════════════════════════════════
+async function loadTitlesPage() {
+  setLoading(true);
+  try {
+    const titleRows = await supa('GET', 'titles', null, '?order=category.asc,level.asc');
+    const el = document.getElementById('titles-list');
+
+    if (!titleRows.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎖️</div><div class="empty-title">Aucun titre configuré</div><div class="empty-sub">Les titres se créent aujourd\'hui directement dans Supabase (table "titles") — cette page les affiche et permet d\'ajouter leur image.</div></div>';
+      return;
+    }
+
+    const categories = {
+      exploration: '🗺️ Exploration',
+      vitesse: '⚡ Vitesse',
+      partenaires: '🏅 Partenaires',
+      fidelite: '📅 Fidélité',
+      enigmes: '🔍 Énigmes',
+      historique: '🏰 Historique'
+    };
+
+    const grouped = {};
+    titleRows.forEach(t => {
+      if (!grouped[t.category]) grouped[t.category] = [];
+      grouped[t.category].push(t);
+    });
+
+    el.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+      <div style="margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">
+          ${categories[cat] || cat}
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Niveau</th><th>Titre</th><th>Condition</th><th>Image</th><th>Statut</th>
+            </tr></thead>
+            <tbody>
+              ${items.map(t => `
+                <tr>
+                  <td><strong>Niv. ${t.level ?? '—'}</strong></td>
+                  <td>${t.icon || '🎖️'} ${t.name}</td>
+                  <td style="font-size:12px;color:#6B7280;">${t.description || ''}</td>
+                  <td>
+                    ${t.image_url
+                      ? `<img src="${t.image_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"/>`
+                      : `<button onclick="uploadTitleImage('${t.id}')" class="btn btn-secondary btn-sm">📸 Ajouter</button>`
+                    }
+                  </td>
+                  <td><span class="status-pill ${t.is_active ? 'status-published' : 'status-draft'}">${t.is_active ? 'Actif' : 'Inactif'}</span></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('titles-list').innerHTML =
+      `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function uploadTitleImage(titleId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
+    showToast('Upload en cours…');
+    try {
+      const url = await uploadImageToStorage(file, 'titles');
+      await supa('PATCH', 'titles', { image_url: url }, `?id=eq.${titleId}`);
+      showToast('Image du titre uploadée ✓');
+      loadTitlesPage();
+    } catch(err) { showToast('Erreur : ' + err.message, true); }
+  };
+  input.click();
 }
 
 // ══════════════════════════════════════════
@@ -1960,7 +2343,7 @@ function openClientModal(clientData) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'client-modal';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Annuler.
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
       <div class="modal-header">
@@ -2088,7 +2471,7 @@ function openPartnerModal(partnerData) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'partner-modal';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Annuler.
   modal.innerHTML = `
     <div class="modal" style="max-width:600px;">
       <div class="modal-header">
@@ -2187,7 +2570,7 @@ async function openPartnerDetail(partnerId) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'partner-detail-modal';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕.
   modal.innerHTML = `
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
@@ -2281,7 +2664,7 @@ function openDepotModal(partnerId) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'depot-modal';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Annuler.
   modal.innerHTML = `
     <div class="modal" style="max-width:550px;">
       <div class="modal-header">
@@ -2427,7 +2810,7 @@ function openInteractionModal(partnerId) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'interaction-modal';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  // Pas de fermeture au clic extérieur — uniquement via ✕ ou Annuler.
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
       <div class="modal-header">
@@ -2626,7 +3009,7 @@ function buildTable(data) {
     </tr></thead>
     <tbody>` + data.map(a => `
       <tr>
-        <td><div class="adv-name">${a.emoji || '🗺️'} ${a.title}</div><div class="adv-sub">${a.duration || ''} · ${a.age_range || ''}</div></td>
+        <td><div class="adv-name">${a.title}</div><div class="adv-sub">${a.duration || ''} · ${a.age_range || ''}</div></td>
         <td>${a.location || '—'}</td>
         <td><strong>${(a.steps||[]).length}</strong> étape${(a.steps||[]).length > 1 ? 's' : ''}</td>
         <td><span class="diff-pill ${a.difficulty === 'Facile' ? 'diff-easy' : a.difficulty === 'Intermédiaire' ? 'diff-medium' : 'diff-hard'}">${a.difficulty || '—'}</span></td>
@@ -2656,12 +3039,17 @@ function openModal(id) {
     document.getElementById('f-scenario-type').value = adv.scenario_type || 'linear';
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
-    document.getElementById('f-emoji').value = adv.emoji || '🗺️';
     document.getElementById('f-intro-text').value = adv.intro_text || '';
     document.getElementById('f-outro-text').value = adv.outro_text || '';
     document.getElementById('f-satisfaction-url').value = adv.satisfaction_url || '';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
     document.getElementById('f-box-solution').value = adv.box_solution || '';
+    document.getElementById('f-badge-name').value = adv.badge_name || '';
+    document.getElementById('f-xp-reward').value = adv.xp_reward ?? 50;
+    document.getElementById('f-locations-count').value = adv.locations_count || '1';
+    document.getElementById('f-main-lat').value = adv.main_lat ?? '';
+    document.getElementById('f-main-lng').value = adv.main_lng ?? '';
+    document.getElementById('f-main-radius').value = adv.main_radius ?? 50;
     // Timer global
     const hasGlobalTimer = adv.has_global_timer || false;
     document.getElementById('f-has-global-timer').checked = hasGlobalTimer;
@@ -2701,7 +3089,16 @@ function openModal(id) {
     } else {
       removeImg('outro');
     }
+    // Image du badge
+    if (adv.badge_image_url) {
+      document.getElementById('badge-img-tag').src = adv.badge_image_url;
+      document.getElementById('badge-img-preview').style.display = 'block';
+      document.getElementById('badge-upload-zone').style.display = 'none';
+    } else {
+      removeImg('badge');
+    }
     (adv.steps || []).forEach(s => addStep(s));
+    onLocationsCountChange();
   } else {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
     ['f-title','f-desc','f-location','f-duration','f-intro-text','f-outro-text'].forEach(id => document.getElementById(id).value = '');
@@ -2709,12 +3106,18 @@ function openModal(id) {
     document.getElementById('f-scenario-type').value = 'linear';
     document.getElementById('f-age').value = '5–12 ans';
     document.getElementById('f-status').value = 'draft';
-    document.getElementById('f-emoji').value = '🗺️';
     updatePreview('intro'); updatePreview('outro');
-    removeImg('intro'); removeImg('outro'); removeImg('cover');
+    removeImg('intro'); removeImg('outro'); removeImg('cover'); removeImg('badge');
     document.getElementById('f-satisfaction-url').value = '';
     document.getElementById('f-box-hint').value = '';
     document.getElementById('f-box-solution').value = '';
+    document.getElementById('f-badge-name').value = '';
+    document.getElementById('f-xp-reward').value = 50;
+    document.getElementById('f-locations-count').value = '1';
+    document.getElementById('f-main-lat').value = '';
+    document.getElementById('f-main-lng').value = '';
+    document.getElementById('f-main-radius').value = 50;
+    onLocationsCountChange();
     document.getElementById('f-has-global-timer').checked = false;
     document.getElementById('global-timer-options').style.display = 'none';
     document.getElementById('f-global-timer-minutes').value = '';
@@ -2728,8 +3131,29 @@ function openModal(id) {
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-function handleOverlayClick(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+// Fermeture au clic en dehors du modal désactivée volontairement — seuls le bouton ✕
+// et "Annuler" ferment le formulaire, pour éviter de perdre les données saisies par erreur.
 function editAdventure(id) { openModal(id); }
+
+// ── FERMETURE DES MODALS AU CLAVIER (touche Échap) ──
+// Alternative ergonomique au clic extérieur, désormais désactivé sur tous les modals
+// (aventure, livre, QR partenaire, client, partenaire B2B, dépôt vente, interaction…)
+// pour éviter de perdre des données saisies par erreur. Un seul listener global suffit :
+// il cible le modal actuellement ouvert, quel qu'il soit, plutôt que d'en ajouter un par modal
+// (ce qui finirait par accumuler des listeners jamais nettoyés si on ferme via ✕/Annuler).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const openModalEl = document.querySelector('.modal-overlay.open');
+  if (!openModalEl) return;
+  if (!confirm('Fermer le formulaire ? Les modifications non sauvegardées seront perdues.')) return;
+  // Le modal aventure (#modal-overlay) est un élément fixe du DOM qu'on masque/affiche
+  // (classList), contrairement aux autres modals créés dynamiquement qu'on peut retirer.
+  if (openModalEl.id === 'modal-overlay') {
+    closeModal();
+  } else {
+    openModalEl.remove();
+  }
+});
 
 // ── SUPPRIMER ──
 async function deleteAdventure(id) {
@@ -2773,19 +3197,21 @@ function addStep(data) {
       <span class="step-toggle open" id="step-arrow-${n}">▾</span>
     </div>
     <div class="step-card-body open" id="step-body-${n}">
-      <div class="step-section-label">📍 Localisation GPS</div>
-      <div class="gps-grid">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Latitude</label>
-          <input type="text" id="s${n}-lat" placeholder="43.538" value="${d.lat||''}" oninput="updateStepLabel(${n})"/>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Longitude</label>
-          <input type="text" id="s${n}-lng" placeholder="6.466" value="${d.lng||d.lng||''}" oninput="updateStepLabel(${n})"/>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Rayon validation (m)</label>
-          <input type="number" id="s${n}-radius" placeholder="20" value="${d.radius_meters||d.radius||'20'}"/>
+      <div class="step-gps-section">
+        <div class="step-section-label">📍 Localisation GPS</div>
+        <div class="gps-grid">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Latitude</label>
+            <input type="text" id="s${n}-lat" placeholder="43.538" value="${d.lat||''}" oninput="updateStepLabel(${n})"/>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Longitude</label>
+            <input type="text" id="s${n}-lng" placeholder="6.466" value="${d.lng||d.lng||''}" oninput="updateStepLabel(${n})"/>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:12px;">Rayon validation (m)</label>
+            <input type="number" id="s${n}-radius" placeholder="20" value="${d.radius_meters||d.radius||'20'}"/>
+          </div>
         </div>
       </div>
       <div class="form-group" style="margin-top:10px;">
@@ -2829,21 +3255,6 @@ function addStep(data) {
         <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
         <textarea id="s${n}-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village">${d.hint||''}</textarea>
         <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
-      </div>
-      <div class="step-section-label">🏆 Récompense</div>
-      <div class="gps-grid">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">XP gagnés</label>
-          <input type="number" id="s${n}-xp" placeholder="50" value="${d.xp||'50'}"/>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Emoji du badge</label>
-          <input type="text" id="s${n}-badge" placeholder="🗝️" value="${d.badge_emoji||d.badge||''}" style="font-size:18px;"/>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Nom du badge</label>
-          <input type="text" id="s${n}-badgeName" placeholder="Ex : Gardien de la Fontaine" value="${d.badge_name||d.badgeName||''}"/>
-        </div>
       </div>
       <div class="step-section-label">⏱️ Timer de cette étape</div>
       <div style="margin-bottom:10px;">
@@ -2931,6 +3342,9 @@ function addStep(data) {
   }
 
   if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
+
+  // Applique la visibilité GPS correcte à cette nouvelle étape selon le nombre de lieux choisi
+  onLocationsCountChange();
 }
 
 function toggleStep(n) {
@@ -3038,9 +3452,6 @@ function collectSteps() {
       enigme:        document.getElementById('s'+i+'-enigme')?.value || '',
       answer:        document.getElementById('s'+i+'-answer')?.value || '',
       hint:          document.getElementById('s'+i+'-hint')?.value || '',
-      xp:            parseInt(document.getElementById('s'+i+'-xp')?.value) || 50,
-      badge_emoji:   document.getElementById('s'+i+'-badge')?.value || '',
-      badge_name:    document.getElementById('s'+i+'-badgeName')?.value || '',
       step_type:     document.getElementById('s'+i+'-step-type')?.value || 'standard',
       is_endpoint:   document.getElementById('s'+i+'-is-endpoint')?.value === 'true',
       choices:       collectChoices(i),
@@ -3069,7 +3480,6 @@ async function saveAdventure(asDraft) {
     scenario_type:   document.getElementById('f-scenario-type').value,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
-    emoji:           document.getElementById('f-emoji').value || '🗺️',
     intro_text:       document.getElementById('f-intro-text').value,
     outro_text:       document.getElementById('f-outro-text').value,
     satisfaction_url: document.getElementById('f-satisfaction-url').value,
@@ -3081,6 +3491,12 @@ async function saveAdventure(asDraft) {
       : null,
     global_timer_visible: document.getElementById('f-global-timer-visible')?.value === 'true',
     timer_fail_step_order: parseInt(document.getElementById('f-global-timer-fail')?.value) || null,
+    badge_name: document.getElementById('f-badge-name')?.value || '',
+    xp_reward: parseInt(document.getElementById('f-xp-reward')?.value) || 50,
+    locations_count: parseInt(document.getElementById('f-locations-count')?.value) || 1,
+    main_lat: parseFloat(document.getElementById('f-main-lat')?.value) || null,
+    main_lng: parseFloat(document.getElementById('f-main-lng')?.value) || null,
+    main_radius: parseInt(document.getElementById('f-main-radius')?.value) || 50,
   };
 
   const btnSave = document.querySelector('.modal-footer .btn-primary');
@@ -3110,6 +3526,13 @@ async function saveAdventure(asDraft) {
     } else {
       const existing = document.getElementById('cover-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.cover_image_url = existing;
+    }
+    if (pending.badge) {
+      btnSave.textContent = '⏳ Upload image badge…';
+      advData.badge_image_url = await uploadImageToStorage(pending.badge, 'badges');
+    } else {
+      const existing = document.getElementById('badge-img-tag')?.src;
+      if (existing && existing.startsWith('http')) advData.badge_image_url = existing;
     }
 
     btnSave.textContent = '⏳ Sauvegarde…';
@@ -3170,6 +3593,23 @@ function showToast(msg, isError = false) {
 
 // ── BRANCHEMENTS ──
 function onScenarioTypeChange() {}
+
+// ── NOMBRE DE LIEUX : masque le GPS par étape quand l'aventure se joue en 1 seul lieu ──
+function onLocationsCountChange() {
+  const count = parseInt(document.getElementById('f-locations-count').value);
+  const isSingle = count === 1;
+
+  // Étapes : masquer/afficher la section GPS de chaque étape déjà rendue
+  document.querySelectorAll('.step-gps-section').forEach(el => {
+    el.style.display = isSingle ? 'none' : 'block';
+  });
+
+  // Message d'info + bloc GPS unique au niveau de l'aventure
+  const infoEl = document.getElementById('single-location-info');
+  if (infoEl) infoEl.style.display = isSingle ? 'block' : 'none';
+  const gpsEl = document.getElementById('single-location-gps');
+  if (gpsEl) gpsEl.style.display = isSingle ? 'block' : 'none';
+}
 
 function toggleGlobalTimer() {
   const checked = document.getElementById('f-has-global-timer').checked;

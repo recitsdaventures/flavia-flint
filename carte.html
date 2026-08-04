@@ -164,15 +164,25 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // Icône boussole fixe (remplace les anciens emojis choisis par aventure/livre)
+  function compassIconSVG(size = 32, color = '#FFFFFF') {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;">
+      <circle cx="12" cy="12" r="9.4" stroke="${color}" stroke-width="1.4" opacity="0.9"/>
+      <path d="M12 3.6L14 12L12 12L10 12Z" fill="${color}"/>
+      <path d="M12 20.4L14 12L12 12L10 12Z" fill="${color}" opacity="0.5"/>
+      <circle cx="12" cy="12" r="1.3" fill="${color}"/>
+    </svg>`;
+  }
+
   function buildAdventurePopup(adv) {
     const cover = adv.cover_image_url
       ? `<img class="popup-cover" src="${adv.cover_image_url}" alt=""/>`
-      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#2D4A2D,#3D6B3D);">${adv.emoji || '🗺️'}</div>`;
+      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#2D4A2D,#3D6B3D);">${compassIconSVG(30)}</div>`;
     return `
       <div>
         ${cover}
         <div class="popup-badge flavia">🧭 Aventure Flavia Flint</div>
-        <div class="popup-title">${escapeHtml(adv.emoji || '🗺️')} ${escapeHtml(adv.title)}</div>
+        <div class="popup-title">${escapeHtml(adv.title)}</div>
         <div class="popup-meta">
           ${adv.location ? `<div>📍 ${escapeHtml(adv.location)}</div>` : ''}
           ${adv.duration ? `<div>⏱ ${escapeHtml(adv.duration)}</div>` : ''}
@@ -185,12 +195,12 @@
   function buildBookPopup(book) {
     const cover = book.cover_image_url
       ? `<img class="popup-cover" src="${book.cover_image_url}" alt=""/>`
-      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);">${book.emoji || '📖'}</div>`;
+      : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);">${compassIconSVG(30)}</div>`;
     return `
       <div>
         ${cover}
         <div class="popup-badge book">📖 Livret Professeur Flint</div>
-        <div class="popup-title">${escapeHtml(book.emoji || '📖')} ${escapeHtml(book.title)}</div>
+        <div class="popup-title">${escapeHtml(book.title)}</div>
         <div class="popup-meta">
           ${book.location ? `<div>📍 ${escapeHtml(book.location)}</div>` : ''}
         </div>
