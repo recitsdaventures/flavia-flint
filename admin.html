@@ -344,6 +344,58 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 }
 .step-delete:hover { background: #FEF2F2; }
 
+/* ── APERÇU ARBORESCENT (liste indentée) ── */
+.outline-list { margin-bottom: 4px; }
+.outline-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--r-sm);
+  cursor: pointer; border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.outline-row:hover { background: var(--gray-bg); border-color: var(--gray-brd); }
+.outline-id {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px; font-weight: 700; color: white;
+  background: var(--green-dark); border-radius: 6px;
+  padding: 2px 7px; flex-shrink: 0; min-width: 34px; text-align: center;
+}
+.outline-row.branch .outline-id { background: #C4622D; }
+.outline-row.endpoint .outline-id { background: #059669; }
+.outline-summary { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outline-summary.empty { color: var(--gray-txt); font-style: italic; }
+.outline-tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; white-space: nowrap; }
+.outline-tag.branch { background: #FFF7ED; color: #C4622D; }
+.outline-tag.endpoint { background: #ECFDF5; color: #059669; }
+.outline-branch-btn {
+  background: none; border: 1px solid var(--gray-brd); border-radius: var(--r-sm);
+  font-size: 11px; padding: 3px 8px; cursor: pointer; color: var(--gray-txt); flex-shrink: 0; white-space: nowrap;
+}
+.outline-branch-btn:hover { border-color: var(--terra); color: var(--terra); }
+
+/* ── PANNEAU LATÉRAL D'ÉDITION D'ÉTAPE ── */
+.step-panel-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+  z-index: 300; justify-content: flex-end;
+}
+.step-panel-overlay.open { display: flex; }
+.step-panel {
+  background: white; width: 100%; max-width: 480px; height: 100%;
+  overflow-y: auto; box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  animation: slidePanel 0.18s ease;
+}
+@keyframes slidePanel { from { transform: translateX(24px); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+.step-panel-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--gray-brd);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  position: sticky; top: 0; background: white; z-index: 1;
+}
+.step-panel-body { padding: 18px 20px 40px; }
+.transition-row {
+  border: 1px solid var(--gray-brd); border-radius: var(--r-sm);
+  padding: 10px; margin-bottom: 8px; background: var(--gray-bg);
+}
+.transition-row input.req-missing { border-color: #DC2626 !important; }
+
 /* ── EMPTY STATE ── */
 .empty-state {
   text-align: center; padding: 48px 24px;
@@ -848,14 +900,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           </select>
         </div>
         <div class="form-group">
-          <label>Type de scénario</label>
-          <select id="f-scenario-type" onchange="onScenarioTypeChange()">
-            <option value="linear">📍 Linéaire — parcours classique A→B→C</option>
-            <option value="branching">🔀 Embranchements — les choix changent le chemin</option>
-            <option value="hybrid">🔀📍 Hybride — mélange des deux</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>Nombre de lieux <span class="label-hint">(1 = un seul endroit, pas de navigation GPS entre étapes)</span></label>
           <select id="f-locations-count" onchange="onLocationsCountChange()">
             <option value="1">1 lieu unique</option>
@@ -904,8 +948,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
                 </select>
               </div>
               <div class="form-group" style="margin:0;">
-                <label style="font-size:12px;">Si timer expiré → étape n°</label>
-                <input type="number" id="f-global-timer-fail" placeholder="Ex: 5" min="1"/>
+                <label style="font-size:12px;">Si timer expiré → étape</label>
+                <select id="f-global-timer-fail"></select>
               </div>
             </div>
             <div style="font-size:12px;color:#92400E;margin-top:8px;">
@@ -940,8 +984,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           </div>
         </div>
         <div class="form-group full">
-          <label>URL du questionnaire de satisfaction <span class="label-hint">(lien Google Forms, Tally, etc.)</span></label>
-          <input type="text" id="f-satisfaction-url" placeholder="https://forms.google.com/..."/>
+          <div style="background:#EFF6EF;border:1px solid #CFE3CF;border-radius:10px;padding:12px 14px;font-size:13px;color:#2D4A2D;">
+            ✅ Le QR code de fin est généré automatiquement après la première sauvegarde du scénario.
+          </div>
         </div>
         <div class="form-group full">
           <label>Indice de localisation de la boîte <span class="label-hint">(affiché si le joueur ne trouve pas)</span></label>
@@ -955,7 +1000,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <label>QR Code de fin d'aventure <span class="label-hint">(à imprimer et plastifier)</span></label>
           <div style="background:white;padding:16px;border-radius:12px;border:1px solid #E2E8E2;text-align:center;">
             <div id="qr-code-display"></div>
-            <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide la fin de l'aventure et redirige vers ton questionnaire</div>
+            <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide la fin de l'aventure quand le joueur le scanne dans l'app</div>
             <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
           </div>
         </div>
@@ -1086,26 +1131,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <!-- ÉTAPES -->
       <div class="steps-section">
         <div class="steps-header">
-          <div class="steps-label">📍 Étapes de l'aventure</div>
-          <div style="display:flex;gap:8px;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleTreeView()">🌳 Voir l'arbre</button>
-          </div>
+          <div class="steps-label">📍 Étapes du scénario</div>
         </div>
-        <div id="tree-view" style="display:none;background:#F8F9FA;border:1px solid #E2E8E2;border-radius:12px;padding:16px;margin-bottom:16px;overflow-x:auto;">
-          <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-            🌳 Arbre de navigation
-          </div>
-          <div id="tree-content"></div>
-        </div>
-        <div id="steps-container">
-          <div class="empty-state" id="steps-empty" style="padding:24px;">
+        <div id="steps-outline" class="outline-list">
+          <div class="empty-state" id="steps-empty" style="padding:32px 24px;">
             <div class="empty-icon" style="font-size:32px;">📍</div>
-            <div class="empty-title" style="font-size:14px;">Aucune étape encore</div>
-            <div class="empty-sub" style="font-size:13px;">Clique sur "+ Ajouter une étape" pour commencer.</div>
+            <div class="empty-title" style="font-size:14px;">Commence ton scénario</div>
+            <div class="empty-sub" style="font-size:13px;margin-bottom:16px;">Choisis un point de départ, ou ajoute une étape directement.</div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStarterTemplate('simple')">📍 Scénario simple</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStarterTemplate('branching')">🔀 Scénario à embranchement</button>
+            </div>
           </div>
         </div>
         <div style="margin-top:12px;">
-          <button class="btn btn-secondary btn-sm" onclick="addStep()" style="width:100%;">+ Ajouter une étape</button>
+          <button class="btn btn-secondary btn-sm" onclick="addStepGlobal()" style="width:100%;">+ Ajouter une étape</button>
         </div>
       </div>
 
@@ -1115,6 +1155,23 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="btn btn-success btn-sm" onclick="saveAdventure(true)" style="margin-right:4px;">💾 Sauvegarder brouillon</button>
       <button class="btn btn-primary" onclick="saveAdventure(false)">✓ Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<!-- PANNEAU LATÉRAL D'ÉDITION D'ÉTAPE -->
+<div class="step-panel-overlay" id="step-panel-overlay" onclick="if(event.target===this) closeStepPanel()">
+  <div class="step-panel">
+    <div class="step-panel-header">
+      <div>
+        <div style="font-size:11px;color:var(--gray-txt);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Étape <span id="panel-id-label"></span></div>
+        <div id="panel-endpoint-badge" style="font-size:12px;color:#059669;font-weight:600;display:none;margin-top:2px;">🏁 Fin de scénario</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" class="step-delete" onclick="deleteStepPanel()">🗑️ Supprimer</button>
+        <button class="modal-close" onclick="closeStepPanel()">✕</button>
+      </div>
+    </div>
+    <div class="step-panel-body" id="step-panel-body"></div>
   </div>
 </div>
 
@@ -1147,7 +1204,14 @@ async function supa(method, table, body, params = '') {
 // ── STATE ──
 let adventures = [];
 let editingId = null;
-let stepCount = 0;
+
+// ── ÉTAPES DU SCÉNARIO (modèle unifié : transitions explicites, IDs E1/E2/E2' calculés) ──
+let scenarioSteps = [];
+let rootUid = null;
+let openStepUid = null;
+let uidCounter = 0;
+let lastOrderToUidMap = {};
+let lastUidToOrderMap = {};
 
 // ── PREVIEWS STORYTELLING ──
 function updatePreview(type) {
@@ -1158,56 +1222,6 @@ function updatePreview(type) {
     el.style.opacity = text ? '1' : '0.7';
     el.style.fontStyle = text ? 'normal' : 'italic';
   }
-}
-
-function updateStepPreview(n) {
-  const text = document.getElementById('s'+n+'-story').value.trim();
-  const el = document.getElementById('s'+n+'-story-preview');
-  if (el) {
-    el.textContent = text || 'Le texte apparaîtra ici…';
-    el.style.opacity = text ? '1' : '0.7';
-    el.style.fontStyle = text ? 'normal' : 'italic';
-  }
-}
-
-// ── IMAGES GLOBALES (intro / outro) ──
-function handleImg(event, type) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById(type+'-img-tag').src = e.target.result;
-    document.getElementById(type+'-img-preview').style.display = 'block';
-    document.getElementById(type+'-upload-zone').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
-}
-
-function removeImg(type) {
-  document.getElementById(type+'-img-tag').src = '';
-  document.getElementById(type+'-img-preview').style.display = 'none';
-  document.getElementById(type+'-upload-zone').style.display = 'block';
-}
-
-// ── IMAGES ÉTAPES ──
-function handleStepImg(event, n) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('s'+n+'-img-tag').src = e.target.result;
-    document.getElementById('s'+n+'-img-preview').style.display = 'block';
-    document.getElementById('s'+n+'-upload-zone').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
-}
-
-function removeStepImg(n) {
-  document.getElementById('s'+n+'-img-tag').src = '';
-  document.getElementById('s'+n+'-img-preview').style.display = 'none';
-  document.getElementById('s'+n+'-upload-zone').style.display = 'block';
 }
 
 // ── NAVIGATION ──
@@ -3024,8 +3038,14 @@ function buildTable(data) {
 // ── MODAL OPEN/CLOSE ──
 function openModal(id) {
   editingId = id || null;
-  stepCount = 0;
-  document.getElementById('steps-container').innerHTML = '';
+  scenarioSteps = [];
+  rootUid = null;
+  openStepUid = null;
+  closeStepPanel();
+  // Repartir d'un état propre à chaque ouverture du modal : évite qu'une image choisie
+  // mais jamais sauvegardée lors d'une session précédente (ex: "Nouvelle aventure"
+  // abandonnée) ne traîne en mémoire et ne soit uploadée par erreur sur cette aventure-ci.
+  window._pendingImgs = {};
 
   if (id) {
     const adv = adventures.find(a => a.id === id);
@@ -3036,12 +3056,10 @@ function openModal(id) {
     document.getElementById('f-location').value = adv.location || '';
     document.getElementById('f-duration').value = adv.duration || '';
     document.getElementById('f-diff').value = adv.difficulty || 'Facile';
-    document.getElementById('f-scenario-type').value = adv.scenario_type || 'linear';
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
     document.getElementById('f-intro-text').value = adv.intro_text || '';
     document.getElementById('f-outro-text').value = adv.outro_text || '';
-    document.getElementById('f-satisfaction-url').value = adv.satisfaction_url || '';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
     document.getElementById('f-box-solution').value = adv.box_solution || '';
     document.getElementById('f-badge-name').value = adv.badge_name || '';
@@ -3057,13 +3075,13 @@ function openModal(id) {
     if (hasGlobalTimer) {
       document.getElementById('f-global-timer-minutes').value = adv.global_timer_seconds ? Math.round(adv.global_timer_seconds / 60) : '';
       document.getElementById('f-global-timer-visible').value = adv.global_timer_visible !== false ? 'true' : 'false';
-      document.getElementById('f-global-timer-fail').value = adv.timer_fail_step_order || '';
+      // Note : la valeur réelle (uid) est fixée plus bas, une fois loadStepsFromAdventure() exécutée.
     } else {
       document.getElementById('f-global-timer-minutes').value = '';
       document.getElementById('f-global-timer-visible').value = 'true';
       document.getElementById('f-global-timer-fail').value = '';
     }
-    generateQRCode(adv.satisfaction_url || '');
+    generateQRForAdventure(adv.id);
     updatePreview('intro'); updatePreview('outro');
     // Cover
     if (adv.cover_image_url) {
@@ -3097,18 +3115,17 @@ function openModal(id) {
     } else {
       removeImg('badge');
     }
-    (adv.steps || []).forEach(s => addStep(s));
+    loadStepsFromAdventure(adv.steps || []);
     onLocationsCountChange();
+    document.getElementById('f-global-timer-fail').value = adv.timer_fail_step_order ? (lastOrderToUidMap[adv.timer_fail_step_order] || '') : '';
   } else {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
     ['f-title','f-desc','f-location','f-duration','f-intro-text','f-outro-text'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-diff').value = 'Facile';
-    document.getElementById('f-scenario-type').value = 'linear';
     document.getElementById('f-age').value = '5–12 ans';
     document.getElementById('f-status').value = 'draft';
     updatePreview('intro'); updatePreview('outro');
-    removeImg('intro'); removeImg('outro'); removeImg('cover'); removeImg('badge');
-    document.getElementById('f-satisfaction-url').value = '';
+    resetAllImageFields();
     document.getElementById('f-box-hint').value = '';
     document.getElementById('f-box-solution').value = '';
     document.getElementById('f-badge-name').value = '';
@@ -3125,7 +3142,8 @@ function openModal(id) {
     document.getElementById('f-global-timer-fail').value = '';
     document.getElementById('qr-preview-section').style.display = 'none';
     document.getElementById('qr-code-display').innerHTML = '';
-    showStepsEmpty();
+    scenarioSteps = []; rootUid = null; openStepUid = null;
+    renderOutline();
   }
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -3170,203 +3188,543 @@ async function deleteAdventure(id) {
 }
 
 // ── ÉTAPES ──
-function showStepsEmpty() {
-  if (stepCount === 0) {
-    document.getElementById('steps-container').innerHTML = `<div class="empty-state" style="padding:24px;">
-      <div class="empty-icon" style="font-size:32px;">📍</div>
-      <div class="empty-title" style="font-size:14px;">Aucune étape encore</div>
-      <div class="empty-sub" style="font-size:13px;">Clique sur "+ Ajouter une étape" pour commencer.</div>
-    </div>`;
-  }
+// ══════════════════════════════════════════
+// ÉTAPES DU SCÉNARIO — modèle unifié
+// Chaque étape porte une liste de "transitions" (0 = fin de scénario, 1 = suite
+// linéaire, 2+ = embranchement — même mécanisme, pas de distinction technique).
+// Pendant l'édition, tout se réfère aux étapes par un identifiant interne (uid) ;
+// l'order_num réel (attendu par la base et le moteur de jeu) n'est calculé qu'à
+// la sauvegarde, à partir de l'ordre de lecture du graphe (voir computeFinalSteps).
+// ══════════════════════════════════════════
+
+function newUid() { uidCounter++; return 'u' + uidCounter; }
+
+function newStepObj() {
+  return {
+    uid: newUid(),
+    title: '', lat: null, lng: null, radius_meters: 20,
+    story_text: '', enigme: '', answer: '', hint: '',
+    image_url: '', _pendingImgFile: null,
+    has_step_timer: false, step_timer_seconds: null, step_timer_visible: true, timer_fail_target_uid: null,
+    transitions: []
+  };
 }
 
-function addStep(data) {
-  stepCount++;
-  const n = stepCount;
-  const c = document.getElementById('steps-container');
-  if (c.querySelector('.empty-state')) c.innerHTML = '';
-  const d = data || {};
-  const div = document.createElement('div');
-  div.className = 'step-card';
-  div.id = 'step-' + n;
-  div.innerHTML = `
-    <div class="step-card-header" onclick="toggleStep(${n})">
-      <div class="step-num">${n}</div>
-      <div class="step-card-title" id="step-title-label-${n}">${d.title || 'Nouvelle étape'}</div>
-      <div class="step-card-loc" id="step-loc-label-${n}">${d.lat ? d.lat+', '+d.lng : 'GPS non défini'}</div>
-      <span class="step-toggle open" id="step-arrow-${n}">▾</span>
-    </div>
-    <div class="step-card-body open" id="step-body-${n}">
-      <div class="step-gps-section">
-        <div class="step-section-label">📍 Localisation GPS</div>
-        <div class="gps-grid">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Latitude</label>
-            <input type="text" id="s${n}-lat" placeholder="43.538" value="${d.lat||''}" oninput="updateStepLabel(${n})"/>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Longitude</label>
-            <input type="text" id="s${n}-lng" placeholder="6.466" value="${d.lng||d.lng||''}" oninput="updateStepLabel(${n})"/>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Rayon validation (m)</label>
-            <input type="number" id="s${n}-radius" placeholder="20" value="${d.radius_meters||d.radius||'20'}"/>
-          </div>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top:10px;">
-        <label style="font-size:12px;">Nom du lieu</label>
-        <input type="text" id="s${n}-title" placeholder="Ex : La fontaine du village" value="${d.title||''}" oninput="updateStepTitleLabel(${n})"/>
-      </div>
-      <div class="step-section-label">💬 Storytelling de Flavia</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Message de Flavia</label>
-          <textarea id="s${n}-story" rows="4" placeholder="Ce que Flavia dit à l'arrivée…" oninput="updateStepPreview(${n})">${d.story_text||d.story||''}</textarea>
-          <div class="flavia-preview-label" style="margin-top:8px;">Aperçu :</div>
-          <div class="flavia-preview">
-            <div class="flavia-bubble-avatar">🧭</div>
-            <div class="flavia-bubble" id="s${n}-story-preview" style="font-size:12px;opacity:0.7;font-style:italic;">${d.story_text||d.story||'Le texte apparaîtra ici…'}</div>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image du lieu</label>
-          <div class="img-preview" id="s${n}-img-preview" style="${(d.image_url||d.img) ? 'display:block;' : ''}">
-            <img id="s${n}-img-tag" src="${d.image_url||d.img||''}" alt=""/>
-            <button class="img-preview-remove" onclick="removeStepImg(${n})">✕</button>
-          </div>
-          <div class="img-upload-zone" id="s${n}-upload-zone" style="${(d.image_url||d.img) ? 'display:none;' : ''}">
-            <input type="file" accept="image/*" onchange="handleStepImg(event,${n})"/>
-            <div class="img-upload-icon">🖼️</div>
-            <div class="img-upload-label"><strong>Clique pour choisir</strong><span class="formats">JPG, PNG, WebP · Max 5 Mo</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="step-section-label">🔍 Énigme</div>
-      <div class="form-group" style="margin:0 0 10px;">
-        <label style="font-size:12px;">Texte de l'énigme</label>
-        <textarea id="s${n}-enigme" rows="2" placeholder="L'énigme posée au joueur…">${d.enigme||''}</textarea>
-      </div>
-      <div class="form-group" style="margin:0 0 10px;">
-        <label style="font-size:12px;">Réponse attendue</label>
-        <input type="text" id="s${n}-answer" placeholder="La réponse correcte" value="${d.answer||''}"/>
-      </div>
-      <div class="form-group" style="margin:0;">
-        <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
-        <textarea id="s${n}-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village">${d.hint||''}</textarea>
-        <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
-      </div>
-      <div class="step-section-label">⏱️ Timer de cette étape</div>
-      <div style="margin-bottom:10px;">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="s${n}-has-timer" onchange="toggleStepTimer(${n})"/>
-          Activer un timer pour cette étape
-        </label>
-      </div>
-      <div id="s${n}-timer-options" style="display:none;background:#FFF7EE;border:1px solid #FDE68A;border-radius:10px;padding:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Durée (minutes)</label>
-            <input type="number" id="s${n}-timer-minutes" placeholder="Ex: 10" min="1" max="120"/>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Timer visible ?</label>
-            <select id="s${n}-timer-visible">
-              <option value="true">👁️ Visible</option>
-              <option value="false">🙈 Caché</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:12px;">Si expiré → étape n°</label>
-            <input type="number" id="s${n}-timer-fail" placeholder="Ex: 5" min="1"/>
-          </div>
-        </div>
-      </div>
-      <div class="step-section-label">🔀 Type d'étape</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Type</label>
-          <select id="s${n}-step-type" onchange="onStepTypeChange(${n})">
-            <option value="standard">📍 Standard</option>
-            <option value="decision">🔀 Décision</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label style="font-size:12px;">Étape finale ?</label>
-          <select id="s${n}-is-endpoint">
-            <option value="false">Non</option>
-            <option value="true">Oui — fin possible</option>
-          </select>
-        </div>
-      </div>
-      <div id="s${n}-choices-section" style="display:none;">
-        <div class="step-section-label">🔀 Choix proposés aux joueurs</div>
-        <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">Pour chaque choix, indique le texte affiché au joueur et le numéro de l'étape de destination.</div>
-        <div id="s${n}-choices-list"></div>
-        <button type="button" onclick="addChoice(${n})" class="btn btn-secondary btn-sm" style="margin-top:8px;">+ Ajouter un choix</button>
-      </div>
-      <div style="margin-top:14px;text-align:right;">
-        <button class="step-delete" onclick="deleteStep(${n})">🗑️ Supprimer cette étape</button>
-      </div>
+// Charge les étapes existantes (format base : order_num + choices/next_step_order)
+// vers le modèle interne (uid + transitions), sans rien modifier en base.
+function loadStepsFromAdventure(dbSteps) {
+  scenarioSteps = []; rootUid = null; openStepUid = null;
+  if (!dbSteps || dbSteps.length === 0) { renderOutline(); return; }
+
+  const sorted = [...dbSteps].sort((a, b) => a.order_num - b.order_num);
+  const orderToUid = {};
+  sorted.forEach(s => {
+    const obj = newStepObj();
+    obj.title = s.title || '';
+    obj.lat = s.lat ?? null;
+    obj.lng = s.lng ?? null;
+    obj.radius_meters = s.radius_meters ?? 20;
+    obj.story_text = s.story_text || '';
+    obj.enigme = s.enigme || '';
+    obj.answer = s.answer || '';
+    obj.hint = s.hint || '';
+    obj.image_url = s.image_url || '';
+    obj.has_step_timer = !!s.has_step_timer;
+    obj.step_timer_seconds = s.step_timer_seconds ?? null;
+    obj.step_timer_visible = s.step_timer_visible !== false;
+    obj._legacyOrderNum = s.order_num;
+    obj._legacyTimerFailOrder = s.timer_fail_step_order || null;
+    obj._legacyStepType = s.step_type;
+    let choices = s.choices;
+    if (typeof choices === 'string') { try { choices = JSON.parse(choices); } catch (e) { choices = []; } }
+    obj._legacyChoices = Array.isArray(choices) ? choices : [];
+    scenarioSteps.push(obj);
+    orderToUid[s.order_num] = obj.uid;
+  });
+
+  // Reconstruit les transitions : décision → choix explicites ; standard → lien implicite order_num+1
+  scenarioSteps.forEach(obj => {
+    if (obj._legacyStepType === 'decision' && obj._legacyChoices.length > 0) {
+      obj.transitions = obj._legacyChoices.map(c => ({
+        label: c.label || '',
+        target_uid: orderToUid[c.next_step_order] || null,
+        is_correct: !!c.is_correct,
+        error_message: c.error_message || null
+      })).filter(t => t.target_uid);
+    } else {
+      const nextUid = orderToUid[obj._legacyOrderNum + 1];
+      obj.transitions = nextUid ? [{ label: '', target_uid: nextUid, is_correct: false, error_message: null }] : [];
+    }
+    if (obj._legacyTimerFailOrder) obj.timer_fail_target_uid = orderToUid[obj._legacyTimerFailOrder] || null;
+    delete obj._legacyOrderNum; delete obj._legacyTimerFailOrder; delete obj._legacyStepType; delete obj._legacyChoices;
+  });
+
+  rootUid = sorted.length ? orderToUid[sorted[0].order_num] : null;
+  lastOrderToUidMap = orderToUid;
+  renderOutline();
+}
+
+// ── ARBRE : parcours depuis la racine, calcule les IDs E1/E2/E2'/E2''… et détecte les orphelines ──
+function computeTree() {
+  const byUid = {}; scenarioSteps.forEach(s => byUid[s.uid] = s);
+  const ordered = [];
+  const visited = new Set();
+  let mainCounter = 1;
+
+  function walk(uid, label, depth) {
+    if (!uid || visited.has(uid) || !byUid[uid]) return;
+    visited.add(uid);
+    const step = byUid[uid];
+    ordered.push({ step, label, depth });
+    const targets = step.transitions.filter(t => t.target_uid && byUid[t.target_uid]);
+    if (targets.length <= 1) {
+      if (targets.length === 1) {
+        mainCounter++;
+        walk(targets[0].target_uid, 'E' + mainCounter, depth);
+      }
+    } else {
+      targets.forEach((t, i) => walk(t.target_uid, label + "'".repeat(i + 1), depth + 1));
+    }
+  }
+  if (rootUid && byUid[rootUid]) walk(rootUid, 'E1', 0);
+
+  const orphans = scenarioSteps.filter(s => !visited.has(s.uid)).map((s, i) => ({ step: s, label: '⚠️' + (i + 1), depth: 0 }));
+  return { ordered, orphans, byUid };
+}
+
+function stepSummary(step) {
+  const txt = (step.title || step.story_text || '').trim();
+  return txt ? (txt.slice(0, 46) + (txt.length > 46 ? '…' : '')) : 'Étape vide';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+function refreshStepsEmptyVisibility() {
+  const empty = document.getElementById('steps-empty');
+  if (empty) empty.style.display = scenarioSteps.length === 0 ? 'block' : 'none';
+}
+
+function updateGlobalTimerFailSelect() {
+  const sel = document.getElementById('f-global-timer-fail');
+  if (sel) populateStepTargetSelect(sel, sel.value, null);
+}
+
+function renderOutline() {
+  const c = document.getElementById('steps-outline');
+  refreshStepsEmptyVisibility();
+  Array.from(c.children).forEach(el => { if (el.id !== 'steps-empty') el.remove(); });
+  if (scenarioSteps.length === 0) { updateGlobalTimerFailSelect(); return; }
+
+  const { ordered, orphans } = computeTree();
+  const rowHtml = (item) => {
+    const { step, label, depth } = item;
+    const nTrans = step.transitions.filter(t => t.target_uid).length;
+    const rowClass = nTrans >= 2 ? 'branch' : (nTrans === 0 ? 'endpoint' : '');
+    const tag = nTrans >= 2 ? `<span class="outline-tag branch">🔀 embranchement</span>`
+              : nTrans === 0 ? `<span class="outline-tag endpoint">🏁 fin</span>` : '';
+    return `
+      <div class="outline-row ${rowClass}" style="padding-left:${10 + depth * 22}px;" onclick="openStepPanel('${step.uid}')">
+        <span class="outline-id">${label}</span>
+        <span class="outline-summary ${(step.title || step.story_text) ? '' : 'empty'}">${escapeHtml(stepSummary(step))}</span>
+        ${tag}
+        <button type="button" class="outline-branch-btn" onclick="event.stopPropagation();addBranchQuick('${step.uid}')">+ embranchement</button>
+      </div>`;
+  };
+
+  let html = `<div>${ordered.map(rowHtml).join('')}</div>`;
+  if (orphans.length > 0) {
+    html += `<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #FCA5A5;">
+      <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:6px;">⚠️ Étapes orphelines <span style="font-weight:400;">(non reliées depuis aucune autre étape)</span></div>
+      ${orphans.map(rowHtml).join('')}
     </div>`;
-  c.appendChild(div);
+  }
+  c.insertAdjacentHTML('beforeend', html);
+  updateGlobalTimerFailSelect();
+}
 
-  // Charger les données existantes de branchement
-  if (d.step_type === 'decision') {
-    document.getElementById('s'+n+'-step-type').value = 'decision';
-    onStepTypeChange(n);
-    if (d.choices && Array.isArray(d.choices)) {
-      d.choices.forEach(() => addChoice(n));
-      d.choices.forEach((c, idx) => {
-        const labelEl = document.getElementById('s'+n+'-choice-'+idx+'-label');
-        const nextEl  = document.getElementById('s'+n+'-choice-'+idx+'-next');
-        if (labelEl) labelEl.value = c.label;
-        if (nextEl)  nextEl.value  = c.next_step_order;
-      });
+// ── AJOUT D'ÉTAPE : bouton unique, prolonge le dernier maillon ouvert du scénario ──
+function addStepGlobal() {
+  const step = newStepObj();
+  if (scenarioSteps.length === 0) {
+    rootUid = step.uid;
+    scenarioSteps.push(step);
+  } else {
+    const { ordered } = computeTree();
+    const leaf = [...ordered].reverse().find(o => o.step.transitions.filter(t => t.target_uid).length === 0);
+    scenarioSteps.push(step);
+    if (leaf) leaf.step.transitions.push({ label: '', target_uid: step.uid, is_correct: false, error_message: null });
+  }
+  renderOutline();
+  openStepPanel(step.uid);
+}
+
+// ── EMBRANCHEMENT : ajoute une transition + une étape enfant sur une étape existante ──
+function addBranch(parentUid) {
+  const parent = scenarioSteps.find(s => s.uid === parentUid);
+  if (!parent) return null;
+  const child = newStepObj();
+  scenarioSteps.push(child);
+  parent.transitions.push({ label: '', target_uid: child.uid, is_correct: false, error_message: null });
+  return child;
+}
+function addBranchQuick(parentUid) { addBranch(parentUid); renderOutline(); openStepPanel(parentUid); }
+function addBranchFromPanel() {
+  if (!openStepUid) return;
+  addBranch(openStepUid);
+  renderOutline();
+  openStepPanel(openStepUid);
+}
+
+// ── GABARITS DE DÉPART ──
+function applyStarterTemplate(kind) {
+  scenarioSteps = []; rootUid = null; openStepUid = null;
+  if (kind === 'simple') {
+    let prevUid = null;
+    for (let i = 0; i < 5; i++) {
+      const s = newStepObj();
+      scenarioSteps.push(s);
+      if (i === 0) rootUid = s.uid;
+      if (prevUid) scenarioSteps.find(x => x.uid === prevUid).transitions.push({ label: '', target_uid: s.uid, is_correct: false, error_message: null });
+      prevUid = s.uid;
     }
+  } else if (kind === 'branching') {
+    const e1 = newStepObj(), e2 = newStepObj(), e2a = newStepObj(), e2b = newStepObj(), e3 = newStepObj();
+    e1.title = 'Départ';
+    e2.title = 'Un choix à faire';
+    e2a.title = 'Première piste';
+    e2b.title = 'Deuxième piste';
+    e3.title = 'Les deux pistes se rejoignent ici';
+    scenarioSteps.push(e1, e2, e2a, e2b, e3);
+    rootUid = e1.uid;
+    e1.transitions.push({ label: '', target_uid: e2.uid, is_correct: false, error_message: null });
+    e2.transitions.push({ label: 'Fouiller les ruines', target_uid: e2a.uid, is_correct: false, error_message: null });
+    e2.transitions.push({ label: 'Interroger le marchand', target_uid: e2b.uid, is_correct: false, error_message: null });
+    e2a.transitions.push({ label: '', target_uid: e3.uid, is_correct: false, error_message: null });
+    e2b.transitions.push({ label: '', target_uid: e3.uid, is_correct: false, error_message: null });
   }
-  if (d.is_endpoint) {
-    document.getElementById('s'+n+'-is-endpoint').value = 'true';
+  renderOutline();
+}
+
+// ── PANNEAU LATÉRAL D'ÉDITION ──
+function openStepPanel(uid) {
+  const step = scenarioSteps.find(s => s.uid === uid);
+  if (!step) return;
+  openStepUid = uid;
+  const { ordered, orphans } = computeTree();
+  const entry = [...ordered, ...orphans].find(o => o.step.uid === uid);
+  const label = entry ? entry.label : '?';
+
+  document.getElementById('panel-id-label').textContent = label;
+  const nTrans = step.transitions.filter(t => t.target_uid).length;
+  document.getElementById('panel-endpoint-badge').style.display = nTrans === 0 ? 'block' : 'none';
+
+  document.getElementById('step-panel-body').innerHTML = renderPanelBody();
+
+  document.getElementById('panel-lat').value = step.lat ?? '';
+  document.getElementById('panel-lng').value = step.lng ?? '';
+  document.getElementById('panel-radius').value = step.radius_meters ?? 20;
+  document.getElementById('panel-title').value = step.title || '';
+  document.getElementById('panel-story').value = step.story_text || '';
+  document.getElementById('panel-enigme').value = step.enigme || '';
+  document.getElementById('panel-answer').value = step.answer || '';
+  document.getElementById('panel-hint').value = step.hint || '';
+  document.getElementById('panel-has-timer').checked = !!step.has_step_timer;
+  document.getElementById('panel-timer-options').style.display = step.has_step_timer ? 'block' : 'none';
+  document.getElementById('panel-timer-minutes').value = step.step_timer_seconds ? Math.round(step.step_timer_seconds / 60) : '';
+  document.getElementById('panel-timer-visible').value = step.step_timer_visible !== false ? 'true' : 'false';
+  populateStepTargetSelect(document.getElementById('panel-timer-fail'), step.timer_fail_target_uid, uid);
+
+  if (step.image_url) {
+    document.getElementById('panel-img-tag').src = step.image_url;
+    document.getElementById('panel-img-preview').style.display = 'block';
+    document.getElementById('panel-upload-zone').style.display = 'none';
+  } else {
+    document.getElementById('panel-img-preview').style.display = 'none';
+    document.getElementById('panel-upload-zone').style.display = 'block';
   }
 
-  // Charger les valeurs timer existantes de l'étape
-  if (d.has_step_timer) {
-    const timerCheck = document.getElementById('s'+n+'-has-timer');
-    if (timerCheck) {
-      timerCheck.checked = true;
-      document.getElementById('s'+n+'-timer-options').style.display = 'block';
-      document.getElementById('s'+n+'-timer-minutes').value = d.step_timer_seconds ? Math.round(d.step_timer_seconds / 60) : '';
-      document.getElementById('s'+n+'-timer-visible').value = d.step_timer_visible !== false ? 'true' : 'false';
-      document.getElementById('s'+n+'-timer-fail').value = d.timer_fail_step_order || '';
-    }
-  }
-
-  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
-
-  // Applique la visibilité GPS correcte à cette nouvelle étape selon le nombre de lieux choisi
+  renderTransitionsInPanel(step);
   onLocationsCountChange();
+  document.getElementById('step-panel-overlay').classList.add('open');
 }
 
-function toggleStep(n) {
-  document.getElementById('step-body-'+n).classList.toggle('open');
-  document.getElementById('step-arrow-'+n).classList.toggle('open');
+function closeStepPanel() {
+  const overlay = document.getElementById('step-panel-overlay');
+  if (overlay) overlay.classList.remove('open');
+  openStepUid = null;
 }
-function updateStepLabel(n) {
-  const lat = document.getElementById('s'+n+'-lat').value;
-  const lng = document.getElementById('s'+n+'-lng').value;
-  document.getElementById('step-loc-label-'+n).textContent = (lat && lng) ? lat+', '+lng : 'GPS non défini';
+
+function renderPanelBody() {
+  return `
+    <div class="step-gps-section" id="panel-gps-section">
+      <div class="step-section-label">📍 Localisation GPS</div>
+      <div class="gps-grid">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Latitude</label>
+          <input type="text" id="panel-lat" placeholder="43.538" oninput="syncPanelToStep()"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Longitude</label>
+          <input type="text" id="panel-lng" placeholder="6.466" oninput="syncPanelToStep()"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Rayon validation (m)</label>
+          <input type="number" id="panel-radius" placeholder="20" oninput="syncPanelToStep()"/>
+        </div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:10px;">
+      <label style="font-size:12px;">Nom du lieu</label>
+      <input type="text" id="panel-title" placeholder="Ex : La fontaine du village" oninput="syncPanelToStep()"/>
+    </div>
+    <div class="step-section-label">💬 Storytelling de Flavia</div>
+    <div class="form-group" style="margin:0;">
+      <label style="font-size:12px;">Message de Flavia</label>
+      <textarea id="panel-story" rows="4" placeholder="Ce que Flavia dit à l'arrivée…" oninput="syncPanelToStep()"></textarea>
+    </div>
+    <div style="margin:10px 0;">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image du lieu</label>
+      <div class="img-preview" id="panel-img-preview">
+        <img id="panel-img-tag" src="" alt=""/>
+        <button class="img-preview-remove" onclick="removeStepImgPanel()">✕</button>
+      </div>
+      <div class="img-upload-zone" id="panel-upload-zone">
+        <input type="file" accept="image/*" onchange="handleStepImgPanel(event)"/>
+        <div class="img-upload-icon">🖼️</div>
+        <div class="img-upload-label"><strong>Clique pour choisir</strong><span class="formats">JPG, PNG, WebP · Max 5 Mo</span></div>
+      </div>
+    </div>
+    <div class="step-section-label">🔍 Énigme</div>
+    <div class="form-group" style="margin:0 0 10px;">
+      <label style="font-size:12px;">Texte de l'énigme</label>
+      <textarea id="panel-enigme" rows="2" placeholder="L'énigme posée au joueur…" oninput="syncPanelToStep()"></textarea>
+    </div>
+    <div class="form-group" style="margin:0 0 10px;">
+      <label style="font-size:12px;">Réponse attendue</label>
+      <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
+      <textarea id="panel-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village" oninput="syncPanelToStep()"></textarea>
+      <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
+    </div>
+    <div class="step-section-label">⏱️ Timer de cette étape</div>
+    <div style="margin-bottom:10px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="panel-has-timer" onchange="togglePanelTimer()"/>
+        Activer un timer pour cette étape
+      </label>
+    </div>
+    <div id="panel-timer-options" style="display:none;background:#FFF7EE;border:1px solid #FDE68A;border-radius:10px;padding:12px;margin-bottom:6px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Durée (minutes)</label>
+          <input type="number" id="panel-timer-minutes" placeholder="Ex: 10" min="1" max="120" oninput="syncPanelToStep()"/>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Timer visible ?</label>
+          <select id="panel-timer-visible" onchange="syncPanelToStep()">
+            <option value="true">👁️ Visible</option>
+            <option value="false">🙈 Caché</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:12px;">Si expiré → étape</label>
+          <select id="panel-timer-fail" onchange="syncPanelToStep()"></select>
+        </div>
+      </div>
+    </div>
+    <div class="step-section-label">🔀 Embranchement</div>
+    <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">Chaque transition mène à une autre étape. Une seule = étape suivante classique. Plusieurs = le joueur choisit son chemin.</div>
+    <div id="panel-transitions-list"></div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addBranchFromPanel()" style="margin-top:4px;">+ Ajouter un embranchement</button>
+  `;
 }
-function updateStepTitleLabel(n) {
-  const val = document.getElementById('s'+n+'-title').value;
-  document.getElementById('step-title-label-'+n).textContent = val || 'Nouvelle étape';
-  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
+
+function togglePanelTimer() {
+  const checked = document.getElementById('panel-has-timer').checked;
+  document.getElementById('panel-timer-options').style.display = checked ? 'block' : 'none';
+  syncPanelToStep();
 }
-function deleteStep(n) {
-  const el = document.getElementById('step-'+n);
-  if (el) el.remove();
-  stepCount--;
-  if (stepCount === 0) showStepsEmpty();
-  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
+
+function handleStepImgPanel(event) {
+  const file = event.target.files[0]; if (!file) return;
+  if (file.size > 5*1024*1024) { alert('Image trop lourde (max 5 Mo)'); return; }
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  step._pendingImgFile = file;
+  previewImgLocal(file, 'panel-img-tag', 'panel-img-preview', 'panel-upload-zone');
+}
+function removeStepImgPanel() {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (step) { step.image_url = ''; step._pendingImgFile = null; }
+  const tag = document.getElementById('panel-img-tag');
+  if (tag) tag.src = '';
+  document.getElementById('panel-img-preview').style.display = 'none';
+  document.getElementById('panel-upload-zone').style.display = 'block';
+}
+
+function deleteStepPanel() {
+  if (!openStepUid) return;
+  const msg = scenarioSteps.length <= 1
+    ? 'Supprimer la dernière étape videra le scénario. Continuer ?'
+    : 'Supprimer cette étape ? Les embranchements qui pointent vers elle seront retirés.';
+  if (!confirm(msg)) return;
+  const uid = openStepUid;
+  scenarioSteps = scenarioSteps.filter(s => s.uid !== uid);
+  scenarioSteps.forEach(s => {
+    s.transitions = s.transitions.filter(t => t.target_uid !== uid);
+    if (s.timer_fail_target_uid === uid) s.timer_fail_target_uid = null;
+  });
+  if (rootUid === uid) rootUid = scenarioSteps[0]?.uid || null;
+  closeStepPanel();
+  renderOutline();
+}
+
+// Recopie tous les champs du panneau ouvert dans l'étape correspondante, puis
+// rafraîchit juste l'aperçu (le panneau lui-même n'est pas reconstruit → le focus reste).
+function syncPanelToStep() {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  step.lat = parseFloat(document.getElementById('panel-lat').value) || null;
+  step.lng = parseFloat(document.getElementById('panel-lng').value) || null;
+  step.radius_meters = parseInt(document.getElementById('panel-radius').value) || 20;
+  step.title = document.getElementById('panel-title').value;
+  step.story_text = document.getElementById('panel-story').value;
+  step.enigme = document.getElementById('panel-enigme').value;
+  step.answer = document.getElementById('panel-answer').value;
+  step.hint = document.getElementById('panel-hint').value;
+  step.has_step_timer = document.getElementById('panel-has-timer').checked;
+  step.step_timer_seconds = step.has_step_timer ? (parseInt(document.getElementById('panel-timer-minutes').value) || 0) * 60 : null;
+  step.step_timer_visible = document.getElementById('panel-timer-visible').value === 'true';
+  const failSel = document.getElementById('panel-timer-fail');
+  step.timer_fail_target_uid = failSel && failSel.value ? failSel.value : null;
+  renderOutline();
+}
+
+// ── TRANSITIONS (dans le panneau) ──
+function renderTransitionsInPanel(step) {
+  const list = document.getElementById('panel-transitions-list');
+  if (!list) return;
+  if (step.transitions.length === 0) {
+    list.innerHTML = `<div style="font-size:12px;color:#6B7280;margin-bottom:8px;">Aucune transition : cette étape termine le scénario (ou une branche).</div>`;
+    return;
+  }
+  const requireLabel = step.transitions.length >= 2;
+  list.innerHTML = step.transitions.map((t, i) => `
+    <div class="transition-row">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
+        <input type="text" id="transition-label-${i}" placeholder="${requireLabel ? 'Texte du choix (obligatoire) ex: Fouiller les ruines' : 'Texte du choix (optionnel si linéaire)'}"
+          value="${(t.label||'').replace(/"/g,'&quot;')}" class="${requireLabel && !t.label ? 'req-missing' : ''}"
+          oninput="updateTransition(${i}, 'label', this.value)"/>
+        <button type="button" onclick="removeTransition(${i})" style="background:#FEF2F2;border:none;border-radius:6px;color:#DC2626;padding:8px;cursor:pointer;">🗑️</button>
+      </div>
+      <div style="margin-top:6px;">
+        <select id="transition-target-${i}" onchange="updateTransition(${i}, 'target_uid', this.value)" style="font-size:12px;"></select>
+      </div>
+      <input type="text" id="transition-error-${i}" placeholder="Message si mauvaise réponse (optionnel)"
+        value="${(t.error_message||'').replace(/"/g,'&quot;')}"
+        oninput="updateTransition(${i}, 'error_message', this.value)"
+        style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid #D4C5A9;border-radius:6px;font-size:11px;box-sizing:border-box;"/>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px;color:#6B7280;">
+        <input type="checkbox" ${t.is_correct ? 'checked' : ''} onchange="updateTransition(${i}, 'is_correct', this.checked)"/>
+        Mode quiz — c'est la bonne réponse
+      </label>
+    </div>
+  `).join('');
+  step.transitions.forEach((t, i) => {
+    populateStepTargetSelect(document.getElementById(`transition-target-${i}`), t.target_uid, step.uid);
+  });
+}
+
+function updateTransition(index, field, value) {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step || !step.transitions[index]) return;
+  step.transitions[index][field] = value;
+  if (field === 'label') {
+    renderOutline();
+    const nTrans = step.transitions.filter(t => t.target_uid).length;
+    const requireLabel = nTrans >= 2;
+    const input = document.getElementById('transition-label-' + index);
+    if (input) input.classList.toggle('req-missing', requireLabel && !value);
+  } else if (field === 'target_uid' || field === 'is_correct') {
+    openStepPanel(openStepUid);
+  }
+}
+
+function removeTransition(index) {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  step.transitions.splice(index, 1);
+  renderOutline();
+  openStepPanel(openStepUid);
+}
+
+// Remplit un <select> avec toutes les étapes existantes (ID E1/E2/E2'… + résumé), en excluant l'étape elle-même
+function populateStepTargetSelect(selectEl, currentUid, excludeUid) {
+  if (!selectEl) return;
+  const { ordered, orphans } = computeTree();
+  const all = [...ordered, ...orphans].filter(o => o.step.uid !== excludeUid);
+  const emptyLabel = selectEl.id === 'panel-timer-fail' || selectEl.id === 'f-global-timer-fail' ? '— Aucun —' : '— choisir —';
+  selectEl.innerHTML = `<option value="">${emptyLabel}</option>` +
+    all.map(o => `<option value="${o.step.uid}" ${o.step.uid === currentUid ? 'selected' : ''}>${o.label} — ${escapeHtml(stepSummary(o.step))}</option>`).join('');
+}
+
+// ── VALIDATION + TRANSFORMATION FINALE AVANT SAUVEGARDE ──
+// Calcule l'ordre de lecture réel (order_num) à partir du graphe de transitions et
+// convertit le modèle interne (uid) vers le format attendu par la base (order_num).
+// Retourne null si la sauvegarde doit être annulée (étapes orphelines non confirmées).
+function computeFinalSteps() {
+  const { ordered, orphans } = computeTree();
+
+  for (const { step, label } of ordered) {
+    const targets = step.transitions.filter(t => t.target_uid);
+    if (targets.length >= 2 && targets.some(t => !(t.label || '').trim())) {
+      throw new Error(`L'étape ${label} a un embranchement dont le texte de choix est vide.`);
+    }
+  }
+
+  let finalList = [...ordered];
+  if (orphans.length > 0) {
+    const names = orphans.map(o => stepSummary(o.step)).join(', ');
+    if (!confirm(`${orphans.length} étape(s) orpheline(s) ne sont reliées depuis aucune autre étape et ne seront jamais atteintes par les joueurs (${names}). Les enregistrer quand même ?`)) {
+      return null;
+    }
+    finalList = finalList.concat(orphans);
+  }
+
+  const uidToOrder = {};
+  finalList.forEach((o, i) => { uidToOrder[o.step.uid] = i + 1; });
+  lastUidToOrderMap = uidToOrder;
+
+  return finalList.map((o, i) => {
+    const step = o.step;
+    const transitions = step.transitions.filter(t => t.target_uid);
+    const stepType = transitions.length >= 2 ? 'decision' : 'standard';
+    return {
+      order_num: i + 1,
+      title: step.title || '',
+      lat: step.lat, lng: step.lng, radius_meters: step.radius_meters || 20,
+      story_text: step.story_text || '',
+      enigme: step.enigme || '',
+      answer: step.answer || '',
+      hint: step.hint || '',
+      step_type: stepType,
+      is_endpoint: transitions.length === 0,
+      choices: stepType === 'decision'
+        ? transitions.map(t => ({ label: t.label, next_step_order: uidToOrder[t.target_uid] || null, is_correct: !!t.is_correct, error_message: t.error_message || null }))
+        : null,
+      has_step_timer: step.has_step_timer || false,
+      step_timer_seconds: step.step_timer_seconds ?? null,
+      step_timer_visible: step.step_timer_visible !== false,
+      timer_fail_step_order: step.timer_fail_target_uid ? (uidToOrder[step.timer_fail_target_uid] || null) : null,
+      image_url: step.image_url || '',
+      _uid: step.uid,
+      _pendingImgFile: step._pendingImgFile || null
+    };
+  });
 }
 
 // ── PREVIEWS ──
@@ -3375,12 +3733,6 @@ function updatePreview(type) {
   const el = document.getElementById('f-'+type+'-preview');
   if (el) { el.textContent = text || 'Le texte apparaîtra ici…'; el.style.opacity = text ? '1' : '0.7'; el.style.fontStyle = text ? 'normal' : 'italic'; }
 }
-function updateStepPreview(n) {
-  const text = document.getElementById('s'+n+'-story').value.trim();
-  const el = document.getElementById('s'+n+'-story-preview');
-  if (el) { el.textContent = text || 'Le texte apparaîtra ici…'; el.style.opacity = text ? '1' : '0.7'; el.style.fontStyle = text ? 'normal' : 'italic'; }
-}
-
 // ── UPLOAD IMAGE VERS SUPABASE STORAGE ──
 async function uploadImageToStorage(file, folder) {
   const ext = file.name.split('.').pop();
@@ -3418,58 +3770,35 @@ function handleImg(event, type) {
   previewImgLocal(file, type+'-img-tag', type+'-img-preview', type+'-upload-zone');
 }
 function removeImg(type) {
-  document.getElementById(type+'-img-tag').src = '';
-  document.getElementById(type+'-img-preview').style.display = 'none';
-  document.getElementById(type+'-upload-zone').style.display = 'block';
+  const tag = document.getElementById(type+'-img-tag');
+  const preview = document.getElementById(type+'-img-preview');
+  const zone = document.getElementById(type+'-upload-zone');
+  if (tag) { tag.src = ''; tag.alt = ''; }
+  if (preview) preview.style.display = 'none';
+  if (zone) zone.style.display = 'block';
   if (window._pendingImgs) delete window._pendingImgs[type];
 }
-function handleStepImg(event, n) {
-  const file = event.target.files[0]; if (!file) return;
-  if (file.size > 5*1024*1024) { alert('Image trop lourde (max 5 Mo)'); return; }
-  window._pendingStepImgs = window._pendingStepImgs || {};
-  window._pendingStepImgs[n] = file;
-  previewImgLocal(file, 's'+n+'-img-tag', 's'+n+'-img-preview', 's'+n+'-upload-zone');
-}
-function removeStepImg(n) {
-  document.getElementById('s'+n+'-img-tag').src = '';
-  document.getElementById('s'+n+'-img-preview').style.display = 'none';
-  document.getElementById('s'+n+'-upload-zone').style.display = 'block';
-  if (window._pendingStepImgs) delete window._pendingStepImgs[n];
-}
 
-// ── COLLECTER LES ÉTAPES DU FORMULAIRE ──
-function collectSteps() {
-  const steps = [];
-  for (let i = 1; i <= 50; i++) {
-    if (!document.getElementById('step-'+i)) continue;
-    steps.push({
-      order_num:     i,
-      title:         document.getElementById('s'+i+'-title')?.value || '',
-      lat:           parseFloat(document.getElementById('s'+i+'-lat')?.value) || null,
-      lng:           parseFloat(document.getElementById('s'+i+'-lng')?.value) || null,
-      radius_meters: parseInt(document.getElementById('s'+i+'-radius')?.value) || 20,
-      story_text:    document.getElementById('s'+i+'-story')?.value || '',
-      enigme:        document.getElementById('s'+i+'-enigme')?.value || '',
-      answer:        document.getElementById('s'+i+'-answer')?.value || '',
-      hint:          document.getElementById('s'+i+'-hint')?.value || '',
-      step_type:     document.getElementById('s'+i+'-step-type')?.value || 'standard',
-      is_endpoint:   document.getElementById('s'+i+'-is-endpoint')?.value === 'true',
-      choices:       collectChoices(i),
-      has_step_timer:      document.getElementById('s'+i+'-has-timer')?.checked || false,
-      step_timer_seconds:  document.getElementById('s'+i+'-has-timer')?.checked
-        ? (parseInt(document.getElementById('s'+i+'-timer-minutes')?.value) || 0) * 60
-        : null,
-      step_timer_visible:  document.getElementById('s'+i+'-timer-visible')?.value === 'true',
-      timer_fail_step_order: parseInt(document.getElementById('s'+i+'-timer-fail')?.value) || null
-    });
-  }
-  return steps;
+// Réinitialise en une fois les 4 zones d'image de l'aventure (cover/intro/outro/badge) —
+// utilisé à l'ouverture de "Nouvelle aventure" pour ne jamais laisser l'aperçu de
+// l'aventure précédemment éditée traîner à l'écran.
+function resetAllImageFields() {
+  ['intro', 'outro', 'cover', 'badge'].forEach(type => removeImg(type));
+  window._pendingImgs = {};
 }
-
 // ── SAUVEGARDER DANS SUPABASE ──
 async function saveAdventure(asDraft) {
   const title = document.getElementById('f-title').value.trim();
   if (!title) { alert('Le titre est obligatoire.'); return; }
+
+  let steps;
+  try {
+    steps = computeFinalSteps();
+  } catch (e) {
+    showToast(e.message, true);
+    return;
+  }
+  if (steps === null) return; // sauvegarde annulée (étapes orphelines non confirmées)
 
   const advData = {
     title,
@@ -3477,12 +3806,10 @@ async function saveAdventure(asDraft) {
     location:        document.getElementById('f-location').value,
     duration:        document.getElementById('f-duration').value,
     difficulty:      document.getElementById('f-diff').value,
-    scenario_type:   document.getElementById('f-scenario-type').value,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
     intro_text:       document.getElementById('f-intro-text').value,
     outro_text:       document.getElementById('f-outro-text').value,
-    satisfaction_url: document.getElementById('f-satisfaction-url').value,
     box_hint:         document.getElementById('f-box-hint').value,
     box_solution:     document.getElementById('f-box-solution').value,
     has_global_timer: document.getElementById('f-has-global-timer')?.checked || false,
@@ -3490,7 +3817,7 @@ async function saveAdventure(asDraft) {
       ? (parseInt(document.getElementById('f-global-timer-minutes')?.value) || 0) * 60
       : null,
     global_timer_visible: document.getElementById('f-global-timer-visible')?.value === 'true',
-    timer_fail_step_order: parseInt(document.getElementById('f-global-timer-fail')?.value) || null,
+    timer_fail_step_order: (() => { const u = document.getElementById('f-global-timer-fail')?.value; return u ? (lastUidToOrderMap[u] || null) : null; })(),
     badge_name: document.getElementById('f-badge-name')?.value || '',
     xp_reward: parseInt(document.getElementById('f-xp-reward')?.value) || 50,
     locations_count: parseInt(document.getElementById('f-locations-count')?.value) || 1,
@@ -3546,19 +3873,17 @@ async function saveAdventure(asDraft) {
       adventureId = created[0].id;
     }
 
-    // ── Upload images des étapes ──
-    const pendingSteps = window._pendingStepImgs || {};
-    const steps = collectSteps();
+    // ── Génération automatique de l'URL du QR code de fin d'aventure (basée sur l'ID) ──
+    const satisfactionUrl = `https://flavia-flint.vercel.app/validate?id=${adventureId}`;
+    await supa('PATCH', 'adventures', { satisfaction_url: satisfactionUrl }, `?id=eq.${adventureId}`);
 
-    for (let i = 0; i < steps.length; i++) {
-      const stepNum = i + 1;
-      if (pendingSteps[stepNum]) {
-        btnSave.textContent = `⏳ Upload image étape ${stepNum}…`;
-        steps[i].image_url = await uploadImageToStorage(pendingSteps[stepNum], 'steps');
-      } else {
-        const existing = document.getElementById('s'+stepNum+'-img-tag')?.src;
-        if (existing && existing.startsWith('http')) steps[i].image_url = existing;
+    // ── Upload des images des étapes (déjà calculées et validées en haut de la fonction) ──
+    for (const s of steps) {
+      if (s._pendingImgFile) {
+        btnSave.textContent = `⏳ Upload image étape ${s.order_num}…`;
+        s.image_url = await uploadImageToStorage(s._pendingImgFile, 'steps');
       }
+      delete s._uid; delete s._pendingImgFile;
     }
 
     if (steps.length > 0) {
@@ -3568,7 +3893,7 @@ async function saveAdventure(asDraft) {
 
     // Réinitialiser les images en attente
     window._pendingImgs = {};
-    window._pendingStepImgs = {};
+    scenarioSteps.forEach(s => { s._pendingImgFile = null; });
 
     showToast(editingId ? 'Aventure mise à jour ✓' : 'Nouvelle aventure créée ✓');
     closeModal();
@@ -3591,9 +3916,6 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── BRANCHEMENTS ──
-function onScenarioTypeChange() {}
-
 // ── NOMBRE DE LIEUX : masque le GPS par étape quand l'aventure se joue en 1 seul lieu ──
 function onLocationsCountChange() {
   const count = parseInt(document.getElementById('f-locations-count').value);
@@ -3614,144 +3936,6 @@ function onLocationsCountChange() {
 function toggleGlobalTimer() {
   const checked = document.getElementById('f-has-global-timer').checked;
   document.getElementById('global-timer-options').style.display = checked ? 'block' : 'none';
-}
-
-function toggleStepTimer(n) {
-  const checked = document.getElementById(`s${n}-has-timer`).checked;
-  document.getElementById(`s${n}-timer-options`).style.display = checked ? 'block' : 'none';
-}
-
-function onStepTypeChange(n) {
-  const type = document.getElementById('s'+n+'-step-type').value;
-  const section = document.getElementById('s'+n+'-choices-section');
-  if (section) section.style.display = type === 'decision' ? 'block' : 'none';
-  if (document.getElementById('tree-view').style.display !== 'none') buildTreeView();
-}
-
-function addChoice(n) {
-  const list = document.getElementById('s'+n+'-choices-list');
-  const idx = list.children.length;
-  const div = document.createElement('div');
-  div.id = `s${n}-choice-${idx}`;
-  div.style.cssText = 'display:grid;grid-template-columns:1fr auto 60px auto;gap:8px;align-items:center;margin-bottom:8px;';
-  div.innerHTML = `
-    <input type="text" placeholder="Texte du choix ex: Aller à gauche"
-      id="s${n}-choice-${idx}-label"
-      style="padding:8px 10px;border:1px solid #E2E8E2;border-radius:6px;font-size:13px;"/>
-    <span style="font-size:12px;color:#6B7280;white-space:nowrap;">→ étape</span>
-    <input type="number" placeholder="N°" min="1" max="50"
-      id="s${n}-choice-${idx}-next"
-      style="padding:8px;border:1px solid #E2E8E2;border-radius:6px;font-size:13px;text-align:center;"/>
-    <button type="button" onclick="removeChoice(this)"
-      style="background:#FEF2F2;border:none;border-radius:6px;color:#DC2626;padding:6px 8px;cursor:pointer;">🗑️</button>`;
-  list.appendChild(div);
-}
-
-function removeChoice(btn) { btn.closest('div[id]').remove(); }
-
-function collectChoices(n) {
-  const list = document.getElementById('s'+n+'-choices-list');
-  if (!list) return null;
-  const choices = [];
-  const rows = list.querySelectorAll('div[id^="s'+n+'-choice-"]');
-  rows.forEach(row => {
-    const labelInput = row.querySelector('input[type="text"]');
-    const nextInput  = row.querySelector('input[type="number"]');
-    const label = labelInput?.value?.trim();
-    const next  = parseInt(nextInput?.value);
-    if (label && !isNaN(next)) {
-      choices.push({ label, next_step_order: next });
-    }
-  });
-  return choices.length > 0 ? choices : null;
-}
-
-// ── ARBRE DE NAVIGATION ──
-function toggleTreeView() {
-  const tree = document.getElementById('tree-view');
-  const isVisible = tree.style.display !== 'none';
-  if (!isVisible) {
-    buildTreeView();
-    tree.style.display = 'block';
-  } else {
-    tree.style.display = 'none';
-  }
-}
-
-function buildTreeView() {
-  const steps = collectStepsForTree();
-  if (!steps || steps.length === 0) {
-    document.getElementById('tree-content').innerHTML = '<p style="color:#9CA3AF;font-size:13px;">Aucune étape définie.</p>';
-    return;
-  }
-  const html = renderTreeNode(steps, 0, new Set());
-  document.getElementById('tree-content').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;">${html}</div>`;
-}
-
-function collectStepsForTree() {
-  const steps = [];
-  for (let i = 1; i <= 50; i++) {
-    if (!document.getElementById('step-'+i)) continue;
-    const title      = document.getElementById('s'+i+'-title')?.value || 'Étape '+i;
-    const type       = document.getElementById('s'+i+'-step-type')?.value || 'standard';
-    const isEndpoint = document.getElementById('s'+i+'-is-endpoint')?.value === 'true';
-    const choices    = collectChoices(i);
-    steps.push({ order_num: i, title, step_type: type, is_endpoint: isEndpoint, choices });
-  }
-  return steps;
-}
-
-function renderTreeNode(steps, index, visited) {
-  if (index >= steps.length || visited.has(index)) return '';
-  visited.add(index);
-
-  const step = steps[index];
-  const isFirst = index === 0;
-  const typeClass = isFirst ? 'start' : step.is_endpoint ? 'endpoint' : step.step_type === 'decision' ? 'decision' : '';
-  const typeIcon  = step.step_type === 'decision' ? '🔀 ' : step.is_endpoint ? '🏁 ' : '📍 ';
-
-  let html = `
-    <div class="tree-node">
-      <div class="tree-step ${typeClass}" title="Étape ${step.order_num}">
-        ${typeIcon}<strong>${step.order_num}</strong><br>
-        <span style="font-weight:400;font-size:11px;">${step.title.substring(0,20)}${step.title.length>20?'…':''}</span>
-      </div>`;
-
-  if (step.is_endpoint) {
-    html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>
-      <div style="font-size:18px;">🏆</div>`;
-  } else if (step.step_type === 'decision' && step.choices && step.choices.length > 0) {
-    html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>
-      <div class="tree-choices-row">`;
-
-    step.choices.forEach(choice => {
-      const targetIndex = steps.findIndex(s => s.order_num === choice.next_step_order);
-      html += `<div class="tree-node">
-        <div class="tree-choice-label">${choice.label.substring(0,20)}${choice.label.length>20?'…':''}</div>
-        <div class="tree-connector"><div class="tree-connector-line"></div></div>`;
-
-      if (targetIndex >= 0 && !visited.has(targetIndex)) {
-        html += renderTreeNode(steps, targetIndex, new Set(visited));
-      } else if (targetIndex < 0) {
-        html += `<div class="tree-unknown">❓ Étape ${choice.next_step_order}<br><span style="font-size:10px;">non créée</span></div>`;
-      } else {
-        const target = steps[targetIndex];
-        html += `<div class="tree-step" style="opacity:0.6;" title="Déjà affiché">↩ ${target.order_num}. ${target.title.substring(0,15)}</div>`;
-      }
-      html += `</div>`;
-    });
-    html += `</div>`;
-  } else {
-    // Étape linéaire → suivante par order_num+1
-    const nextIndex = steps.findIndex(s => s.order_num === step.order_num + 1);
-    if (nextIndex >= 0) {
-      html += `<div class="tree-connector"><div class="tree-connector-line"></div></div>`;
-      html += renderTreeNode(steps, nextIndex, visited);
-    }
-  }
-
-  html += `</div>`;
-  return html;
 }
 
 // ── QR CODE ──
@@ -3779,11 +3963,25 @@ function generateQRCode(url) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('f-satisfaction-url').addEventListener('input', function() {
-    generateQRCode(this.value.trim());
-  });
-});
+// Récupère l'URL de validation (satisfaction_url) fraîche depuis Supabase et affiche le QR code.
+// L'URL est auto-générée par saveAdventure() à partir de l'ID de l'aventure — plus de champ manuel.
+async function generateQRForAdventure(advId) {
+  if (!advId) {
+    document.getElementById('qr-preview-section').style.display = 'none';
+    document.getElementById('qr-code-display').innerHTML = '';
+    return;
+  }
+  try {
+    const rows = await supa('GET', 'adventures', null, `?id=eq.${advId}&select=satisfaction_url`);
+    const url = rows?.[0]?.satisfaction_url || '';
+    if (!url) {
+      showToast('QR code pas encore généré — enregistre le scénario une première fois.', true);
+    }
+    generateQRCode(url);
+  } catch(e) {
+    showToast('Erreur récupération du QR code : ' + e.message, true);
+  }
+}
 
 function printQRCode() {
   const canvas = document.querySelector('#qr-code-display canvas');

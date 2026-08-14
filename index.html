@@ -479,16 +479,17 @@
   #screen-adventure-ranking { background: var(--beige-light); flex-direction: column; }
 
   .ranking-tabs {
-    display: flex; background: var(--green-dark);
-    padding: 0 16px 12px; gap: 8px;
+    display: flex; background: #1A2A1A;
+    padding: 0 16px; gap: 0;
   }
   .ranking-tab {
-    flex: 1; padding: 8px 6px;
-    background: rgba(255,255,255,0.1); border: none; border-radius: var(--radius-sm);
-    color: rgba(255,255,255,0.6); font-size: 12px; font-weight: 600;
+    flex: 1; padding: 12px 0;
+    background: none; border: none;
+    color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600;
+    border-bottom: 2px solid transparent;
     cursor: pointer; transition: all 0.15s;
   }
-  .ranking-tab.active { background: var(--amber); color: var(--green-dark); }
+  .ranking-tab.active { color: var(--amber); font-weight: 700; border-bottom-color: var(--amber); }
 
   .ranking-list { flex: 1; overflow-y: auto; padding: 12px 14px; }
 
@@ -732,6 +733,7 @@
 
   /* GPS ALERT */
   @keyframes pulse-gps { 0%,100%{opacity:1} 50%{opacity:0.7} }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── BOUSSOLE SVG ANIMÉE ── */
   .compass-needle {
@@ -1417,10 +1419,106 @@
        ÉCRAN CLASSEMENT
   ═══════════════════════════════════ -->
   <div id="screen-ranking" class="screen">
-    <div class="ranking-tabs">
-      <button class="ranking-tab active" onclick="setTab(this,'general')">Général</button>
-      <button class="ranking-tab"        onclick="setTab(this,'friends')">Amis</button>
-      <button class="ranking-tab"        onclick="setTab(this,'week')">Cette semaine</button>
+    <!-- Header immersif + podium (décoratif, se remplira avec le vrai top 3 plus tard) -->
+    <div style="
+      background:linear-gradient(180deg, #2D4A2D 0%, #1A2A1A 100%);
+      padding:20px 16px 0;
+      flex-shrink:0;
+    ">
+      <div style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Récits d'Aventures</div>
+      <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:white;margin-bottom:20px;">Classement des Explorateurs</div>
+
+      <!-- Podium top 3 — état vide avec silhouettes -->
+      <div id="ranking-podium" style="display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-bottom:0;">
+
+        <!-- 2ème place -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+          <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:22px;opacity:0.3;">👤</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;">- - -</div>
+          <div style="
+            background:rgba(192,192,192,0.2);
+            border-radius:10px 10px 0 0;
+            width:100%;height:60px;
+            display:flex;align-items:center;justify-content:center;
+            border:1px solid rgba(192,192,192,0.2);
+            border-bottom:none;
+          ">
+            <span style="font-size:22px;color:silver;font-weight:800;">2</span>
+          </div>
+        </div>
+
+        <!-- 1ère place — plus haute -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+          <div style="font-size:20px;">👑</div>
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(232,160,32,0.15);border:2px solid rgba(232,160,32,0.4);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:28px;opacity:0.3;">👤</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;">- - -</div>
+          <div style="
+            background:rgba(232,160,32,0.2);
+            border-radius:10px 10px 0 0;
+            width:100%;height:80px;
+            display:flex;align-items:center;justify-content:center;
+            border:1px solid rgba(232,160,32,0.3);
+            border-bottom:none;
+          ">
+            <span style="font-size:28px;color:#E8A020;font-weight:800;">1</span>
+          </div>
+        </div>
+
+        <!-- 3ème place -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+          <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:22px;opacity:0.3;">👤</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;">- - -</div>
+          <div style="
+            background:rgba(184,115,51,0.2);
+            border-radius:10px 10px 0 0;
+            width:100%;height:48px;
+            display:flex;align-items:center;justify-content:center;
+            border:1px solid rgba(184,115,51,0.2);
+            border-bottom:none;
+          ">
+            <span style="font-size:18px;color:#CD7F32;font-weight:800;">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="
+      background:white;
+      padding:6px;
+      margin:16px;
+      border-radius:12px;
+      display:flex;
+      gap:4px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+      flex-shrink:0;
+    ">
+      <button onclick="setRankTab('general',this)" id="rank-tab-general" style="
+        flex:1;padding:9px 0;
+        background:#2D4A2D;
+        border:none;border-radius:8px;
+        color:white;font-size:13px;font-weight:700;
+        cursor:pointer;transition:all 0.15s;
+      ">Général</button>
+
+      <button onclick="setRankTab('friends',this)" id="rank-tab-friends" style="
+        flex:1;padding:9px 0;
+        background:none;border:none;border-radius:8px;
+        color:#6B7280;font-size:13px;font-weight:600;
+        cursor:pointer;transition:all 0.15s;
+      ">Amis</button>
+
+      <button onclick="setRankTab('scenario',this)" id="rank-tab-scenario" style="
+        flex:1;padding:9px 0;
+        background:none;border:none;border-radius:8px;
+        color:#6B7280;font-size:13px;font-weight:600;
+        cursor:pointer;transition:all 0.15s;
+      ">Par scénario</button>
     </div>
     <div class="ranking-list">
       <div id="ranking-list-content">
@@ -2301,7 +2399,6 @@ function buildCarouselCard(adv) {
       <div class="adv-card">
         <div class="adv-card-banner" style="position:relative;height:100px;">
           ${imgHtml}
-          <span style="position:relative;z-index:1;">${compassIconSVG(28)}</span>
           <div class="adv-card-diff ${diffClass}" style="position:absolute;top:8px;right:8px;">${adv.difficulty || ''}</div>
         </div>
         <div class="adv-card-body">
@@ -2343,29 +2440,79 @@ function renderAdventureCards() {
     return;
   }
   container.innerHTML = adventures.map(adv => {
-    const coverUrl  = adv.cover_image_url || '';
-    const imgHtml   = coverUrl
-      ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
-      : '';
-    const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
     return `
-      <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')">
-        <div class="adv-card-banner">
-          ${imgHtml}
-          <span>${compassIconSVG(32)}</span>
-          <div class="adv-card-diff ${diffClass}">${adv.difficulty || ''}</div>
+      <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')" style="
+        background:white;
+        border-radius:16px;
+        padding:12px;
+        margin-bottom:10px;
+        display:flex;
+        gap:12px;
+        align-items:center;
+        box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        cursor:pointer;
+        transition:transform 0.15s ease;
+      ">
+        <!-- Image carrée à gauche -->
+        <div style="
+          width:80px;height:80px;
+          border-radius:12px;
+          overflow:hidden;
+          flex-shrink:0;
+          background:var(--green-dark);
+        ">
+          ${adv.cover_image_url
+            ? `<img src="${adv.cover_image_url}" style="width:100%;height:100%;object-fit:cover;" alt="${adv.title}"/>`
+            : `<div style="width:100%;height:100%;background:#2D4A2D;"></div>`
+          }
         </div>
-        <div class="adv-card-body">
-          <div class="adv-card-title">${adv.title}</div>
-          <div class="adv-card-desc">${adv.description || ''}</div>
-          <div class="adv-card-meta">
-            <span>⏱ ${adv.duration || ''}</span>
-            <span>📍 ${adv.location || ''}</span>
-            <span>👶 ${adv.age_range || ''}</span>
+
+        <!-- Contenu à droite -->
+        <div style="flex:1;min-width:0;">
+          <!-- Titre -->
+          <div style="
+            font-size:16px;
+            font-weight:700;
+            color:#1A2A1A;
+            margin-bottom:4px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+          ">${adv.title}</div>
+
+          <!-- Résumé -->
+          <div style="
+            font-size:13px;
+            color:#6B7280;
+            line-height:1.4;
+            margin-bottom:8px;
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
+          ">${adv.description || ''}</div>
+
+          <!-- Étiquettes durée + difficulté -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${adv.duration ? `
+              <span style="
+                background:#F5EDD8;
+                color:#4A5A4A;
+                border-radius:20px;
+                padding:3px 10px;
+                font-size:11px;
+                font-weight:600;
+              ">⏱ ${adv.duration}</span>` : ''}
+            ${adv.difficulty ? `
+              <span style="
+                background:${adv.difficulty === 'Facile' ? '#ECFDF5' : adv.difficulty === 'Intermédiaire' ? '#FFF7EE' : '#FEF2F2'};
+                color:${adv.difficulty === 'Facile' ? '#065F46' : adv.difficulty === 'Intermédiaire' ? '#92400E' : '#991B1B'};
+                border-radius:20px;
+                padding:3px 10px;
+                font-size:11px;
+                font-weight:600;
+              ">${adv.difficulty}</span>` : ''}
           </div>
-        </div>
-        <div style="padding:6px 14px 12px;border-top:1px solid #F0E8D5;display:flex;justify-content:flex-end;">
-          <button onclick="event.stopPropagation();showAdventureRanking('${adv.id}','${adv.title.replace(/'/g,"\\'")}')" style="background:none;border:none;font-size:12px;font-weight:700;color:#C4622D;cursor:pointer;padding:4px 8px;display:flex;align-items:center;gap:4px;">🏆 Classement</button>
         </div>
       </div>`;
   }).join('');
@@ -4788,16 +4935,41 @@ async function submitAuthorRequest() {
 // ══════════════════════════════════════════
 // CLASSEMENT RÉEL
 // ══════════════════════════════════════════
-const RANKING_MOTIVATION_HTML = `
-  <div style="text-align:center;padding:30px 20px;">
-    <div style="font-size:48px;margin-bottom:12px;">🏆</div>
-    <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
-      Sois parmi les premiers !
-    </div>
-    <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
-      Le classement se remplira au fur et à mesure que les aventuriers terminent leurs quêtes.
-    </div>
-  </div>`;
+function buildRankingEmptyState() {
+  const ghostOpacities = [0.5, 0.4, 0.3, 0.2, 0.12];
+  const ghostRows = ghostOpacities.map(op => `
+    <div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #E5D9C0;border-radius:12px;padding:10px 14px;margin-bottom:8px;opacity:${op};">
+      <div style="width:24px;height:14px;border-radius:4px;background:#D4C5A9;"></div>
+      <div style="width:36px;height:36px;border-radius:50%;background:#D4C5A9;flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="width:60%;height:10px;border-radius:4px;background:#D4C5A9;margin-bottom:6px;"></div>
+        <div style="width:35%;height:8px;border-radius:4px;background:#E5D9C0;"></div>
+      </div>
+      <div style="width:40px;height:10px;border-radius:4px;background:#D4C5A9;"></div>
+    </div>`).join('');
+
+  return `
+    <div style="position:relative;border:2px dashed #D4C5A9;border-radius:16px;padding:28px 16px 16px;margin-top:8px;">
+      <div style="position:absolute;top:-1px;left:-1px;width:18px;height:18px;border-top:2px solid var(--terra);border-left:2px solid var(--terra);border-radius:6px 0 0 0;"></div>
+      <div style="position:absolute;top:-1px;right:-1px;width:18px;height:18px;border-top:2px solid var(--terra);border-right:2px solid var(--terra);border-radius:0 6px 0 0;"></div>
+      <div style="position:absolute;bottom:-1px;left:-1px;width:18px;height:18px;border-bottom:2px solid var(--terra);border-left:2px solid var(--terra);border-radius:0 0 0 6px;"></div>
+      <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-bottom:2px solid var(--terra);border-right:2px solid var(--terra);border-radius:0 0 6px 0;"></div>
+
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:36px;margin-bottom:8px;">🏆</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">
+          Sois le premier !
+        </div>
+        <div style="font-size:13px;color:#9CA3AF;line-height:1.5;max-width:260px;margin:0 auto;">
+          Le classement se remplira au fur et à mesure que les aventuriers terminent leurs quêtes.
+        </div>
+      </div>
+
+      ${ghostRows}
+    </div>`;
+}
+
+const RANKING_MOTIVATION_HTML = buildRankingEmptyState();
 
 // Titres de rang — univers Flavia Flint
 function getRankName(xp) {
@@ -4826,38 +4998,6 @@ async function loadRanking(tab = 'general') {
 
   const myId = currentPlayer?.id;
 
-  // ── Onglet Amis (à venir) ──
-  if (tab === 'friends') {
-    container.innerHTML = '<div class="adv-card-empty">👥 Les amis arrivent bientôt…</div>';
-    return;
-  }
-
-  // ── Onglet Cette semaine ──
-  if (tab === 'week') {
-    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
-    try {
-      let weekPlayers;
-      try {
-        const rows = await supaFetch('rpc/get_weekly_ranking', { method: 'POST', body: {} });
-        weekPlayers = (rows || []).map(p => ({ ...p, total_xp: p.weekly_xp }));
-      } catch {
-        // Fallback : classement général si la fonction n'existe pas encore
-        weekPlayers = await supaFetch('players?select=id,pseudo,avatar_emoji,total_xp,team_name&order=total_xp.desc&limit=50');
-      }
-      const ranked = weekPlayers.map((p, i) => ({
-        ...p,
-        rank: i + 1,
-        value: `${(p.total_xp || 0).toLocaleString('fr')} XP semaine`,
-        subvalue: `${getRankIcon(p.total_xp)} ${getRankName(p.total_xp)}`
-      }));
-      renderRankingList(container, ranked, myId);
-    } catch (e) {
-      console.error('Erreur classement semaine:', e);
-      container.innerHTML = '<div class="adv-card-empty">Impossible de charger le classement.</div>';
-    }
-    return;
-  }
-
   // ── Onglet Général : recherche + pagination 10 par 10 ──
   container.innerHTML = `
     <div style="padding:12px 0 8px;">
@@ -4870,13 +5010,317 @@ async function loadRanking(tab = 'general') {
     <div id="ranking-rows">
       <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
     </div>
-    <div id="ranking-pagination" style="display:flex;gap:8px;justify-content:center;padding:12px 0;"></div>
-    <div id="ranking-adventure-section" style="margin-top:8px;"></div>`;
+    <div id="ranking-pagination" style="display:flex;gap:8px;justify-content:center;padding:12px 0;"></div>`;
 
   rankingPage = 0;
   rankingSearchQuery = '';
   await renderRankingRows(myId);
-  await renderAdventureRankings();
+}
+
+// Dispatche le bon contenu selon l'onglet actif (utilisé par setRankTab et à la ré-ouverture de l'écran)
+function loadRankingTab(tab) {
+  console.log('[loadRankingTab] dispatch vers onglet:', tab);
+  currentRankingTab = tab;
+  if (tab === 'friends') {
+    renderPodium([]); // le podium XP général n'a pas de sens sur l'onglet amis
+    loadFriendsRanking();
+  } else if (tab === 'scenario') {
+    renderPodium([]); // idem : classement chrono par scénario, pas de podium XP
+    loadScenarioRanking();
+  } else {
+    loadRanking('general');
+  }
+}
+
+// ══════════════════════════════════════════
+// ONGLET AMIS — recherche, ajout, classement entre amis
+// ══════════════════════════════════════════
+async function loadFriendsRanking() {
+  console.log('[loadFriendsRanking] appel — currentPlayer:', currentPlayer?.id, '| screen actif:', document.getElementById('screen-ranking')?.classList.contains('active'));
+  const userId = currentPlayer?.id;
+  const friends = JSON.parse(localStorage.getItem('ff_friends') || '[]');
+  // ff_friends = tableau d'IDs de joueurs suivis
+
+  const contentEl = document.getElementById('ranking-list-content');
+  console.log('[loadFriendsRanking] #ranking-list-content trouvé ?', !!contentEl, '| amis en localStorage:', friends);
+  if (!contentEl) {
+    console.error('[loadFriendsRanking] ABANDON : #ranking-list-content introuvable dans le DOM.');
+    return;
+  }
+
+  // Section ajout d'ami
+  contentEl.innerHTML = `
+    <div style="padding:0 0 16px;">
+
+      <!-- Recherche ami -->
+      <div style="background:white;border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:13px;font-weight:700;color:#1A2A1A;margin-bottom:10px;">🔍 Ajouter un ami</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="friend-search-input" placeholder="Pseudo de l'aventurier..."
+            style="flex:1;padding:10px 12px;border:1.5px solid #E5D9C0;border-radius:10px;font-size:14px;outline:none;"/>
+          <button onclick="searchAndAddFriend()" style="
+            padding:10px 14px;background:#2D4A2D;color:white;
+            border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
+            Ajouter
+          </button>
+        </div>
+        <div id="friend-search-result" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Liste amis -->
+      <div id="friends-ranking-list">
+        ${friends.length === 0 ? `
+          <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-size:40px;margin-bottom:12px;">👥</div>
+            <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Aucun ami encore</div>
+            <div style="font-size:13px;color:#6B7280;line-height:1.5;">
+              Recherche le pseudo d'un aventurier<br/>pour le comparer à toi !
+            </div>
+          </div>` : '<div style="text-align:center;color:#9CA3AF;padding:20px;">Chargement...</div>'}
+      </div>
+    </div>`;
+  console.log('[loadFriendsRanking] HTML injecté dans #ranking-list-content (', contentEl.innerHTML.length, 'caractères)');
+
+  // Charger les scores des amis
+  if (friends.length > 0) {
+    await loadFriendsScores(friends, userId);
+  }
+}
+
+async function searchAndAddFriend() {
+  const pseudo = document.getElementById('friend-search-input')?.value?.trim();
+  if (!pseudo) return;
+
+  const resultEl = document.getElementById('friend-search-result');
+  resultEl.innerHTML = '<div style="font-size:13px;color:#9CA3AF;">Recherche...</div>';
+
+  try {
+    const players = await supaFetch(
+      `players?pseudo=ilike.*${encodeURIComponent(pseudo)}*&select=id,pseudo,avatar_emoji,total_xp,city&limit=5`
+    );
+
+    if (!players.length) {
+      resultEl.innerHTML = '<div style="font-size:13px;color:#DC2626;">Aucun aventurier trouvé avec ce pseudo.</div>';
+      return;
+    }
+
+    resultEl.innerHTML = players.map(p => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#F5EDD8;border-radius:10px;margin-top:6px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#2D4A2D;display:flex;align-items:center;justify-content:center;font-size:18px;">${p.avatar_emoji || '🧒'}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${p.pseudo}</div>
+          <div style="font-size:12px;color:#6B7280;">${p.city || ''} · ${p.total_xp || 0} XP</div>
+        </div>
+        <button onclick="addFriend('${p.id}','${(p.pseudo || '').replace(/'/g,"\\'")}')" style="
+          padding:7px 12px;background:#C4622D;color:white;
+          border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+          + Ajouter
+        </button>
+      </div>`).join('');
+
+  } catch (e) {
+    console.error('Erreur recherche ami:', e);
+    resultEl.innerHTML = '<div style="font-size:13px;color:#DC2626;">Erreur de recherche.</div>';
+  }
+}
+
+function addFriend(friendId, pseudo) {
+  const userId = currentPlayer?.id;
+  if (friendId === userId) {
+    showToast("Tu ne peux pas t'ajouter toi-même !");
+    return;
+  }
+  const friends = JSON.parse(localStorage.getItem('ff_friends') || '[]');
+  if (friends.includes(friendId)) {
+    showToast(`${pseudo} est déjà dans ta liste !`);
+    return;
+  }
+  friends.push(friendId);
+  localStorage.setItem('ff_friends', JSON.stringify(friends));
+  showToast(`${pseudo} ajouté à tes amis ! 👥`);
+  loadFriendsRanking();
+}
+
+function removeFriend(friendId) {
+  const friends = JSON.parse(localStorage.getItem('ff_friends') || '[]').filter(id => id !== friendId);
+  localStorage.setItem('ff_friends', JSON.stringify(friends));
+  showToast('Ami retiré');
+  loadFriendsRanking();
+}
+
+async function loadFriendsScores(friendIds, userId) {
+  try {
+    // Charger le joueur actuel + ses amis
+    const allIds = [...new Set([...friendIds, userId])].filter(Boolean);
+    console.log('[loadFriendsScores] IDs interrogés:', allIds);
+    if (!allIds.length) { console.warn('[loadFriendsScores] Aucun ID à interroger, abandon.'); return; }
+    const query = `players?id=in.(${allIds.join(',')})&select=id,pseudo,avatar_emoji,total_xp,city&order=total_xp.desc`;
+    console.log('[loadFriendsScores] requête Supabase:', query);
+    const players = await supaFetch(query);
+    console.log('[loadFriendsScores] réponse Supabase:', players?.length, players);
+
+    const listEl = document.getElementById('friends-ranking-list');
+    if (!listEl) { console.error('[loadFriendsScores] #friends-ranking-list introuvable (contenu déjà remplacé ?)'); return; }
+
+    if (!players.length) {
+      listEl.innerHTML = `
+        <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:40px;margin-bottom:12px;">👥</div>
+          <div style="font-size:16px;font-weight:700;color:#1A2A1A;">Aucun ami trouvé</div>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = players.map((p, i) => {
+      const isMe = p.id === userId;
+      const medals = ['🥇','🥈','🥉'];
+      return `
+        <div style="
+          display:flex;align-items:center;gap:12px;
+          padding:12px 14px;margin-bottom:8px;
+          background:${isMe ? '#FFF7F4' : 'white'};
+          border-radius:14px;
+          border-left:3px solid ${isMe ? '#C4622D' : 'transparent'};
+          box-shadow:0 2px 8px rgba(0,0,0,0.05);
+        ">
+          <div style="width:28px;text-align:center;font-size:${i<3?'20px':'14px'};font-weight:700;color:${i>=3?'#9CA3AF':'inherit'};">
+            ${i < 3 ? medals[i] : '#'+(i+1)}
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:${isMe?'#2D4A2D':'#F5EDD8'};display:flex;align-items:center;justify-content:center;font-size:20px;border:${isMe?'2px solid #C4622D':'none'};">
+            ${p.avatar_emoji || '🧒'}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:${isMe?'700':'600'};color:${isMe?'#C4622D':'#1A2A1A'};">
+              ${isMe ? '⭐ Toi' : p.pseudo}
+            </div>
+            <div style="font-size:12px;color:#9CA3AF;">${p.city || ''}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:800;color:#E8A020;">${p.total_xp || 0}</div>
+            <div style="font-size:10px;color:#9CA3AF;">XP</div>
+          </div>
+          ${!isMe ? `
+            <button onclick="removeFriend('${p.id}')" style="
+              background:none;border:none;color:#9CA3AF;
+              font-size:16px;cursor:pointer;padding:4px;">✕</button>` : ''}
+        </div>`;
+    }).join('');
+
+  } catch (e) {
+    console.error('[loadFriendsScores] ERREUR requête Supabase:', e.message || e, e);
+  }
+}
+
+// ══════════════════════════════════════════
+// ONGLET PAR SCÉNARIO — sélecteur + classement chrono
+// ══════════════════════════════════════════
+async function loadScenarioRanking() {
+  console.log('[loadScenarioRanking] appel — screen actif:', document.getElementById('screen-ranking')?.classList.contains('active'));
+  const contentEl = document.getElementById('ranking-list-content');
+  console.log('[loadScenarioRanking] #ranking-list-content trouvé ?', !!contentEl);
+  if (!contentEl) {
+    console.error('[loadScenarioRanking] ABANDON : #ranking-list-content introuvable dans le DOM.');
+    return;
+  }
+
+  contentEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
+
+  let adventures;
+  try {
+    console.log('[loadScenarioRanking] requête Supabase: adventures?status=eq.published&select=id,title&order=title.asc');
+    adventures = await supaFetch('adventures?status=eq.published&select=id,title&order=title.asc');
+    console.log('[loadScenarioRanking] réponse Supabase:', adventures?.length, adventures);
+  } catch (e) {
+    console.error('[loadScenarioRanking] ERREUR requête Supabase:', e.message || e, e);
+    contentEl.innerHTML = '<div class="adv-card-empty">Impossible de charger les scénarios.</div>';
+    return;
+  }
+
+  contentEl.innerHTML = `
+    <div style="padding:0 0 16px;">
+
+      <!-- Sélecteur de scénario -->
+      <div style="background:white;border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:13px;font-weight:700;color:#1A2A1A;margin-bottom:10px;">Choisir un scénario</div>
+        <select id="scenario-select" onchange="loadScenarioLeaderboard(this.value)" style="
+          width:100%;padding:10px 12px;border:1.5px solid #E5D9C0;
+          border-radius:10px;font-size:14px;color:#1A2A1A;
+          background:#F5EDD8;outline:none;cursor:pointer;">
+          <option value="">-- Sélectionne un scénario --</option>
+          ${adventures.map(a => `<option value="${a.id}">${a.title}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- Classement du scénario sélectionné -->
+      <div id="scenario-leaderboard">
+        <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:40px;margin-bottom:12px;">🏁</div>
+          <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Qui est le plus rapide ?</div>
+          <div style="font-size:13px;color:#6B7280;">Sélectionne un scénario pour voir le classement chrono.</div>
+        </div>
+      </div>
+    </div>`;
+  console.log('[loadScenarioRanking] HTML injecté dans #ranking-list-content (', contentEl.innerHTML.length, 'caractères,', adventures.length, 'scénarios listés)');
+}
+
+async function loadScenarioLeaderboard(adventureId) {
+  console.log('[loadScenarioLeaderboard] appel avec adventureId =', adventureId);
+  if (!adventureId) return;
+
+  const listEl = document.getElementById('scenario-leaderboard');
+  if (!listEl) { console.error('[loadScenarioLeaderboard] #scenario-leaderboard introuvable dans le DOM.'); return; }
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">Chargement...</div>';
+
+  try {
+    const query = `adventure_completions?adventure_id=eq.${adventureId}&select=*,players!player_id(pseudo,avatar_emoji,city)&order=total_duration_seconds.asc&limit=20`;
+    console.log('[loadScenarioLeaderboard] requête Supabase:', query);
+    const completions = await supaFetch(query);
+    console.log('[loadScenarioLeaderboard] réponse Supabase:', completions?.length, completions);
+
+    if (!completions.length) {
+      listEl.innerHTML = `
+        <div style="text-align:center;padding:30px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:36px;margin-bottom:10px;">⏳</div>
+          <div style="font-size:15px;font-weight:700;color:#1A2A1A;">Aucune complétion encore</div>
+          <div style="font-size:13px;color:#6B7280;margin-top:4px;">Sois le premier à terminer ce scénario !</div>
+        </div>`;
+      return;
+    }
+
+    const medals = ['🥇','🥈','🥉'];
+    listEl.innerHTML = completions.map((c, i) => {
+      const mins = Math.floor((c.total_duration_seconds || 0) / 60);
+      const secs = (c.total_duration_seconds || 0) % 60;
+      const timeStr = `${mins}:${String(secs).padStart(2,'0')}`;
+
+      return `
+        <div style="
+          display:flex;align-items:center;gap:12px;
+          padding:12px 14px;margin-bottom:8px;
+          background:white;border-radius:14px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.05);
+        ">
+          <div style="width:28px;text-align:center;font-size:${i<3?'20px':'14px'};font-weight:700;color:${i>=3?'#9CA3AF':'inherit'};">
+            ${i < 3 ? medals[i] : '#'+(i+1)}
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5EDD8;display:flex;align-items:center;justify-content:center;font-size:20px;">
+            ${c.players?.avatar_emoji || '🧒'}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:600;color:#1A2A1A;">${c.players?.pseudo || 'Aventurier'}</div>
+            <div style="font-size:12px;color:#9CA3AF;">${c.players?.city || ''}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:17px;font-weight:800;color:#2D4A2D;">⏱ ${timeStr}</div>
+            <div style="font-size:10px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (e) {
+    console.error('[loadScenarioLeaderboard] ERREUR requête Supabase:', e.message || e, e);
+    listEl.innerHTML = '<div style="color:#DC2626;text-align:center;padding:20px;">Erreur de chargement.</div>';
+  }
 }
 
 async function searchRanking(query) {
@@ -4899,18 +5343,25 @@ async function renderRankingRows(userId) {
       query += `&pseudo=ilike.*${encodeURIComponent(rankingSearchQuery.trim())}*`;
     }
     const allPlayers = await supaFetch(query);
+    console.log('Joueurs classement:', allPlayers.length, allPlayers);
+
+    if (!rankingSearchQuery) renderPodium(allPlayers);
 
     if (!allPlayers.length) {
-      rowsEl.innerHTML = `
-        <div style="text-align:center;padding:40px 20px;">
-          <div style="font-size:48px;margin-bottom:12px;">🏆</div>
-          <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
-            ${rankingSearchQuery ? 'Aucun joueur trouvé' : 'Sois parmi les premiers !'}
-          </div>
-          <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
-            ${rankingSearchQuery ? 'Essaie un autre nom' : 'Le classement se remplira au fur et à mesure.'}
-          </div>
-        </div>`;
+      if (rankingSearchQuery) {
+        rowsEl.innerHTML = `
+          <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+            <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
+              Aucun joueur trouvé
+            </div>
+            <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
+              Essaie un autre nom
+            </div>
+          </div>`;
+      } else {
+        rowsEl.innerHTML = buildRankingEmptyState();
+      }
       if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
@@ -5050,6 +5501,75 @@ function renderRankRow(player, isMe) {
       </div>
       <div style="font-size:14px;font-weight:800;color:var(--amber);white-space:nowrap;">${player.value}</div>
     </div>`;
+}
+
+// Remplit le podium top 3 du header classement avec les vrais joueurs (ou les silhouettes si absent)
+function renderPodium(players) {
+  const p1 = players[0];
+  const p2 = players[1];
+  const p3 = players[2];
+
+  const podiumHtml = `
+    <!-- 2ème place -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+      ${p2 ? `
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;">
+          ${p2.avatar_emoji || '🧒'}
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;">${p2.pseudo || '?'}</div>
+        <div style="font-size:11px;color:silver;font-weight:700;">${(p2.total_xp || 0).toLocaleString('fr')} XP</div>
+      ` : `
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:22px;opacity:0.2;">👤</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;">- - -</div>
+      `}
+      <div style="background:rgba(192,192,192,0.2);border-radius:10px 10px 0 0;width:100%;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(192,192,192,0.2);border-bottom:none;">
+        <span style="font-size:22px;color:silver;font-weight:800;">2</span>
+      </div>
+    </div>
+
+    <!-- 1ère place -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+      <div style="font-size:20px;">👑</div>
+      ${p1 ? `
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(232,160,32,0.2);border:2px solid rgba(232,160,32,0.6);display:flex;align-items:center;justify-content:center;font-size:32px;">
+          ${p1.avatar_emoji || '🧒'}
+        </div>
+        <div style="font-size:12px;color:white;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;text-align:center;">${p1.pseudo || '?'}</div>
+        <div style="font-size:12px;color:#E8A020;font-weight:700;">${(p1.total_xp || 0).toLocaleString('fr')} XP</div>
+      ` : `
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(232,160,32,0.1);border:2px dashed rgba(232,160,32,0.3);display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:28px;opacity:0.2;">👤</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;">- - -</div>
+      `}
+      <div style="background:rgba(232,160,32,0.2);border-radius:10px 10px 0 0;width:100%;height:80px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(232,160,32,0.3);border-bottom:none;">
+        <span style="font-size:28px;color:#E8A020;font-weight:800;">1</span>
+      </div>
+    </div>
+
+    <!-- 3ème place -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+      ${p3 ? `
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(184,115,51,0.4);display:flex;align-items:center;justify-content:center;font-size:26px;">
+          ${p3.avatar_emoji || '🧒'}
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;text-align:center;">${p3.pseudo || '?'}</div>
+        <div style="font-size:11px;color:#CD7F32;font-weight:700;">${(p3.total_xp || 0).toLocaleString('fr')} XP</div>
+      ` : `
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:22px;opacity:0.2;">👤</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;">- - -</div>
+      `}
+      <div style="background:rgba(184,115,51,0.2);border-radius:10px 10px 0 0;width:100%;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(184,115,51,0.2);border-bottom:none;">
+        <span style="font-size:18px;color:#CD7F32;font-weight:800;">3</span>
+      </div>
+    </div>`;
+
+  const podiumEl = document.getElementById('ranking-podium');
+  if (podiumEl) podiumEl.innerHTML = podiumHtml;
 }
 
 // ══════════════════════════════════════════
@@ -5725,7 +6245,7 @@ function goToScreen(name, btn) {
   }
   if (name === 'ranking') {
     if (isGuest()) renderGuestGate('screen-ranking');
-    else loadRanking(currentRankingTab);
+    else loadRankingTab(currentRankingTab);
   }
   if (name === 'flavia-story') loadFlaviaStory();
   if (name === 'author-request') loadAuthorRequestStatus();
@@ -5739,11 +6259,32 @@ function goBack() {
   goToScreen('home', document.getElementById('nav-home'));
 }
 
-function setTab(btn, tab) {
-  currentRankingTab = tab;
-  document.querySelectorAll('.ranking-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  loadRanking(tab);
+function setRankTab(tab, btn) {
+  console.log('[setRankTab] clic sur onglet:', tab, '| bouton:', btn?.id);
+  // Réinitialiser tous les onglets
+  ['general','friends','scenario'].forEach(t => {
+    const el = document.getElementById('rank-tab-'+t);
+    if (el) {
+      el.style.background = 'none';
+      el.style.color = '#6B7280';
+      el.style.fontWeight = '600';
+    }
+  });
+  // Activer l'onglet cliqué
+  if (btn) {
+    btn.style.background = '#2D4A2D';
+    btn.style.color = 'white';
+    btn.style.fontWeight = '700';
+  }
+
+  // Vider le contenu et afficher un spinner le temps du chargement
+  const contentEl = document.getElementById('ranking-list-content');
+  if (contentEl) {
+    contentEl.innerHTML = '<div style="text-align:center;padding:40px;"><div style="width:24px;height:24px;border:3px solid #E5D9C0;border-top-color:#C4622D;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div></div>';
+  }
+
+  // Charger le contenu (met aussi à jour currentRankingTab)
+  loadRankingTab(tab);
 }
 
 // ══════════════════════════════════════════
