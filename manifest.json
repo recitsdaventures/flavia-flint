@@ -2,6 +2,7 @@
   "name": "Les Aventures de Flavia Flint",
   "short_name": "Flavia Flint",
   "description": "La chasse au trésor géolocalisée pour toute la famille",
+  "version": "2.0",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2D4A2D",

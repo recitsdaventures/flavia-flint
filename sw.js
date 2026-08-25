@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flavia-flint-v1';
+const CACHE_NAME = 'flavia-flint-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
