@@ -539,6 +539,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('professor', this)">
         <span class="nav-icon">📖</span> Professeur Flint
       </button>
+      <button class="nav-item" onclick="showPage('flavia-chapters', this)">
+        <span class="nav-icon">📖</span> Chapitres Flavia
+      </button>
       <button class="nav-item" onclick="showPage('partner-qr', this)">
         <span class="nav-icon">🏅</span> QR Partenaires
       </button>
@@ -715,6 +718,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <button class="btn btn-primary" onclick="openBookModal()">+ Nouveau livre</button>
       </div>
       <div class="table-wrap" id="books-table"></div>
+    </div>
+
+    <!-- ═══ PAGE : CHAPITRES FLAVIA ═══ -->
+    <div id="page-flavia-chapters" class="page">
+      <div class="section-header">
+        <div class="section-title">Chapitres Flavia Flint</div>
+        <button class="btn btn-primary" onclick="openChapterModal()">+ Nouveau chapitre</button>
+      </div>
+      <div id="chapters-list" class="table-wrap"></div>
     </div>
 
     <!-- ═══ PAGE : QR PARTENAIRES ═══ -->
@@ -1230,12 +1242,13 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'flavia-chapters':'Chapitres Flavia Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
   if (name === 'authors') loadAuthorsPage();
   if (name === 'professor') loadBooksPage();
+  if (name === 'flavia-chapters') loadFlaviaChapters();
   if (name === 'partner-qr') loadPartnerQRPage();
   if (name === 'titles') loadTitlesPage();
   if (name === 'xp-validations') loadXpValidations();
@@ -2090,6 +2103,237 @@ async function loadTitlesPage() {
   } finally {
     setLoading(false);
   }
+}
+
+// ══════════════════════════════════════════
+// CHAPITRES FLAVIA FLINT (module "L'Histoire de Flavia Flint")
+// Gère la table flavia_chapters — colonnes réelles : id, title, order_index,
+// unlock_cost, is_published, content (legacy), scenes, description.
+// (voir supabase-flavia-chapters.sql pour les 2 dernières)
+// ══════════════════════════════════════════
+
+async function loadFlaviaChapters() {
+  setLoading(true);
+  const el = document.getElementById('chapters-list');
+  try {
+    const chapters = await supa('GET', 'flavia_chapters', null, '?order=order_index.asc');
+
+    el.innerHTML = chapters.length ? `
+      <table>
+        <thead><tr>
+          <th>Ordre</th><th>Titre</th><th>Scènes</th><th>Coût boussoles</th><th>Statut</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${chapters.map(c => `
+            <tr>
+              <td><strong>${c.order_index === 0 ? '0 — Intro' : c.order_index}</strong></td>
+              <td>${c.title}</td>
+              <td>${c.scenes?.length || 0} scène(s)</td>
+              <td>${c.order_index === 0 ? '🆓 Gratuit' : c.unlock_cost + ' 🧭'}</td>
+              <td><span class="status-pill ${c.is_published ? 'status-published' : 'status-draft'}">${c.is_published ? '✓ Publié' : '✏️ Brouillon'}</span></td>
+              <td><div class="actions-cell">
+                <button onclick="editChapter('${c.id}')" class="btn btn-secondary btn-sm">✏️ Modifier</button>
+                <button onclick="deleteChapter('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
+              </div></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`
+      : '<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-title">Aucun chapitre</div><div class="empty-sub">Crée ton premier chapitre Flavia Flint !</div></div>';
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openChapterModal(chapterData) {
+  const c = chapterData || {};
+  const scenes = c.scenes || [{ image_url: '', text: '', button_label: 'Continuer' }];
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'chapter-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:680px;">
+      <div class="modal-header">
+        <h2>${c.id ? 'Modifier le chapitre' : 'Nouveau chapitre'}</h2>
+        <button class="modal-close" onclick="document.getElementById('chapter-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+        <div class="form-grid">
+          <div class="form-group"><label>Numéro de chapitre</label>
+            <input type="number" id="ch-order" value="${c.order_index ?? ''}" min="0" placeholder="0 = intro gratuit"/>
+          </div>
+          <div class="form-group"><label>Coût en boussoles</label>
+            <input type="number" id="ch-cost" value="${c.unlock_cost || 0}" min="0" placeholder="0 = gratuit"/>
+          </div>
+          <div class="form-group full"><label>Titre du chapitre</label>
+            <input type="text" id="ch-title" value="${c.title || ''}" placeholder="Ex : Le Pacte avec Flavia"/>
+          </div>
+          <div class="form-group full"><label>Description courte</label>
+            <input type="text" id="ch-desc" value="${c.description || ''}" placeholder="Ex : Découvre qui est Flavia Flint"/>
+          </div>
+          <div class="form-group"><label>Statut</label>
+            <select id="ch-published">
+              <option value="false" ${!c.is_published ? 'selected' : ''}>Brouillon</option>
+              <option value="true" ${c.is_published ? 'selected' : ''}>Publié</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Scènes -->
+        <div style="margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:700;color:#1A2A1A;">🎬 Scènes</div>
+            <button onclick="addScene()" class="btn btn-secondary btn-sm">+ Ajouter une scène</button>
+          </div>
+          <div id="scenes-container">
+            ${scenes.map((s, i) => renderSceneEditor(s, i)).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('chapter-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveChapter('${c.id || ''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function renderSceneEditor(scene, index) {
+  return `
+    <div id="scene-${index}" style="
+      background:#F9F7F4;border-radius:12px;padding:14px;
+      margin-bottom:12px;border:1px solid #E5D9C0;
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;color:#2D4A2D;">Scène ${index + 1}</div>
+        ${index > 0 ? `<button onclick="removeScene(${index})" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:13px;">🗑️ Supprimer</button>` : ''}
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:12px;">URL de l'image (illustration plein cadre)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="scene-${index}-img" value="${scene.image_url || ''}"
+            placeholder="https://... ou laisser vide pour placeholder"
+            style="flex:1;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
+          <button onclick="uploadSceneImage(${index})" class="btn btn-secondary btn-sm">📸</button>
+        </div>
+        ${scene.image_url ? `<img src="${scene.image_url}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;"/>` : ''}
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:12px;">Texte de la scène (style carnet manuscrit)</label>
+        <textarea id="scene-${index}-text" rows="4"
+          placeholder="Le texte qui apparaît avec l'effet machine à écrire..."
+          style="width:100%;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;resize:none;font-family:inherit;">${scene.text || ''}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:12px;">Label du bouton d'action</label>
+        <input type="text" id="scene-${index}-btn" value="${scene.button_label || 'Continuer'}"
+          placeholder="Ex : Continuer, Je suis partant !, Sceller le pacte..."
+          style="width:100%;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
+      </div>
+    </div>`;
+}
+
+let sceneCount = 1;
+function addScene() {
+  const container = document.getElementById('scenes-container');
+  const newScene = { image_url: '', text: '', button_label: 'Continuer' };
+  const div = document.createElement('div');
+  div.innerHTML = renderSceneEditor(newScene, sceneCount);
+  container.appendChild(div.firstElementChild);
+  sceneCount++;
+}
+
+function removeScene(index) {
+  const el = document.getElementById('scene-' + index);
+  if (el) el.remove();
+}
+
+async function uploadSceneImage(index) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast('Upload en cours...');
+    try {
+      const filename = `chapters/scene-${Date.now()}.jpg`;
+      const token = localStorage.getItem('ff_access_token');
+      await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + (token || SUPA_KEY),
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+      const url = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+      const imgInput = document.getElementById(`scene-${index}-img`);
+      if (imgInput) imgInput.value = url;
+      showToast('Image uploadée ✓');
+    } catch(err) { showToast('Erreur upload', true); }
+  };
+  input.click();
+}
+
+function collectScenes() {
+  const scenes = [];
+  let i = 0;
+  while (document.getElementById(`scene-${i}-text`)) {
+    scenes.push({
+      image_url: document.getElementById(`scene-${i}-img`)?.value || '',
+      text: document.getElementById(`scene-${i}-text`)?.value || '',
+      button_label: document.getElementById(`scene-${i}-btn`)?.value || 'Continuer'
+    });
+    i++;
+  }
+  return scenes;
+}
+
+async function saveChapter(chapterId) {
+  const data = {
+    order_index: parseInt(document.getElementById('ch-order').value) || 0,
+    unlock_cost: parseInt(document.getElementById('ch-cost').value) || 0,
+    title: document.getElementById('ch-title').value,
+    description: document.getElementById('ch-desc').value,
+    is_published: document.getElementById('ch-published').value === 'true',
+    scenes: collectScenes()
+  };
+
+  if (!data.title) { alert('Le titre est obligatoire'); return; }
+
+  try {
+    if (chapterId) {
+      await supa('PATCH', 'flavia_chapters', data, `?id=eq.${chapterId}`);
+    } else {
+      await supa('POST', 'flavia_chapters', data);
+    }
+    document.getElementById('chapter-modal').remove();
+    showToast('Chapitre sauvegardé ✓');
+    loadFlaviaChapters();
+  } catch(e) { showToast('Erreur : ' + e.message, true); }
+}
+
+async function editChapter(id) {
+  const chapters = await supa('GET', 'flavia_chapters', null, `?id=eq.${id}`);
+  if (chapters[0]) {
+    sceneCount = chapters[0].scenes?.length || 1;
+    openChapterModal(chapters[0]);
+  }
+}
+
+async function deleteChapter(id) {
+  if (!confirm('Supprimer ce chapitre ?')) return;
+  await supa('DELETE', 'flavia_chapters', null, `?id=eq.${id}`);
+  showToast('Chapitre supprimé');
+  loadFlaviaChapters();
 }
 
 async function uploadTitleImage(titleId) {

@@ -22,6 +22,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Flavia Flint"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
+<!-- Police carnet manuscrit (chapitres Flavia à scènes) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -806,6 +810,103 @@
   .landing-feature-title { color: white; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
   .landing-feature-desc  { color: rgba(255,255,255,0.5); font-size: 12px; }
   .landing-ctas { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  /* ══════════════════════════════════════════
+     CHAPITRE 0 — Cinématique de recrutement
+     (préfixe "c0-" pour éviter toute collision
+     avec les classes existantes)
+  ══════════════════════════════════════════ */
+  #app.chapter0-mode .app-header,
+  #app.chapter0-mode .bottom-nav { display: none !important; }
+
+  #screen-chapitre0 { background: var(--green-dark); position: relative; }
+
+  .c0-skip {
+    position: absolute; top: 14px; right: 14px; z-index: 5;
+  }
+  .c0-skip button {
+    background: rgba(0,0,0,0.35); color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 30px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer;
+  }
+
+  .c0-back {
+    position: absolute; top: 14px; left: 14px; z-index: 5;
+  }
+  .c0-back button {
+    background: #C4622D; color: white; border: none;
+    border-radius: 10px; padding: 8px 16px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  .c0-dots {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 5; display: flex; gap: 6px;
+  }
+  .c0-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); transition: background 0.3s;
+  }
+  .c0-dot.active { background: var(--amber); }
+  .c0-dot.done   { background: rgba(255,255,255,0.7); }
+
+  .c0-stage {
+    flex: 1; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .c0-image-wrap {
+    flex: 1 1 42%; min-height: 0;
+    background: #12241A; overflow: hidden;
+  }
+  .c0-image {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  .c0-notebook {
+    flex: 1 1 58%; min-height: 0;
+    background: var(--beige-light);
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 33px, rgba(74,90,74,0.12) 34px
+    );
+    border-top: 3px solid var(--beige-dark);
+    border-radius: 20px 20px 0 0;
+    padding: 22px 22px 18px;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    cursor: pointer;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
+  }
+
+  .c0-text {
+    font-family: 'Caveat', 'Segoe UI', cursive;
+    font-size: 26px; line-height: 1.35; font-weight: 500;
+    color: var(--text-dark); white-space: pre-wrap;
+    flex: 1;
+  }
+  .c0-cursor {
+    font-family: 'Caveat', cursive; font-size: 26px; color: var(--terra);
+    animation: c0Blink 0.9s step-end infinite;
+  }
+  @keyframes c0Blink { 50% { opacity: 0; } }
+
+  .c0-next-btn {
+    align-self: flex-end; margin-top: 10px;
+    background: none; border: none; color: var(--terra-dark);
+    font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  .c0-choices {
+    flex-direction: column; gap: 10px; margin-top: 14px;
+  }
+  .c0-choice-btn {
+    width: 100%; padding: 13px 16px; text-align: left;
+    background: white; border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+    color: var(--text-dark); cursor: pointer; font-family: inherit;
+  }
+  .c0-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+
   .btn-outline {
     width: 100%; background: none; color: white;
     border: 1.5px solid rgba(255,255,255,0.35); border-radius: var(--radius-md);
@@ -1066,6 +1167,26 @@
   </div>
 
   <!-- ═══════════════════════════════════
+       CHAPITRE 0 — Cinématique de recrutement
+       (4 scènes narratives avant la 1ère aventure)
+  ═══════════════════════════════════ -->
+  <div id="screen-chapitre0" class="screen">
+    <div class="c0-back"><button onclick="backFromChapitre0()">← Retour</button></div>
+    <div class="c0-skip"><button onclick="skipChapitre0()">Passer →</button></div>
+    <div class="c0-dots" id="c0-dots"></div>
+    <div class="c0-stage">
+      <div class="c0-image-wrap">
+        <img id="c0-scene-img" class="c0-image" src="" alt=""/>
+      </div>
+      <div class="c0-notebook" onclick="handleChapitre0Tap(event)">
+        <div id="c0-text" class="c0-text"></div>
+        <div id="c0-choices" class="c0-choices" style="display:none;"></div>
+        <button id="c0-next-btn" class="c0-next-btn" style="display:none;">Continuer →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
        ÉCRAN ACCUEIL
   ═══════════════════════════════════ -->
   <div id="screen-home" class="screen">
@@ -1086,14 +1207,21 @@
         <div class="hero-tagline">Découvrez l'histoire de votre ville par le JEU !</div>
         <button onclick="goToScreen('flavia-story', null)" style="
           width:85%;margin:10px auto 0;display:block;
-          padding:14px;border-radius:14px;
-          background:linear-gradient(135deg, #1A3A5C, #2D5A8E);
-          color:white;border:none;cursor:pointer;
+          padding:14px 16px;border-radius:14px;
+          background:#FFFFFF;
+          border:2px solid #E8A020;
+          box-shadow:0 2px 8px rgba(0,0,0,0.08);
+          color:#1A2A1A;cursor:pointer;
           font-size:14px;font-weight:700;letter-spacing:0.3px;
         ">
-          📖 L'Histoire de Flavia Flint
-          <div id="compass-balance-home" style="font-size:12px;font-weight:400;opacity:0.8;margin-top:3px;">
-            🧭 Chargement...
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              📖 L'Histoire de Flavia Flint
+              <div id="compass-balance-home" style="font-size:12px;font-weight:400;opacity:0.8;margin-top:3px;">
+                🧭 Chargement...
+              </div>
+            </div>
+            <span style="color:#E8A020;font-size:18px;font-weight:700;">→</span>
           </div>
         </button>
       </div>
@@ -1569,11 +1697,11 @@
   ═══════════════════════════════════ -->
   <div id="screen-flavia-story" class="screen">
     <!-- Header -->
-    <div style="background:#1A3A5C;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+    <div style="background:#2D4A2D;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
       <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="
         background:rgba(255,255,255,0.1);border:none;border-radius:8px;
-        color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
-      <span style="color:white;font-weight:700;flex:1;">📖 Histoire de Flavia Flint</span>
+        color:#F5EDD8;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
+      <span style="color:#E8A020;font-weight:700;flex:1;">📖 Histoire de Flavia Flint</span>
       <div style="background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px;
         color:#E8A020;font-size:13px;font-weight:700;" id="compass-balance-story">
         🧭 ...
@@ -2119,7 +2247,9 @@ async function handleLogin() {
     await loadCurrentPlayer(data.user);
     document.getElementById('app').classList.remove('auth-mode');
     await loadAdventures();
-    setTimeout(() => goToScreen('home', document.getElementById('nav-home')), 500);
+    setTimeout(() => {
+      goToScreen('home', document.getElementById('nav-home'));
+    }, 500);
     startGlobalGPS();
 
   } catch (e) {
@@ -5603,6 +5733,10 @@ async function loadFlaviaStory() {
   const content = document.getElementById('flavia-story-content');
   if (!content) return;
 
+  // Toujours repartir de la liste des chapitres — jamais du dernier chapitre
+  // ouvert (évite qu'un état de lecture périmé ne reste accroché à l'écran).
+  chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null };
+
   if (isGuest() || !currentPlayer?.id) {
     content.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
@@ -5670,8 +5804,8 @@ async function loadFlaviaStory() {
           </div>
           ${canAfford
             ? `<button onclick="unlockChapter('${ch.id}', ${ch.unlock_cost})" style="
-                width:100%;padding:10px;background:#1A3A5C;color:white;
-                border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
+                width:100%;background:#C4622D;color:white;border:none;
+                border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
                 🧭 Débloquer pour ${ch.unlock_cost} boussoles
               </button>`
             : `<div style="text-align:center;font-size:12px;color:#C4622D;font-weight:600;">
@@ -5739,19 +5873,40 @@ async function readChapter(chapterId) {
     if (!chapter) return;
 
     const content = document.getElementById('flavia-story-content');
+    const hasScenes = Array.isArray(chapter.scenes) && chapter.scenes.length > 0;
 
-    if (!chapter.is_published || !chapter.content) {
+    if (!chapter.is_published || (!chapter.content && !hasScenes)) {
       content.innerHTML = `
         <div style="text-align:center;padding:40px 20px;">
           <div style="font-size:48px;margin-bottom:12px;">⏳</div>
           <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">${chapter.title}</div>
           <div style="font-size:13px;color:#9CA3AF;line-height:1.6;">Ce chapitre arrive bientôt...<br>Tes boussoles sont conservées !</div>
-          <button onclick="loadFlaviaStory()" style="margin-top:20px;background:#1A3A5C;color:white;border:none;border-radius:12px;padding:10px 20px;cursor:pointer;font-weight:700;">← Retour aux chapitres</button>
+          <button onclick="loadFlaviaStory()" style="margin-top:20px;background:#C4622D;color:white;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">← Retour aux chapitres</button>
         </div>`;
       return;
     }
 
-    // Marquer comme lu
+    // Chapitre "à scènes" (image + carnet manuscrit) — moteur de scènes partagé.
+    // La lecture est marquée "lue" à la fin (finishStoryChapterRead), pas ici.
+    if (hasScenes) {
+      chapitre0State = {
+        index: 0, typing: false, fullText: '',
+        scenes: chapter.scenes.map(s => ({
+          img: s.image_url || '',
+          text: s.text || '',
+          button_label: s.button_label || 'Continuer'
+        })),
+        mode: 'story',
+        dbChapterId: chapter.id
+      };
+      document.getElementById('app').classList.add('chapter0-mode');
+      goToScreen('chapitre0', null);
+      renderChapitre0Scene();
+      return;
+    }
+
+    // Legacy : chapitre en texte simple (colonne flavia_chapters.content),
+    // pour les chapitres écrits avant l'introduction des scènes.
     if (userId) {
       await supaFetch(`player_unlocked_chapters?player_id=eq.${userId}&chapter_id=eq.${chapterId}`, {
         method: 'PATCH',
@@ -5763,8 +5918,8 @@ async function readChapter(chapterId) {
     content.innerHTML = `
       <div style="max-width:100%;">
         <button onclick="loadFlaviaStory()" style="
-          background:none;border:1px solid #D4C5A9;border-radius:8px;
-          padding:6px 12px;font-size:13px;color:#6B7280;cursor:pointer;margin-bottom:16px;">
+          background:#C4622D;color:white;border:none;
+          border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
           ← Retour
         </button>
         <h2 style="font-size:20px;font-weight:800;color:#1A2A1A;margin-bottom:16px;">${chapter.title}</h2>
@@ -6317,6 +6472,153 @@ function goFromLanding(tab) {
   localStorage.setItem('ff_visited', '1');
   showAuthTab(tab);
   goToScreen('auth', null);
+}
+
+// ══════════════════════════════════════════
+// CHAPITRES FLAVIA — moteur de scènes partagé
+// (image plein cadre + carnet manuscrit à effet machine à écrire)
+//
+// Moteur 100% générique, entièrement piloté par Supabase : sert à tous les
+// chapitres gérés depuis l'admin (onglet "Chapitres Flavia"), via readChapter()
+// plus bas, quand la colonne flavia_chapters.scenes contient des scènes.
+// Le Chapitre 0 n'est plus codé en dur : c'est un chapitre comme les autres
+// (order_index = 0), créé et édité depuis l'admin.
+// ══════════════════════════════════════════
+
+// mode: 'story' (seul mode restant — chapitre 100% Supabase, bouton
+// "Continuer" simple, éventuellement des choix de dialogue si scene.choices
+// est défini côté admin)
+let chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null };
+
+function getPlayerFirstName() {
+  const pseudo = (currentPlayer && currentPlayer.pseudo) || 'aventurier';
+  return pseudo.split(/[ _-]/)[0];
+}
+
+function personalizeChapitre0(text) {
+  return text.replace(/\{prenom\}/g, getPlayerFirstName());
+}
+
+function renderChapitre0Dots() {
+  const wrap = document.getElementById('c0-dots');
+  if (!wrap) return;
+  wrap.innerHTML = chapitre0State.scenes.map((_, i) => {
+    const cls = i === chapitre0State.index ? 'active' : (i < chapitre0State.index ? 'done' : '');
+    return `<span class="c0-dot ${cls}"></span>`;
+  }).join('');
+}
+
+function renderChapitre0Scene() {
+  const scene = chapitre0State.scenes[chapitre0State.index];
+  document.getElementById('c0-scene-img').src = scene.img;
+  document.getElementById('c0-choices').style.display = 'none';
+  document.getElementById('c0-choices').innerHTML = '';
+  document.getElementById('c0-next-btn').style.display = 'none';
+  renderChapitre0Dots();
+
+  const text = personalizeChapitre0(scene.text);
+  typewriterChapitre0(text, () => onChapitre0TypingDone(scene));
+}
+
+function typewriterChapitre0(text, onDone) {
+  const el = document.getElementById('c0-text');
+  el.textContent = '';
+  chapitre0State.typing = true;
+  chapitre0State.fullText = text;
+  clearInterval(window._c0TypeInterval);
+  let i = 0;
+  window._c0TypeInterval = setInterval(() => {
+    i++;
+    el.textContent = text.slice(0, i);
+    if (i >= text.length) {
+      clearInterval(window._c0TypeInterval);
+      chapitre0State.typing = false;
+      if (onDone) onDone();
+    }
+  }, 28);
+}
+
+// Tap sur le carnet : termine l'effet machine à écrire s'il est en cours,
+// sinon avance à la scène suivante (sauf quand des choix / le tampon sont affichés —
+// ceux-ci gèrent leur propre bouton, cf. garde ci-dessous).
+function handleChapitre0Tap(event) {
+  if (event && event.target.closest('.c0-choice-btn')) return;
+
+  if (chapitre0State.typing) {
+    clearInterval(window._c0TypeInterval);
+    document.getElementById('c0-text').textContent = chapitre0State.fullText;
+    chapitre0State.typing = false;
+    onChapitre0TypingDone(chapitre0State.scenes[chapitre0State.index]);
+    return;
+  }
+
+  const scene = chapitre0State.scenes[chapitre0State.index];
+  if (scene.choices) return; // ces scènes avancent via leur propre bouton
+  advanceChapitre0();
+}
+
+function onChapitre0TypingDone(scene) {
+  if (scene.choices) {
+    const wrap = document.getElementById('c0-choices');
+    wrap.innerHTML = scene.choices.map((c, i) =>
+      `<button class="c0-choice-btn" onclick="chooseChapitre0(${i})">${c.label}</button>`
+    ).join('');
+    wrap.style.display = 'flex';
+  } else {
+    const btn = document.getElementById('c0-next-btn');
+    btn.textContent = (scene.button_label || 'Continuer') + ' →';
+    btn.style.display = 'block';
+  }
+}
+
+function chooseChapitre0(i) {
+  advanceChapitre0();
+}
+
+// Avance à la scène suivante ; avancer depuis la dernière scène termine la
+// lecture (finishStoryChapterRead).
+function advanceChapitre0() {
+  if (chapitre0State.index < chapitre0State.scenes.length - 1) {
+    chapitre0State.index++;
+    renderChapitre0Scene();
+  } else if (chapitre0State.mode === 'story') {
+    finishStoryChapterRead();
+  }
+}
+
+function skipChapitre0() {
+  clearInterval(window._c0TypeInterval);
+  chapitre0State.index = chapitre0State.scenes.length - 1;
+  renderChapitre0Scene();
+}
+
+// Quitte la lecture en cours (à tout moment, avant la fin) et ramène à la
+// liste des chapitres.
+function backFromChapitre0() {
+  clearInterval(window._c0TypeInterval);
+  document.getElementById('app').classList.remove('chapter0-mode');
+  goToScreen('flavia-story', null);
+}
+
+// Fin de lecture d'un chapitre payant générique (mode "story") : marque le
+// chapitre comme lu côté Supabase puis retourne à la liste des chapitres.
+async function finishStoryChapterRead() {
+  const chapterId = chapitre0State.dbChapterId;
+  const userId = currentPlayer?.id;
+  if (chapterId && userId) {
+    try {
+      await supaFetch(`player_unlocked_chapters?player_id=eq.${userId}&chapter_id=eq.${chapterId}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { has_been_read: true }
+      });
+    } catch (e) {
+      console.error('Erreur marquage chapitre lu:', e);
+    }
+  }
+  document.getElementById('app').classList.remove('chapter0-mode');
+  goToScreen('flavia-story', null);
+  loadFlaviaStory();
 }
 
 // ══════════════════════════════════════════
