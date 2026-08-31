@@ -2188,7 +2188,7 @@ function openChapterModal(chapterData) {
             <button onclick="addScene()" class="btn btn-secondary btn-sm">+ Ajouter une scène</button>
           </div>
           <div id="scenes-container">
-            ${scenes.map((s, i) => renderSceneEditor(s, i)).join('')}
+            ${scenes.map((s, i) => renderSceneEditor(s, nextSceneUid(), i + 1)).join('')}
           </div>
         </div>
       </div>
@@ -2200,60 +2200,72 @@ function openChapterModal(chapterData) {
   document.body.appendChild(modal);
 }
 
-function renderSceneEditor(scene, index) {
+// uid unique et jamais réutilisé par scène (indépendant de sa position dans la
+// liste) — évite les collisions d'ID quand des scènes sont ajoutées/supprimées
+// en cours d'édition (un simple index de position se retrouvait dupliqué ou
+// avec des trous après une suppression, ce qui cassait collectScenes()).
+let sceneUidSeq = Date.now();
+function nextSceneUid() { return sceneUidSeq++; }
+
+function renderSceneEditor(scene, uid, orderNum) {
   return `
-    <div id="scene-${index}" style="
+    <div id="scene-${uid}" class="scene-editor-block" style="
       background:#F9F7F4;border-radius:12px;padding:14px;
       margin-bottom:12px;border:1px solid #E5D9C0;
     ">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:700;color:#2D4A2D;">Scène ${index + 1}</div>
-        ${index > 0 ? `<button onclick="removeScene(${index})" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:13px;">🗑️ Supprimer</button>` : ''}
+        <div style="font-size:13px;font-weight:700;color:#2D4A2D;">Scène ${orderNum}</div>
+        ${orderNum > 1 ? `<button onclick="removeScene(${uid})" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:13px;">🗑️ Supprimer</button>` : ''}
       </div>
 
       <div class="form-group">
         <label style="font-size:12px;">URL de l'image (illustration plein cadre)</label>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="scene-${index}-img" value="${scene.image_url || ''}"
+          <input type="text" id="scene-${uid}-img" value="${scene.image_url || ''}"
             placeholder="https://... ou laisser vide pour placeholder"
             style="flex:1;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
-          <button onclick="uploadSceneImage(${index})" class="btn btn-secondary btn-sm">📸</button>
+          <button onclick="uploadSceneImage(${uid})" class="btn btn-secondary btn-sm">📸</button>
         </div>
-        ${scene.image_url ? `<img src="${scene.image_url}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;"/>` : ''}
+        <img id="scene-${uid}-preview" src="${scene.image_url || ''}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;${scene.image_url ? '' : 'display:none;'}"/>
       </div>
 
       <div class="form-group">
         <label style="font-size:12px;">Texte de la scène (style carnet manuscrit)</label>
-        <textarea id="scene-${index}-text" rows="4"
+        <textarea id="scene-${uid}-text" rows="4"
           placeholder="Le texte qui apparaît avec l'effet machine à écrire..."
           style="width:100%;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;resize:none;font-family:inherit;">${scene.text || ''}</textarea>
       </div>
 
       <div class="form-group">
         <label style="font-size:12px;">Label du bouton d'action</label>
-        <input type="text" id="scene-${index}-btn" value="${scene.button_label || 'Continuer'}"
+        <input type="text" id="scene-${uid}-btn" value="${scene.button_label || 'Continuer'}"
           placeholder="Ex : Continuer, Je suis partant !, Sceller le pacte..."
           style="width:100%;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
       </div>
     </div>`;
 }
 
-let sceneCount = 1;
 function addScene() {
   const container = document.getElementById('scenes-container');
   const newScene = { image_url: '', text: '', button_label: 'Continuer' };
+  const orderNum = container.querySelectorAll('.scene-editor-block').length + 1;
   const div = document.createElement('div');
-  div.innerHTML = renderSceneEditor(newScene, sceneCount);
+  div.innerHTML = renderSceneEditor(newScene, nextSceneUid(), orderNum);
   container.appendChild(div.firstElementChild);
-  sceneCount++;
 }
 
-function removeScene(index) {
-  const el = document.getElementById('scene-' + index);
+function removeScene(uid) {
+  const el = document.getElementById('scene-' + uid);
   if (el) el.remove();
 }
 
-async function uploadSceneImage(index) {
+// Upload réel vers Supabase Storage via uploadImageToStorage() — le même
+// helper déjà utilisé pour les titres/intros/outros/covers/badges/étapes.
+// Contrairement à l'ancien code de cette fonction, uploadImageToStorage()
+// vérifie response.ok et lève une erreur si l'upload échoue côté serveur :
+// c'était le bug (le message "upload terminé" s'affichait même en cas
+// d'échec réel, car l'ancien code ne vérifiait jamais le statut HTTP).
+async function uploadSceneImage(uid) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -2262,69 +2274,76 @@ async function uploadSceneImage(index) {
     if (!file) return;
     showToast('Upload en cours...');
     try {
-      const filename = `chapters/scene-${Date.now()}.jpg`;
-      const token = localStorage.getItem('ff_access_token');
-      await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPA_KEY,
-          'Authorization': 'Bearer ' + (token || SUPA_KEY),
-          'Content-Type': file.type,
-          'x-upsert': 'true'
-        },
-        body: file
-      });
-      const url = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
-      const imgInput = document.getElementById(`scene-${index}-img`);
+      const url = await uploadImageToStorage(file, 'chapters');
+      console.log('Image scène uploadée avec succès :', url);
+
+      const imgInput = document.getElementById(`scene-${uid}-img`);
       if (imgInput) imgInput.value = url;
+
+      const preview = document.getElementById(`scene-${uid}-preview`);
+      if (preview) { preview.src = url; preview.style.display = 'block'; }
+
       showToast('Image uploadée ✓');
-    } catch(err) { showToast('Erreur upload', true); }
+    } catch (err) {
+      console.error('Erreur upload image scène:', err);
+      showToast('Erreur upload : ' + err.message, true);
+    }
   };
   input.click();
 }
 
 function collectScenes() {
-  const scenes = [];
-  let i = 0;
-  while (document.getElementById(`scene-${i}-text`)) {
-    scenes.push({
-      image_url: document.getElementById(`scene-${i}-img`)?.value || '',
-      text: document.getElementById(`scene-${i}-text`)?.value || '',
-      button_label: document.getElementById(`scene-${i}-btn`)?.value || 'Continuer'
-    });
-    i++;
-  }
-  return scenes;
+  // Parcourt les blocs de scène réellement présents dans le DOM (dans leur
+  // ordre d'affichage), plutôt que de supposer une plage d'index 0..N-1 —
+  // robuste même après suppression d'une scène au milieu de la liste.
+  const blocks = document.querySelectorAll('#scenes-container .scene-editor-block');
+  return Array.from(blocks).map(block => ({
+    image_url: block.querySelector('input[id$="-img"]')?.value || '',
+    text: block.querySelector('textarea[id$="-text"]')?.value || '',
+    button_label: block.querySelector('input[id$="-btn"]')?.value || 'Continuer'
+  }));
 }
 
 async function saveChapter(chapterId) {
+  const scenes = collectScenes();
+  console.log('Scènes collectées:', scenes);
+  console.log('Nombre de scènes:', scenes.length);
+
+  // Colonnes réelles de flavia_chapters (voir supabase-flavia-chapters.sql) :
+  // order_index et unlock_cost — PAS order_num/compass_cost.
   const data = {
     order_index: parseInt(document.getElementById('ch-order').value) || 0,
     unlock_cost: parseInt(document.getElementById('ch-cost').value) || 0,
     title: document.getElementById('ch-title').value,
     description: document.getElementById('ch-desc').value,
     is_published: document.getElementById('ch-published').value === 'true',
-    scenes: collectScenes()
+    scenes: scenes
   };
+
+  console.log('Data à envoyer:', data);
 
   if (!data.title) { alert('Le titre est obligatoire'); return; }
 
   try {
     if (chapterId) {
-      await supa('PATCH', 'flavia_chapters', data, `?id=eq.${chapterId}`);
+      const result = await supa('PATCH', 'flavia_chapters', data, `?id=eq.${chapterId}`);
+      console.log('Résultat PATCH:', result);
     } else {
-      await supa('POST', 'flavia_chapters', data);
+      const result = await supa('POST', 'flavia_chapters', data);
+      console.log('Résultat POST:', result);
     }
     document.getElementById('chapter-modal').remove();
     showToast('Chapitre sauvegardé ✓');
     loadFlaviaChapters();
-  } catch(e) { showToast('Erreur : ' + e.message, true); }
+  } catch(e) {
+    console.error('Erreur sauvegarde:', e);
+    showToast('Erreur : ' + e.message, true);
+  }
 }
 
 async function editChapter(id) {
   const chapters = await supa('GET', 'flavia_chapters', null, `?id=eq.${id}`);
   if (chapters[0]) {
-    sceneCount = chapters[0].scenes?.length || 1;
     openChapterModal(chapters[0]);
   }
 }

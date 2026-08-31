@@ -6768,19 +6768,23 @@ function showInstallButton() {
 
 async function installApp() {
   if (deferredPrompt) {
-    // Chrome Android — prompt natif
+    // Cas 1 — Chrome a capturé le prompt beforeinstallprompt : on tente d'abord celui-ci
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       showToast('🎉 App installée ! Retrouve-la sur ton écran d\'accueil');
+      localStorage.setItem('ff_app_installed', '1');
     }
     deferredPrompt = null;
     dismissInstall();
+  } else if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Cas 2 — App déjà installée en mode standalone
+    showToast('✅ L\'app est déjà installée !');
   } else if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-    // iOS Safari — pas de prompt natif possible, instructions manuelles
+    // Cas 3 — iOS Safari : pas de prompt natif possible, instructions manuelles
     showIOSInstallInstructions();
   } else {
-    // Déjà installée, navigateur non supporté, ou prompt pas encore proposé par Chrome
+    // Cas 4 — Android/desktop mais prompt pas encore disponible : instructions manuelles
     showManualInstallInstructions();
   }
 }
