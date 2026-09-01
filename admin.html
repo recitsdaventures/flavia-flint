@@ -2179,6 +2179,17 @@ function openChapterModal(chapterData) {
               <option value="true" ${c.is_published ? 'selected' : ''}>Publié</option>
             </select>
           </div>
+
+          <div class="form-group"><label>Icône du tampon</label>
+            <input type="text" id="ch-stamp-icon" value="${c.stamp_icon || '🧭'}"
+              placeholder="Ex : 🧭 🗺️ 🏆 🔍" style="font-size:20px;"/>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Un emoji qui apparaîtra au centre du tampon</div>
+          </div>
+          <div class="form-group full"><label>Texte du tampon</label>
+            <input type="text" id="ch-stamp-text" value="${c.stamp_text || 'Compagnon d\'Aventure'}"
+              placeholder="Ex : Gardien des Secrets, Maître Explorateur..."/>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Texte affiché dans le tampon à la fin du chapitre</div>
+          </div>
         </div>
 
         <!-- Scènes -->
@@ -2237,6 +2248,13 @@ function renderSceneEditor(scene, uid, orderNum) {
       </div>
 
       <div class="form-group">
+        <label style="font-size:12px;">Question à afficher au-dessus des réponses <span style="color:#9CA3AF;">(optionnel)</span></label>
+        <input type="text" id="scene-${uid}-question" value="${scene.question || ''}"
+          placeholder="Ex : À quelle époque date ce monument ?"
+          style="width:100%;padding:8px 10px;border:1.5px solid #D4C5A9;border-radius:8px;font-size:13px;"/>
+      </div>
+
+      <div class="form-group">
         <label style="font-size:12px;">Label du bouton d'action</label>
         <input type="text" id="scene-${uid}-btn" value="${scene.button_label || 'Continuer'}"
           placeholder="Ex : Continuer, Je suis partant !, Sceller le pacte..."
@@ -2247,7 +2265,7 @@ function renderSceneEditor(scene, uid, orderNum) {
 
 function addScene() {
   const container = document.getElementById('scenes-container');
-  const newScene = { image_url: '', text: '', button_label: 'Continuer' };
+  const newScene = { image_url: '', text: '', button_label: 'Continuer', question: '' };
   const orderNum = container.querySelectorAll('.scene-editor-block').length + 1;
   const div = document.createElement('div');
   div.innerHTML = renderSceneEditor(newScene, nextSceneUid(), orderNum);
@@ -2300,6 +2318,7 @@ function collectScenes() {
   return Array.from(blocks).map(block => ({
     image_url: block.querySelector('input[id$="-img"]')?.value || '',
     text: block.querySelector('textarea[id$="-text"]')?.value || '',
+    question: block.querySelector('input[id$="-question"]')?.value || '',
     button_label: block.querySelector('input[id$="-btn"]')?.value || 'Continuer'
   }));
 }
@@ -2317,6 +2336,8 @@ async function saveChapter(chapterId) {
     title: document.getElementById('ch-title').value,
     description: document.getElementById('ch-desc').value,
     is_published: document.getElementById('ch-published').value === 'true',
+    stamp_icon: document.getElementById('ch-stamp-icon')?.value || '🧭',
+    stamp_text: document.getElementById('ch-stamp-text')?.value || 'Compagnon d\'Aventure',
     scenes: scenes
   };
 

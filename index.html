@@ -270,7 +270,7 @@
   /* ══════════════════════════════
      ÉCRAN AVENTURE EN COURS
   ══════════════════════════════ */
-  #screen-adventure { background: var(--beige-light); }
+  #screen-adventure { background: var(--beige-light); position: relative; }
 
   .adv-header { background: var(--green-dark); padding: 12px 16px 16px; flex-shrink: 0; }
   .adv-header-top {
@@ -819,6 +819,13 @@
   #app.chapter0-mode .app-header,
   #app.chapter0-mode .bottom-nav { display: none !important; }
 
+  /* Mode immersif pendant un scénario d'aventure en cours (cf. startAdventure()) :
+     masque le chrome de l'app ET la barre-titre/progression/points d'étape de
+     l'écran aventure — remplacés par la barre overlay .adv-immersive-bar. */
+  #app.adventure-immersive-mode .app-header,
+  #app.adventure-immersive-mode .bottom-nav,
+  #app.adventure-immersive-mode .adv-header { display: none !important; }
+
   #screen-chapitre0 { background: var(--green-dark); position: relative; }
 
   .c0-skip {
@@ -855,58 +862,225 @@
     overflow: hidden;
   }
 
+  /* Option B améliorée : image fixe (hauteur fixe, pas proportionnelle à
+     l'écran) puis carte de texte + zone réponse qui scrollent en dessous.
+     Bord à bord (aucun padding/marge/radius sur le conteneur), coupure nette
+     avec le carnet en dessous — pas de fondu. */
   .c0-image-wrap {
-    flex: 1 1 42%; min-height: 0;
-    background: #12241A; overflow: hidden;
+    flex-shrink: 0; height: 45vh; margin: 0; padding: 0;
+    background: #12241A; overflow: hidden; position: relative;
   }
   .c0-image {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+    width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;
   }
 
   .c0-notebook {
-    flex: 1 1 58%; min-height: 0;
+    flex: 1; min-height: 0;
+    background: var(--beige-light);
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 33px, rgba(74,90,74,0.12) 34px
+    );
+    padding: 16px 16px 20px;
+    overflow-y: auto;
+    cursor: pointer;
+  }
+
+  /* Pas d'encadré : le texte flotte directement sur le fond beige du carnet
+     (.c0-notebook) — ce bloc ne sert plus qu'à positionner le bouton Relire. */
+  .c0-text-card {
+    padding: 16px; margin-bottom: 14px;
+    position: relative;
+  }
+  .c0-replay-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: none; border: 1px solid var(--beige-dark);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; color: #9CA3AF; cursor: pointer; font-family: inherit;
+  }
+
+  .c0-text {
+    font-family: 'Caveat', 'Segoe UI', cursive;
+    font-size: 22px; line-height: 1.5; font-weight: 500;
+    color: var(--text-dark); white-space: pre-wrap;
+    padding-right: 54px; min-height: 40px;
+  }
+  .c0-cursor {
+    font-family: 'Caveat', cursive; font-size: 22px; color: var(--terra);
+    animation: c0Blink 0.9s step-end infinite;
+  }
+  @keyframes c0Blink { 50% { opacity: 0; } }
+
+  .c0-answer-zone { animation: c0FadeIn 0.4s ease; }
+  @keyframes c0FadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .c0-question {
+    background: var(--green-dark); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 12px;
+  }
+  .c0-question-label {
+    font-size: 11px; color: rgba(255,255,255,0.6);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .c0-question-text {
+    font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700;
+    color: white; line-height: 1.4;
+  }
+
+  .c0-next-btn {
+    display: none; margin-top: 4px; width: 100%;
+    background: var(--terra); color: white; border: none;
+    border-radius: var(--radius-md); padding: 14px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  .c0-choices {
+    flex-direction: column; gap: 10px; margin-top: 4px;
+  }
+  .c0-choice-btn {
+    width: 100%; padding: 13px 16px;
+    background: white; border: 1.5px solid var(--beige-dark);
+    border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+    color: var(--text-dark); cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    text-align: left;
+  }
+  .c0-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+  .c0-choice-arrow { color: #9CA3AF; flex-shrink: 0; }
+
+  /* ── CARNET D'AVENTURE (même présentation que le Chapitre 0, appliquée aux
+     étapes de récit/énigme des scénarios d'aventure — hors mode boussole GPS) ──
+     Pas d'encadré : .adv-scroll a un padding de 16px, donc une marge négative
+     ici fait déborder l'image jusqu'aux bords de l'écran (bord à bord, sans
+     radius ni ombre qui la rogneraient) ; .adv-nb-paper garde son propre
+     padding pour que le texte reste lisiblement inséré, sur le fond beige. */
+  .adv-nb-wrap {
+    display: flex; flex-direction: column;
+    margin: -16px -16px 0 -16px;
+  }
+  .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
+  .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
+
+  /* Barre overlay du mode immersif — remplace la barre-titre/quitter habituelle
+     pendant qu'un scénario est en cours (cf. enableImmersiveMode()) */
+  .adv-immersive-bar {
+    display: none; position: absolute; top: 0; left: 0; right: 0; z-index: 15;
+    padding: 16px 16px 0;
+    align-items: center; justify-content: space-between;
+  }
+  #app.adventure-immersive-mode .adv-immersive-bar { display: flex; }
+  .adv-immersive-quit {
+    background: rgba(0,0,0,0.4); border: none; border-radius: 20px;
+    color: white; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    backdrop-filter: blur(4px); font-family: inherit;
+  }
+  .adv-immersive-counter {
+    background: rgba(0,0,0,0.4); border-radius: 20px; padding: 6px 12px;
+    color: white; font-size: 12px; font-weight: 600; backdrop-filter: blur(4px);
+  }
+  .adv-nb-paper {
     background: var(--beige-light);
     background-image: repeating-linear-gradient(
       to bottom, transparent, transparent 33px, rgba(74,90,74,0.12) 34px
     );
     border-top: 3px solid var(--beige-dark);
-    border-radius: 20px 20px 0 0;
-    padding: 22px 22px 18px;
-    display: flex; flex-direction: column;
-    overflow-y: auto;
+    padding: 20px 20px 16px;
     cursor: pointer;
-    box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
   }
-
-  .c0-text {
+  .adv-nb-text {
     font-family: 'Caveat', 'Segoe UI', cursive;
-    font-size: 26px; line-height: 1.35; font-weight: 500;
-    color: var(--text-dark); white-space: pre-wrap;
-    flex: 1;
+    font-size: 24px; line-height: 1.35; font-weight: 500;
+    color: var(--text-dark); white-space: pre-wrap; min-height: 30px;
   }
-  .c0-cursor {
-    font-family: 'Caveat', cursive; font-size: 26px; color: var(--terra);
-    animation: c0Blink 0.9s step-end infinite;
-  }
-  @keyframes c0Blink { 50% { opacity: 0; } }
-
-  .c0-next-btn {
-    align-self: flex-end; margin-top: 10px;
+  .adv-nb-next-btn {
+    display: none; margin-top: 10px; align-self: flex-end;
     background: none; border: none; color: var(--terra-dark);
-    font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700;
-    cursor: pointer;
+    font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; cursor: pointer;
   }
-
-  .c0-choices {
-    flex-direction: column; gap: 10px; margin-top: 14px;
+  .adv-nb-choices {
+    display: none; flex-direction: column; gap: 10px; margin-top: 14px;
   }
-  .c0-choice-btn {
+  .adv-nb-choice-btn {
     width: 100%; padding: 13px 16px; text-align: left;
     background: white; border: 1.5px solid var(--beige-dark);
     border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
     color: var(--text-dark); cursor: pointer; font-family: inherit;
   }
-  .c0-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+  .adv-nb-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+  .adv-nb-freetext { display: none; margin-top: 14px; }
+
+  /* ── TAMPON DE FIN DE CHAPITRE ──
+     Popup centré (padding sur l'overlay + max-width sur la carte) qui ne
+     touche jamais les bords de l'écran, même sur petit téléphone. */
+  .chapter-stamp-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .stamp-popup {
+    background: var(--beige-light); border-radius: 24px;
+    padding: 32px 24px; width: 100%; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: popupAppear 0.4s cubic-bezier(0.68,-0.55,0.265,1.55) forwards;
+  }
+  .stamp-popup-label {
+    font-size: 12px; font-weight: 700; color: #9CA3AF;
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;
+  }
+  .stamp-container {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    animation: stampDrop 0.5s cubic-bezier(0.68,-0.55,0.265,1.55) 0.15s both;
+  }
+  .stamp-circle {
+    width: 160px; height: 160px; border-radius: 50%;
+    border: 6px solid var(--terra); background: rgba(196,98,45,0.15);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; transform: rotate(-12deg);
+    box-shadow: 0 0 0 3px var(--terra), 0 0 0 8px rgba(196,98,45,0.2);
+  }
+  .stamp-circle-inner {
+    position: absolute; inset: 8px; border-radius: 50%;
+    border: 2px dashed rgba(196,98,45,0.5);
+  }
+  .stamp-circle-text {
+    font-family: 'Caveat', cursive; font-size: 15px; font-weight: 700;
+    color: var(--terra); text-align: center; line-height: 1.2; padding: 0 20px;
+  }
+  .stamp-circle-arc {
+    position: absolute; bottom: 18px; font-size: 10px; color: var(--terra);
+    font-family: 'Caveat', cursive; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .stamp-ink {
+    width: 180px; height: 8px; margin-top: -15px;
+    background: radial-gradient(ellipse, rgba(196,98,45,0.4) 0%, transparent 70%);
+    animation: inkSpread 0.4s ease 0.3s both;
+  }
+  /* Titre du chapitre sous le tampon — texte sombre, la carte popup est
+     désormais beige (et non plus l'overlay sombre) derrière lui. */
+  .stamp-chapter-title {
+    font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700;
+    color: var(--text-dark); animation: fadeInUp 0.4s ease 0.45s both;
+  }
+  .stamp-close-btn {
+    width: 100%; margin-top: 4px; padding: 14px; background: var(--terra); color: white;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+    animation: fadeInUp 0.4s ease 0.55s both;
+  }
+  @keyframes stampDrop {
+    0%   { transform: translateY(-50px) scale(1.4); opacity: 0; }
+    60%  { transform: translateY(6px) scale(0.95); opacity: 1; }
+    80%  { transform: translateY(-3px) scale(1.02); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes inkSpread { 0% { transform: scaleX(0); opacity: 0; } 100% { transform: scaleX(1); opacity: 1; } }
+  @keyframes fadeInUp { 0% { transform: translateY(10px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  @keyframes popupAppear {
+    0%   { opacity: 0; transform: scale(0.8) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
 
   .btn-outline {
     width: 100%; background: none; color: white;
@@ -1180,9 +1354,18 @@
         <img id="c0-scene-img" class="c0-image" src="" alt=""/>
       </div>
       <div class="c0-notebook" onclick="handleChapitre0Tap(event)">
-        <div id="c0-text" class="c0-text"></div>
-        <div id="c0-choices" class="c0-choices" style="display:none;"></div>
-        <button id="c0-next-btn" class="c0-next-btn" style="display:none;">Continuer →</button>
+        <div class="c0-text-card">
+          <button class="c0-replay-btn" onclick="replayChapitre0Typewriter()">↺ Relire</button>
+          <div id="c0-text" class="c0-text"></div>
+        </div>
+        <div id="c0-answer-zone" class="c0-answer-zone" style="display:none;">
+          <div id="c0-question" class="c0-question" style="display:none;">
+            <div class="c0-question-label">Question</div>
+            <div id="c0-question-text" class="c0-question-text"></div>
+          </div>
+          <div id="c0-choices" class="c0-choices"></div>
+          <button id="c0-next-btn" class="c0-next-btn" style="display:none;">Continuer →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1385,7 +1568,50 @@
           </svg>
         </div>
         <div class="tuto-title">Gagne des points<br>et des badges !</div>
-        <div class="tuto-sub">Monte dans le classement des explorateurs et collectionne tes trophées !</div>
+        <div class="tuto-sub">Résous les énigmes, économise tes indices : chaque étape réussie te rapporte de l'XP !</div>
+      </div>
+
+      <!-- Slide 4 — Le classement -->
+      <div class="tuto-slide" id="tuto-4">
+        <div class="tuto-svg-wrap">
+          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Podium -->
+            <rect x="28"  y="128" width="52" height="62" rx="6" fill="#3D7A3D" stroke="#E8A020" stroke-width="2"/>
+            <rect x="84"  y="92"  width="52" height="98" rx="6" fill="#4A8C4A" stroke="#E8A020" stroke-width="3"/>
+            <rect x="140" y="150" width="52" height="40" rx="6" fill="#2D5A2D" stroke="#E8A020" stroke-width="2"/>
+            <text x="54"  y="166" text-anchor="middle" font-size="24" font-weight="900" fill="#E8A020">2</text>
+            <text x="110" y="147" text-anchor="middle" font-size="28" font-weight="900" fill="#E8A020">1</text>
+            <text x="166" y="177" text-anchor="middle" font-size="20" font-weight="900" fill="#E8A020">3</text>
+            <text x="110" y="66"  text-anchor="middle" font-size="42">🥇</text>
+            <text x="54"  y="98"  text-anchor="middle" font-size="28">🥈</text>
+            <text x="166" y="115" text-anchor="middle" font-size="24">🥉</text>
+          </svg>
+        </div>
+        <div class="tuto-title">Grimpe au classement</div>
+        <div class="tuto-sub">Classement général, entre amis, ou par aventure : défie les autres explorateurs !</div>
+      </div>
+
+      <!-- Slide 5 — Chasse au trésor ultime -->
+      <div class="tuto-slide" id="tuto-5">
+        <div class="tuto-svg-wrap">
+          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Coffre -->
+            <rect x="45" y="112" width="130" height="68" rx="10" fill="#C4622D" stroke="#E8A020" stroke-width="4"/>
+            <path d="M45 112 Q110 72 175 112 L175 132 Q110 96 45 132 Z" fill="#D97C40" stroke="#E8A020" stroke-width="4"/>
+            <rect x="100" y="114" width="20" height="26" rx="4" fill="#1A3A1A" stroke="#E8A020" stroke-width="2"/>
+            <!-- Pièces -->
+            <circle cx="70"  cy="107" r="10" fill="#E8A020"/>
+            <circle cx="95"  cy="100" r="9"  fill="#F4C752"/>
+            <circle cx="125" cy="102" r="10" fill="#E8A020"/>
+            <circle cx="150" cy="108" r="9"  fill="#F4C752"/>
+            <!-- Étincelles -->
+            <text x="32"  y="62" font-size="22" text-anchor="middle">✨</text>
+            <text x="188" y="78" font-size="18" text-anchor="middle">✨</text>
+            <text x="110" y="42" font-size="26" text-anchor="middle">✨</text>
+          </svg>
+        </div>
+        <div class="tuto-title">La chasse au trésor<br>ultime</div>
+        <div class="tuto-sub">Grimpe dans le classement annuel pour tenter de remporter une récompense en argent. Les règles complètes arrivent bientôt !</div>
         <button class="tuto-cta" onclick="skipTutorial()">C'est parti ! 🚀</button>
       </div>
     </div>
@@ -1396,6 +1622,8 @@
       <div class="tuto-dot" onclick="showTutoSlide(1)"></div>
       <div class="tuto-dot" onclick="showTutoSlide(2)"></div>
       <div class="tuto-dot" onclick="showTutoSlide(3)"></div>
+      <div class="tuto-dot" onclick="showTutoSlide(4)"></div>
+      <div class="tuto-dot" onclick="showTutoSlide(5)"></div>
     </div>
 
     <!-- Barre de progression -->
@@ -1447,6 +1675,10 @@
        ÉCRAN AVENTURE EN COURS
   ═══════════════════════════════════ -->
   <div id="screen-adventure" class="screen">
+    <div id="adv-immersive-bar" class="adv-immersive-bar">
+      <button class="adv-immersive-quit" onclick="confirmQuitAdventure()">← Quitter</button>
+      <div class="adv-immersive-counter" id="adv-immersive-counter">Étape 1 / 1</div>
+    </div>
     <div class="adv-header">
       <div class="adv-header-top">
         <button class="adv-back" onclick="goBack()">← Carte</button>
@@ -2042,6 +2274,22 @@ async function checkExistingSession() {
   }
 
   document.getElementById('app').classList.add('auth-mode');
+
+  // Tout premier lancement (jamais visité, cinématique jamais vue) : afficher
+  // le Chapitre 0 avant la page d'authentification, s'il est disponible côté
+  // Supabase. Sinon on retombe sur le parcours normal (landing puis auth).
+  if (!localStorage.getItem('ff_visited') && !localStorage.getItem('ff_intro_seen')) {
+    try {
+      const chapters = await supaFetch('flavia_chapters?order_index=eq.0&is_published=eq.true&select=*&limit=1');
+      if (chapters && chapters[0]) {
+        startChapterFromIntro(chapters[0]);
+        return false;
+      }
+    } catch (e) {
+      console.error('Erreur chargement Chapitre 0 (intro premier lancement) :', e);
+    }
+  }
+
   if (!localStorage.getItem('ff_visited')) {
     goToScreen('landing', null);
   } else {
@@ -2455,7 +2703,7 @@ async function loadAdventures() {
 let tutoTimer     = null;
 let tutoSlide     = 0;
 let tutoIsPaused  = false;
-const TUTO_N      = 4;
+const TUTO_N      = 6;
 const TUTO_DELAY  = 4100; // ms avant slide suivant
 
 function startTutorial() {
@@ -3055,6 +3303,30 @@ function stopAllTimers() {
 }
 
 // ══════════════════════════════════════════
+// MODE IMMERSIF (plein écran pendant un scénario en cours)
+// ══════════════════════════════════════════
+// Simple bascule de classe sur #app — même convention que .auth-mode et
+// .chapter0-mode déjà utilisées ailleurs dans l'app : le CSS (règles
+// #app.adventure-immersive-mode ...) se charge de masquer le header, la
+// bottom nav et la barre-titre de l'écran aventure, et de faire apparaître
+// la barre overlay .adv-immersive-bar (bouton Quitter + compteur d'étape).
+function enableImmersiveMode() {
+  document.getElementById('app').classList.add('adventure-immersive-mode');
+}
+function disableImmersiveMode() {
+  document.getElementById('app').classList.remove('adventure-immersive-mode');
+}
+
+// Bouton "← Quitter" affiché en overlay sur l'image en mode immersif — délègue
+// à goBack() (qui coupe déjà les timers/le GPS et réinitialise l'état) une
+// fois la confirmation obtenue, plutôt que de dupliquer cette logique ici.
+function confirmQuitAdventure() {
+  const confirmed = confirm('⚠️ Quitter cette aventure ?\nTa progression sera sauvegardée.');
+  if (!confirmed) return;
+  goBack();
+}
+
+// ══════════════════════════════════════════
 // LANCER L'AVENTURE (avec reprise de progression)
 // ══════════════════════════════════════════
 async function startAdventure() {
@@ -3131,6 +3403,7 @@ async function startAdventure() {
   renderStoryMode();
   goToScreen('adventure', null);
   window._adventureInProgress = true;
+  enableImmersiveMode();
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
   // Timer narratif : (re)démarrage propre du timer global de l'aventure
@@ -3147,6 +3420,9 @@ function buildStepDots(total, current) {
   document.getElementById('step-current').textContent        = current;
   document.getElementById('step-total').textContent          = total;
   document.getElementById('progress-fill').style.width      = (current / total * 100) + '%';
+  // Compteur de la barre overlay du mode immersif (cf. enableImmersiveMode())
+  const immersiveCounter = document.getElementById('adv-immersive-counter');
+  if (immersiveCounter) immersiveCounter.textContent = `Étape ${current} / ${total}`;
   for (let i = 1; i <= total; i++) {
     const d = document.createElement('div');
     d.className  = 'step-dot' + (i < current ? ' done' : i === current ? ' current' : '');
@@ -3176,43 +3452,78 @@ function currentStep() {
   return currentAdv.steps[currentStepIndex] || currentAdv.steps[0] || null;
 }
 
+// ── CARNET D'AVENTURE — moteur générique (image + texte qui s'écrit + bouton),
+// même présentation que le Chapitre 0, réutilisé par le récit et les énigmes
+// (choix multiple ou réponse libre) des scénarios d'aventure. Namespace séparé
+// de chapitre0State pour ne pas interférer avec la lecture des chapitres.
+let advNbState = { typing: false, fullText: '', hasInteraction: false, onRevealed: null, onAdvance: null };
+
+// Bloc image en haut du carnet (quasi plein écran en mode immersif, cf. .adv-nb-image
+// en CSS) — factorisé car utilisé à l'identique par renderStoryMode() et les deux
+// variantes de renderEnigmeMode().
+function advNbImageHtml(url) {
+  if (!url) return '';
+  return `<div class="adv-nb-image-wrap"><img class="adv-nb-image" src="${url}" alt=""/></div>`;
+}
+
+function typewriterAdvNb(text, { hasInteraction = false, onRevealed = null, onAdvance = null } = {}) {
+  const el = document.getElementById('adv-nb-text');
+  if (!el) return;
+  el.textContent = '';
+  advNbState = { typing: true, fullText: text || '', hasInteraction, onRevealed, onAdvance };
+  clearInterval(window._advNbTypeInterval);
+  let i = 0;
+  window._advNbTypeInterval = setInterval(() => {
+    i++;
+    el.textContent = (text || '').slice(0, i);
+    if (i >= (text || '').length) {
+      clearInterval(window._advNbTypeInterval);
+      advNbState.typing = false;
+      if (advNbState.onRevealed) advNbState.onRevealed();
+    }
+  }, 22);
+}
+
+// Tap sur le carnet : termine l'effet machine à écrire s'il est en cours ;
+// sinon, avance directement si l'écran n'attend pas d'interaction (récit),
+// ou ne fait rien si une réponse/un choix est requis (énigme).
+function handleAdvNbTap(event) {
+  if (event && event.target.closest('button, input, textarea, .adv-nb-choice-btn')) return;
+  if (advNbState.typing) {
+    clearInterval(window._advNbTypeInterval);
+    const el = document.getElementById('adv-nb-text');
+    if (el) el.textContent = advNbState.fullText;
+    advNbState.typing = false;
+    if (advNbState.onRevealed) advNbState.onRevealed();
+    return;
+  }
+  if (!advNbState.hasInteraction && advNbState.onAdvance) advNbState.onAdvance();
+}
+
 // ── STORY ──
 function renderStoryMode() {
   const step    = currentStep();
   const isFirst = currentStepIndex === 0;
 
-  const introText = (isFirst && currentAdv.intro_text)
-    ? `<div class="bubble-row" style="margin-bottom:12px;">
-         <div class="bubble-avatar">${compassSVG(26)}</div>
-         <div class="bubble flavia">${currentAdv.intro_text}</div>
-       </div>` : '';
-
-  const introImg = (isFirst && currentAdv.intro_image_url)
-    ? `<img src="${currentAdv.intro_image_url}" style="width:100%;border-radius:12px;margin-bottom:12px;object-fit:cover;max-height:180px;" alt=""/>`
-    : '';
-
-  const stepText = step?.story_text
-    ? `<div class="bubble-row" style="margin-bottom:12px;">
-         <div class="bubble-avatar">${compassSVG(26)}</div>
-         <div class="bubble flavia">${step.story_text}</div>
-       </div>`
-    : `<div class="bubble-row" style="margin-bottom:12px;">
-         <div class="bubble-avatar">${compassSVG(26)}</div>
-         <div class="bubble flavia">Direction : ${step?.title || 'le prochain lieu'} !</div>
-       </div>`;
-
-  const stepImg = step?.image_url
-    ? `<img src="${step.image_url}" style="width:100%;border-radius:12px;margin-bottom:12px;object-fit:cover;max-height:180px;" alt=""/>`
-    : '';
+  const image = (isFirst && currentAdv.intro_image_url) ? currentAdv.intro_image_url : (step?.image_url || '');
+  const introPart = (isFirst && currentAdv.intro_text) ? currentAdv.intro_text : '';
+  const stepPart  = step?.story_text || (introPart ? '' : `Direction : ${step?.title || 'le prochain lieu'} !`);
+  const text = [introPart, stepPart].filter(Boolean).join('\n\n');
 
   document.getElementById('mode-story').innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      ${introText}${introImg}${stepImg}${stepText}
-    </div>
-    <div style="margin-top:16px;">
-      <button class="btn-primary" onclick="renderCompassMode()">Aller au prochain lieu →</button>
+    <div class="adv-nb-wrap">
+      ${advNbImageHtml(image)}
+      <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+        <div class="adv-nb-text" id="adv-nb-text"></div>
+        <button class="adv-nb-next-btn" id="adv-nb-next-btn" onclick="event.stopPropagation(); renderCompassMode();">Aller au prochain lieu →</button>
+      </div>
     </div>`;
   showMode('story');
+  typewriterAdvNb(text, {
+    hasInteraction: false,
+    onRevealed: () => { const btn = document.getElementById('adv-nb-next-btn'); if (btn) btn.style.display = 'block'; },
+    onAdvance: () => renderCompassMode()
+  });
   saveCurrentProgress();
 }
 
@@ -3338,53 +3649,52 @@ function renderEnigmeMode() {
   step.choices = choices;
   console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
 
-  // Étape DÉCISION — afficher les choix
+  // Étape DÉCISION — afficher les choix (choix multiple qui change la suite du
+  // parcours via handleChoice()/goToNextStep() — logique de branchement inchangée)
   if (step.step_type === 'decision' && step.choices && step.choices.length > 0) {
     const choicesHtml = step.choices.map((c, i) => `
-      <button onclick="handleChoice(${i})" style="
-        width:100%;padding:14px;margin-bottom:10px;
-        background:white;border:2px solid #D4C5A9;border-radius:14px;
-        font-size:14px;font-weight:600;color:#1A2A1A;cursor:pointer;
-        text-align:left;display:flex;align-items:center;gap:10px;
-      " onmouseover="this.style.borderColor='#C4622D';this.style.background='#FFF7F4'"
-         onmouseout="this.style.borderColor='#D4C5A9';this.style.background='white'">
-        <span style="min-width:28px;height:28px;border-radius:50%;background:#F5EDD8;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#C4622D;">
-          ${String.fromCharCode(65 + i)}
-        </span>
-        ${c.label}
+      <button class="adv-nb-choice-btn" onclick="handleChoice(${i})">
+        <span style="display:inline-flex;min-width:26px;height:26px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--terra);margin-right:9px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
       </button>`).join('');
 
     document.getElementById('mode-enigme').innerHTML = `
-      <div class="bubble-row" style="margin-bottom:12px;">
-        <div class="bubble-avatar">${compassSVG(26)}</div>
-        <div class="bubble flavia">Tu arrives à ${step.title || 'destination'}. Une décision s'impose !</div>
-      </div>
-      <div class="enigme-card">
-        <div class="enigme-label">🔀 À toi de choisir</div>
-        <div class="enigme-text">"${step.enigme || 'Quelle direction vas-tu prendre ?'}"</div>
-        <div style="margin-top:14px;">${choicesHtml}</div>
+      <div class="adv-nb-wrap">
+        ${advNbImageHtml(step.image_url)}
+        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+          <div class="adv-nb-text" id="adv-nb-text"></div>
+          <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
+        </div>
       </div>`;
     showMode('enigme');
+    typewriterAdvNb(step.enigme || 'Quelle direction vas-tu prendre ?', {
+      hasInteraction: true,
+      onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'flex'; }
+    });
     saveCurrentProgress();
     return;
   }
 
-  // Étape STANDARD — champ texte libre
+  // Étape STANDARD — champ texte libre (une réponse, comme une date ou un mot,
+  // validée par checkAnswer() — logique de validation inchangée)
   document.getElementById('mode-enigme').innerHTML = `
-    <div class="bubble-row" style="margin-bottom:12px;">
-      <div class="bubble-avatar">${compassSVG(26)}</div>
-      <div class="bubble flavia">Excellent ! Tu es arrivé à ${step.title || 'destination'}. Résous cette énigme !</div>
-    </div>
-    <div class="enigme-card">
-      <div class="enigme-label">🔍 Énigme du lieu</div>
-      <div class="enigme-text">"${step.enigme || ''}"</div>
-      <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
-             onkeydown="if(event.key==='Enter') checkAnswer()"/>
-      <div class="error-msg" id="error-msg">Pas tout à fait… réessaie ou prends un indice !</div>
-      <button class="btn-primary" onclick="checkAnswer()">Valider ma réponse</button>
-      <div id="hint-section"></div>
+    <div class="adv-nb-wrap">
+      ${advNbImageHtml(step.image_url)}
+      <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+        <div class="adv-nb-text" id="adv-nb-text"></div>
+        <div class="adv-nb-freetext" id="adv-nb-freetext">
+          <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
+                 onkeydown="if(event.key==='Enter') checkAnswer()"/>
+          <div class="error-msg" id="error-msg">Pas tout à fait… réessaie ou prends un indice !</div>
+          <button class="btn-primary" onclick="event.stopPropagation(); checkAnswer();" style="margin-top:10px;">Valider ma réponse</button>
+          <div id="hint-section"></div>
+        </div>
+      </div>
     </div>`;
   showMode('enigme');
+  typewriterAdvNb(step.enigme || '', {
+    hasInteraction: true,
+    onRevealed: () => { const w = document.getElementById('adv-nb-freetext'); if (w) w.style.display = 'block'; }
+  });
   renderHintSection();
   saveCurrentProgress();
 }
@@ -3456,6 +3766,7 @@ async function renderRewardMode() {
   // Aventure terminée : la sauvegarde locale de reprise n'a plus lieu d'être
   if (isLast) {
     window._adventureInProgress = false;
+    disableImmersiveMode();
     localStorage.removeItem('ff_current_adventure');
     stopAllTimers();
 
@@ -5736,7 +6047,7 @@ async function loadFlaviaStory() {
 
   // Toujours repartir de la liste des chapitres — jamais du dernier chapitre
   // ouvert (évite qu'un état de lecture périmé ne reste accroché à l'écran).
-  chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null };
+  chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null, chapterTitle: null, stampIcon: null, stampText: null, introMode: false };
 
   if (isGuest() || !currentPlayer?.id) {
     content.innerHTML = `
@@ -5890,19 +6201,7 @@ async function readChapter(chapterId) {
     // Chapitre "à scènes" (image + carnet manuscrit) — moteur de scènes partagé.
     // La lecture est marquée "lue" à la fin (finishStoryChapterRead), pas ici.
     if (hasScenes) {
-      chapitre0State = {
-        index: 0, typing: false, fullText: '',
-        scenes: chapter.scenes.map(s => ({
-          img: s.image_url || '',
-          text: s.text || '',
-          button_label: s.button_label || 'Continuer'
-        })),
-        mode: 'story',
-        dbChapterId: chapter.id
-      };
-      document.getElementById('app').classList.add('chapter0-mode');
-      goToScreen('chapitre0', null);
-      renderChapitre0Scene();
+      startSceneChapter(chapter);
       return;
     }
 
@@ -6369,6 +6668,7 @@ function goToScreen(name, btn) {
     );
     if (!confirmed) return; // Annuler la navigation
     window._adventureInProgress  = false;
+    disableImmersiveMode();
     currentAdv                   = null;
     currentStepIndex              = 0;
     window._currentStepId         = null;
@@ -6409,6 +6709,7 @@ function goToScreen(name, btn) {
 
 function goBack() {
   window._adventureInProgress = false;
+  disableImmersiveMode();
   localStorage.removeItem('ff_current_adventure');
   stopAllTimers();
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
@@ -6489,7 +6790,7 @@ function goFromLanding(tab) {
 // mode: 'story' (seul mode restant — chapitre 100% Supabase, bouton
 // "Continuer" simple, éventuellement des choix de dialogue si scene.choices
 // est défini côté admin)
-let chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null };
+let chapitre0State = { index: 0, typing: false, fullText: '', scenes: [], mode: null, dbChapterId: null, chapterTitle: null, stampIcon: null, stampText: null, introMode: false };
 
 function getPlayerFirstName() {
   const pseudo = (currentPlayer && currentPlayer.pseudo) || 'aventurier';
@@ -6498,6 +6799,42 @@ function getPlayerFirstName() {
 
 function personalizeChapitre0(text) {
   return text.replace(/\{prenom\}/g, getPlayerFirstName());
+}
+
+// Construit chapitre0State à partir d'une ligne flavia_chapters ayant des
+// scènes, puis lance la lecture. Utilisé par readChapter() (chapitre choisi
+// dans la liste) et par startChapterFromIntro() (cinématique au tout premier
+// lancement, avant l'authentification — introMode=true).
+function startSceneChapter(chapter, introMode = false) {
+  chapitre0State = {
+    index: 0, typing: false, fullText: '',
+    scenes: chapter.scenes.map(s => ({
+      img: s.image_url || '',
+      text: s.text || '',
+      button_label: s.button_label || 'Continuer',
+      question: s.question || '',
+      choices: Array.isArray(s.choices) && s.choices.length ? s.choices : null
+    })),
+    mode: 'story',
+    dbChapterId: chapter.id,
+    chapterTitle: chapter.title,
+    stampIcon: chapter.stamp_icon || '🧭',
+    stampText: chapter.stamp_text || 'Compagnon d\'Aventure',
+    introMode
+  };
+  document.getElementById('app').classList.add('chapter0-mode');
+  goToScreen('chapitre0', null);
+  renderChapitre0Scene();
+}
+
+// Cinématique du Chapitre 0 affichée avant la page d'authentification, la
+// toute première fois que l'app est lancée (cf. checkExistingSession()).
+// Marque l'intro comme vue immédiatement : même si l'appli est fermée avant
+// la fin, elle ne sera pas rejouée au prochain lancement.
+function startChapterFromIntro(chapter) {
+  localStorage.setItem('ff_intro_seen', '1');
+  localStorage.setItem('ff_visited', '1');
+  startSceneChapter(chapter, true);
 }
 
 function renderChapitre0Dots() {
@@ -6512,11 +6849,28 @@ function renderChapitre0Dots() {
 function renderChapitre0Scene() {
   const scene = chapitre0State.scenes[chapitre0State.index];
   document.getElementById('c0-scene-img').src = scene.img;
+  document.getElementById('c0-answer-zone').style.display = 'none';
   document.getElementById('c0-choices').style.display = 'none';
   document.getElementById('c0-choices').innerHTML = '';
   document.getElementById('c0-next-btn').style.display = 'none';
+  const questionEl = document.getElementById('c0-question');
+  questionEl.style.display = 'none';
+  document.getElementById('c0-question-text').textContent = '';
   renderChapitre0Dots();
 
+  const text = personalizeChapitre0(scene.text);
+  typewriterChapitre0(text, () => onChapitre0TypingDone(scene));
+}
+
+// Relance l'effet machine à écrire sur la scène courante sans changer de
+// scène (bouton "↺ Relire") — cache d'abord la zone réponse déjà révélée.
+function replayChapitre0Typewriter() {
+  const scene = chapitre0State.scenes[chapitre0State.index];
+  document.getElementById('c0-answer-zone').style.display = 'none';
+  document.getElementById('c0-choices').style.display = 'none';
+  document.getElementById('c0-choices').innerHTML = '';
+  document.getElementById('c0-next-btn').style.display = 'none';
+  document.getElementById('c0-question').style.display = 'none';
   const text = personalizeChapitre0(scene.text);
   typewriterChapitre0(text, () => onChapitre0TypingDone(scene));
 }
@@ -6543,7 +6897,7 @@ function typewriterChapitre0(text, onDone) {
 // sinon avance à la scène suivante (sauf quand des choix / le tampon sont affichés —
 // ceux-ci gèrent leur propre bouton, cf. garde ci-dessous).
 function handleChapitre0Tap(event) {
-  if (event && event.target.closest('.c0-choice-btn')) return;
+  if (event && event.target.closest('.c0-choice-btn, .c0-replay-btn')) return;
 
   if (chapitre0State.typing) {
     clearInterval(window._c0TypeInterval);
@@ -6559,17 +6913,30 @@ function handleChapitre0Tap(event) {
 }
 
 function onChapitre0TypingDone(scene) {
+  if (scene.question) {
+    document.getElementById('c0-question-text').textContent = scene.question;
+    document.getElementById('c0-question').style.display = 'block';
+  }
+
+  const isLastScene = chapitre0State.index === chapitre0State.scenes.length - 1;
+
   if (scene.choices) {
     const wrap = document.getElementById('c0-choices');
     wrap.innerHTML = scene.choices.map((c, i) =>
-      `<button class="c0-choice-btn" onclick="chooseChapitre0(${i})">${c.label}</button>`
+      `<button class="c0-choice-btn" onclick="chooseChapitre0(${i})"><span>${c.label}</span><span class="c0-choice-arrow">→</span></button>`
     ).join('');
     wrap.style.display = 'flex';
   } else {
     const btn = document.getElementById('c0-next-btn');
-    btn.textContent = (scene.button_label || 'Continuer') + ' →';
+    btn.textContent = (isLastScene && scene.button_label === 'Continuer')
+      ? 'Terminer le chapitre ✓'
+      : (scene.button_label || 'Continuer') + ' →';
     btn.style.display = 'block';
   }
+
+  // Passer de display:none à display:block relance naturellement l'animation
+  // c0FadeIn définie sur .c0-answer-zone, y compris après une relecture.
+  document.getElementById('c0-answer-zone').style.display = 'block';
 }
 
 function chooseChapitre0(i) {
@@ -6588,21 +6955,39 @@ function advanceChapitre0() {
 }
 
 function skipChapitre0() {
+  if (chapitre0State.introMode) { exitChapitre0Intro(); return; }
   clearInterval(window._c0TypeInterval);
   chapitre0State.index = chapitre0State.scenes.length - 1;
   renderChapitre0Scene();
 }
 
 // Quitte la lecture en cours (à tout moment, avant la fin) et ramène à la
-// liste des chapitres.
+// liste des chapitres — ou, en mode intro (premier lancement, avant tout
+// compte), à la page d'authentification (cf. exitChapitre0Intro()).
 function backFromChapitre0() {
+  if (chapitre0State.introMode) { exitChapitre0Intro(); return; }
   clearInterval(window._c0TypeInterval);
   document.getElementById('app').classList.remove('chapter0-mode');
   goToScreen('flavia-story', null);
 }
 
+// Sortie de la cinématique d'intro (Chapitre 0 au premier lancement), que ce
+// soit via "Passer", "← Retour" ou la fermeture du tampon de fin : ramène à
+// la page d'authentification sur l'onglet Inscription.
+function exitChapitre0Intro() {
+  clearInterval(window._c0TypeInterval);
+  chapitre0State.introMode = false;
+  document.getElementById('app').classList.remove('chapter0-mode');
+  document.getElementById('chapter-stamp-overlay')?.remove();
+  goToScreen('auth', null);
+  showAuthTab('signup');
+  showToast('Crée ton compte pour rejoindre Flavia ! 🧭');
+}
+
 // Fin de lecture d'un chapitre payant générique (mode "story") : marque le
-// chapitre comme lu côté Supabase puis retourne à la liste des chapitres.
+// chapitre comme lu côté Supabase puis affiche le tampon de fin (le retour à
+// la liste des chapitres se fait quand le joueur ferme le tampon, cf.
+// closeStampAndReturn()).
 async function finishStoryChapterRead() {
   const chapterId = chapitre0State.dbChapterId;
   const userId = currentPlayer?.id;
@@ -6618,6 +7003,48 @@ async function finishStoryChapterRead() {
     }
   }
   document.getElementById('app').classList.remove('chapter0-mode');
+  showChapterStamp({
+    title: chapitre0State.chapterTitle || '',
+    stamp_icon: chapitre0State.stampIcon,
+    stamp_text: chapitre0State.stampText
+  });
+}
+
+// Overlay "tampon" affiché à la fin d'un chapitre — un cachet qui s'écrase
+// sur le carnet, comme un tampon officiel posé sur du papier. Icône et texte
+// du tampon sont personnalisables par chapitre depuis l'admin (colonnes
+// flavia_chapters.stamp_icon / stamp_text).
+function showChapterStamp(chapter) {
+  const stampIcon = chapter?.stamp_icon || '🧭';
+  const stampText = chapter?.stamp_text || 'Compagnon d\'Aventure';
+  const chapterTitle = chapter?.title || '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'chapter-stamp-overlay';
+  overlay.className = 'chapter-stamp-overlay';
+  overlay.innerHTML = `
+    <div class="stamp-popup">
+      <div class="stamp-popup-label">Chapitre terminé !</div>
+      <div class="stamp-container">
+        <div class="stamp-circle">
+          <div class="stamp-circle-inner"></div>
+          <div style="font-size:48px;margin-bottom:4px;">${stampIcon}</div>
+          <div class="stamp-circle-text">${stampText}</div>
+          <div class="stamp-circle-arc">Récits d'Aventures</div>
+        </div>
+        <div class="stamp-ink"></div>
+        ${chapterTitle ? `<div class="stamp-chapter-title">${chapterTitle}</div>` : ''}
+        <button class="stamp-close-btn" onclick="closeStampAndReturn()">Continuer →</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  if (navigator.vibrate) navigator.vibrate([100, 50, 200]);
+}
+
+function closeStampAndReturn() {
+  document.getElementById('chapter-stamp-overlay')?.remove();
+  if (chapitre0State.introMode) { exitChapitre0Intro(); return; }
   goToScreen('flavia-story', null);
   loadFlaviaStory();
 }
