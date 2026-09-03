@@ -780,6 +780,48 @@
   }
   @keyframes fill-splash { from { width: 0%; } to { width: 100%; } }
   .splash-loading { color: var(--beige-light); font-size: 12px; text-align: center; opacity: 0.65; letter-spacing: 0.3px; }
+  /* ── NOTIFICATION "MESSAGE REÇU DE FLAVIA" ──
+     Affichée après le splash, avant la cinématique du Chapitre 0, pour créer
+     une attente façon notification push plutôt qu'un enchaînement brutal. */
+  .flavia-notif-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(26,42,26,0.55);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 60px 16px 0;
+    opacity: 0; animation: notifOverlayIn 0.3s ease forwards;
+  }
+  @keyframes notifOverlayIn { to { opacity: 1; } }
+  .flavia-notif-card {
+    width: 100%; max-width: 380px;
+    background: var(--white); border-radius: var(--radius-lg);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    padding: 16px; display: flex; gap: 12px; align-items: flex-start;
+    transform: translateY(-140px);
+    animation: notifSlideDown 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.1s forwards,
+               notifPulse 1.6s ease-in-out 0.75s infinite;
+    cursor: pointer;
+  }
+  @keyframes notifSlideDown { to { transform: translateY(0); } }
+  @keyframes notifPulse {
+    0%, 100% { box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+    50%      { box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 0 0 6px rgba(232,160,32,0.25); }
+  }
+  .flavia-notif-icon {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .flavia-notif-body { flex: 1; min-width: 0; }
+  .flavia-notif-top {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
+  }
+  .flavia-notif-app {
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .flavia-notif-time { font-size: 11px; color: var(--text-light); }
+  .flavia-notif-title { font-size: 14px; font-weight: 800; color: var(--text-dark); margin-bottom: 2px; }
+  .flavia-notif-msg { font-size: 13px; color: var(--text-mid); line-height: 1.35; }
+  .flavia-notif-hint { margin-top: 8px; font-size: 11px; color: var(--terra); font-weight: 700; }
 
   /* ══════════════════════════════
      LANDING PAGE
@@ -2240,6 +2282,12 @@ async function refreshToken() {
   }
 }
 
+// État de synchro entre le splash screen et la notification "message reçu de
+// Flavia" : la notification n'apparaît que quand LES DEUX sont prêts (splash
+// terminé ET chapitre 0 chargé depuis Supabase), quel que soit l'ordre
+// d'arrivée (cf. maybeShowFlaviaIntroNotification()).
+let _introChapterPending = null;
+let _splashDone = false;
 async function checkExistingSession() {
   const token = localStorage.getItem('ff_access_token');
   const user  = localStorage.getItem('ff_user');
@@ -2282,7 +2330,8 @@ async function checkExistingSession() {
     try {
       const chapters = await supaFetch('flavia_chapters?order_index=eq.0&is_published=eq.true&select=*&limit=1');
       if (chapters && chapters[0]) {
-        startChapterFromIntro(chapters[0]);
+        _introChapterPending = chapters[0];
+        maybeShowFlaviaIntroNotification();
         return false;
       }
     } catch (e) {
@@ -3817,6 +3866,19 @@ async function renderRewardMode() {
     formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     const userId = JSON.parse(localStorage.getItem('ff_user') || '{}').id;
     if (userId) {
+      // Anti-doublon : les boussoles ne sont dues qu'à la toute première
+      // complétion de ce scénario par ce joueur. On vérifie AVANT l'upsert
+      // (qui lui reste autorisé à chaque replay, pour garder le meilleur temps).
+      let isFirstCompletion = true;
+      try {
+        const existingCompletion = await supaFetch(
+          `adventure_completions?player_id=eq.${userId}&adventure_id=eq.${currentAdv.id}&select=id`
+        );
+        isFirstCompletion = !existingCompletion.length;
+      } catch (e) {
+        console.error('Erreur vérification complétion existante:', e);
+        isFirstCompletion = false; // par prudence, en cas d'erreur réseau on n'attribue pas
+      }
       supaFetch('adventure_completions', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates',
@@ -3829,10 +3891,16 @@ async function renderRewardMode() {
         }
       }).catch(e => console.error('Erreur enregistrement chrono:', e));
 
-      // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
-      awardCompasses(userId, COMPASS_PER_ADVENTURE);
+      if (isFirstCompletion) {
+        // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
+        // — uniquement à la première complétion, pas de gain infini au replay.
+        awardCompasses(userId, COMPASS_PER_ADVENTURE);
+      } else {
+        console.log('[finishAdventure] Scénario déjà complété par ce joueur — boussoles non réattribuées (anti-doublon)');
+      }
 
       // Vérifier si ce scénario terminé débloque un nouveau titre
+      // (déjà protégé en interne contre les doublons de titres)
       checkAndAwardTitles();
     }
   }
@@ -6749,12 +6817,62 @@ function setRankTab(tab, btn) {
 // ══════════════════════════════════════════
 (function initSplash() {
   const splash = document.getElementById('splash');
-  if (!splash) return;
+  if (!splash) { _splashDone = true; return; }
   setTimeout(() => {
     splash.classList.add('fade-out');
-    setTimeout(() => splash.classList.add('hidden'), 420);
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      _splashDone = true;
+      maybeShowFlaviaIntroNotification();
+    }, 420);
   }, 2500);
 })();
+// Affiche la notification "message reçu de Flavia" seulement une fois le
+// splash terminé ET le chapitre 0 chargé (peu importe lequel finit en
+// premier) — évite que la cinématique n'apparaisse brutalement pendant ou
+// juste après le splash.
+function maybeShowFlaviaIntroNotification() {
+  if (!_splashDone || !_introChapterPending) return;
+  const chapter = _introChapterPending;
+  _introChapterPending = null; // consommé, ne s'affiche qu'une seule fois
+  showFlaviaMessageNotification(chapter);
+}
+// Notification façon push : vibration + son d'arrivée + carte qui glisse
+// depuis le haut. Le joueur doit toucher la carte pour lancer la cinématique
+// du Chapitre 0 — évite l'enchaînement brutal splash → générique.
+function showFlaviaMessageNotification(chapter) {
+  vibrateFeedback([80, 40, 80, 40, 160]);
+  soundArrival();
+  const overlay = document.createElement('div');
+  overlay.id = 'flavia-notif-overlay';
+  overlay.className = 'flavia-notif-overlay';
+  overlay.innerHTML = `
+    <div class="flavia-notif-card" onclick="openFlaviaIntroFromNotif()">
+      <img src="/icon-192.png" class="flavia-notif-icon" alt="Flavia Flint">
+      <div class="flavia-notif-body">
+        <div class="flavia-notif-top">
+          <span class="flavia-notif-app">Flavia Flint</span>
+          <span class="flavia-notif-time">maintenant</span>
+        </div>
+        <div class="flavia-notif-title">Nouveau message</div>
+        <div class="flavia-notif-msg">J'ai besoin de ton aide pour une aventure... Tu es partant ?</div>
+        <div class="flavia-notif-hint">Toucher pour ouvrir →</div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  window._pendingIntroChapterForNotif = chapter;
+}
+function openFlaviaIntroFromNotif() {
+  const overlay = document.getElementById('flavia-notif-overlay');
+  const chapter = window._pendingIntroChapterForNotif;
+  window._pendingIntroChapterForNotif = null;
+  if (overlay) {
+    overlay.style.transition = 'opacity 0.25s ease';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 250);
+  }
+  if (chapter) startChapterFromIntro(chapter);
+}
 
 // ══════════════════════════════════════════
 // TOGGLE MOT DE PASSE
