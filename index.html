@@ -2282,12 +2282,12 @@ async function refreshToken() {
   }
 }
 
-// État de synchro entre le splash screen et la notification "message reçu de
-// Flavia" : la notification n'apparaît que quand LES DEUX sont prêts (splash
-// terminé ET chapitre 0 chargé depuis Supabase), quel que soit l'ordre
-// d'arrivée (cf. maybeShowFlaviaIntroNotification()).
+// Chapitre 0 en attente : chargé depuis Supabase au tout premier lancement,
+// puis déclenché (notification + vibration + son) au tout premier tap du
+// joueur sur la page d'inscription (cf. armFlaviaIntroOnFirstTouch) — jamais
+// automatiquement, car Chrome bloque vibration/audio sans geste utilisateur
+// réel préalable.
 let _introChapterPending = null;
-let _splashDone = false;
 async function checkExistingSession() {
   const token = localStorage.getItem('ff_access_token');
   const user  = localStorage.getItem('ff_user');
@@ -2325,15 +2325,21 @@ async function checkExistingSession() {
 
   document.getElementById('app').classList.add('auth-mode');
 
-  // Tout premier lancement (jamais visité, cinématique jamais vue) : afficher
-  // le Chapitre 0 avant la page d'authentification, s'il est disponible côté
-  // Supabase. Sinon on retombe sur le parcours normal (landing puis auth).
+  // Tout premier lancement (jamais visité, cinématique jamais vue) : le
+  // chapitre 0 est chargé mais n'apparaît PAS tout de suite — il attend le
+  // tout premier tap du joueur sur la page d'inscription (cf.
+  // armFlaviaIntroOnFirstTouch), pour que vibration + son soient autorisés
+  // par le navigateur. Le joueur voit donc directement la page d'accueil /
+  // inscription, comme un visiteur normal.
   if (!localStorage.getItem('ff_visited') && !localStorage.getItem('ff_intro_seen')) {
     try {
       const chapters = await supaFetch('flavia_chapters?order_index=eq.0&is_published=eq.true&select=*&limit=1');
       if (chapters && chapters[0]) {
+        localStorage.setItem('ff_intro_seen', '1');
+        localStorage.setItem('ff_visited', '1');
         _introChapterPending = chapters[0];
-        maybeShowFlaviaIntroNotification();
+        armFlaviaIntroOnFirstTouch();
+        goToScreen('landing', null);
         return false;
       }
     } catch (e) {
@@ -6821,31 +6827,35 @@ function setRankTab(tab, btn) {
 // ══════════════════════════════════════════
 (function initSplash() {
   const splash = document.getElementById('splash');
-  if (!splash) { _splashDone = true; return; }
+  if (!splash) return;
   setTimeout(() => {
     splash.classList.add('fade-out');
-    setTimeout(() => {
-      splash.classList.add('hidden');
-      _splashDone = true;
-      maybeShowFlaviaIntroNotification();
-    }, 420);
+    setTimeout(() => splash.classList.add('hidden'), 420);
   }, 2500);
 })();
-// Affiche la notification "message reçu de Flavia" seulement une fois le
-// splash terminé ET le chapitre 0 chargé (peu importe lequel finit en
-// premier) — évite que la cinématique n'apparaisse brutalement pendant ou
-// juste après le splash.
-function maybeShowFlaviaIntroNotification() {
-  if (!_splashDone || !_introChapterPending) return;
-  const chapter = _introChapterPending;
-  _introChapterPending = null; // consommé, ne s'affiche qu'une seule fois
-  showFlaviaMessageNotification(chapter);
+// Arme un écouteur one-shot sur le tout premier tap du joueur (écrire son
+// pseudo, appuyer sur "Continuer sans compte", etc.) pour déclencher la
+// notification "message reçu de Flavia" avec vibration + son EN MÊME TEMPS
+// que le tap lui-même — c'est le premier geste utilisateur réel de la
+// session, donc Chrome autorise vibration/audio à ce moment précis (il les
+// bloque silencieusement sans geste préalable). Le splash bloque déjà tout
+// tap pendant son affichage (z-index full-screen), donc ce tap ne peut
+// arriver qu'une fois la page d'inscription visible.
+function armFlaviaIntroOnFirstTouch() {
+  const trigger = () => {
+    document.removeEventListener('pointerdown', trigger);
+    if (!_introChapterPending) return;
+    const chapter = _introChapterPending;
+    _introChapterPending = null; // consommé, ne s'affiche qu'une seule fois
+    vibrateFeedback([80, 40, 80, 40, 160]);
+    soundArrival();
+    showFlaviaMessageNotification(chapter);
+  };
+  document.addEventListener('pointerdown', trigger, { once: true });
 }
-// Notification façon push : carte qui glisse depuis le haut. La vibration et
-// le son sont déclenchés au TAP (cf. openFlaviaIntroFromNotif), pas ici —
-// Chrome bloque navigator.vibrate() et l'AudioContext tant qu'aucun geste
-// utilisateur réel n'a eu lieu sur la page, et l'affichage automatique de
-// cette carte (au chargement, sans tap préalable) ne compte pas comme tel.
+// Notification façon push : carte qui glisse depuis le haut. Vibration et son
+// sont déjà déclenchés par armFlaviaIntroOnFirstTouch() au moment du premier
+// tap — cette fonction ne gère que l'affichage visuel de la carte.
 function showFlaviaMessageNotification(chapter) {
   const overlay = document.createElement('div');
   overlay.id = 'flavia-notif-overlay';
@@ -6867,10 +6877,6 @@ function showFlaviaMessageNotification(chapter) {
   window._pendingIntroChapterForNotif = chapter;
 }
 function openFlaviaIntroFromNotif() {
-  // Vibration + son ici : premier vrai geste utilisateur de la session, donc
-  // le navigateur les autorise (contrairement à un déclenchement automatique).
-  vibrateFeedback([80, 40, 80, 40, 160]);
-  soundArrival();
   const overlay = document.getElementById('flavia-notif-overlay');
   const chapter = window._pendingIntroChapterForNotif;
   window._pendingIntroChapterForNotif = null;
