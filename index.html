@@ -2299,6 +2299,7 @@ async function checkExistingSession() {
       try {
         loadCurrentPlayer(JSON.parse(user));
         document.getElementById('app').classList.remove('auth-mode');
+        if (deferredPrompt) showInstallButton();
         await loadAdventures();
         goToScreen('home', document.getElementById('nav-home'));
         startGlobalGPS();
@@ -2315,6 +2316,7 @@ async function checkExistingSession() {
   // Mode invité
   if (localStorage.getItem('ff_guest')) {
     document.getElementById('app').classList.remove('auth-mode');
+    if (deferredPrompt) showInstallButton();
     await loadAdventures();
     goToScreen('home', document.getElementById('nav-home'));
     startGlobalGPS();
@@ -2544,6 +2546,7 @@ async function handleLogin() {
 
     await loadCurrentPlayer(data.user);
     document.getElementById('app').classList.remove('auth-mode');
+    if (deferredPrompt) showInstallButton();
     await loadAdventures();
     setTimeout(() => {
       goToScreen('home', document.getElementById('nav-home'));
@@ -2619,6 +2622,7 @@ function enterGuestMode() {
   localStorage.removeItem('ff_access_token');
   localStorage.removeItem('ff_user');
   document.getElementById('app').classList.remove('auth-mode');
+  if (deferredPrompt) showInstallButton();
   const balanceHome = document.getElementById('compass-balance-home');
   if (balanceHome) balanceHome.textContent = '🧭 Connecte-toi pour en gagner';
   loadAdventures();
@@ -6837,12 +6841,12 @@ function maybeShowFlaviaIntroNotification() {
   _introChapterPending = null; // consommé, ne s'affiche qu'une seule fois
   showFlaviaMessageNotification(chapter);
 }
-// Notification façon push : vibration + son d'arrivée + carte qui glisse
-// depuis le haut. Le joueur doit toucher la carte pour lancer la cinématique
-// du Chapitre 0 — évite l'enchaînement brutal splash → générique.
+// Notification façon push : carte qui glisse depuis le haut. La vibration et
+// le son sont déclenchés au TAP (cf. openFlaviaIntroFromNotif), pas ici —
+// Chrome bloque navigator.vibrate() et l'AudioContext tant qu'aucun geste
+// utilisateur réel n'a eu lieu sur la page, et l'affichage automatique de
+// cette carte (au chargement, sans tap préalable) ne compte pas comme tel.
 function showFlaviaMessageNotification(chapter) {
-  vibrateFeedback([80, 40, 80, 40, 160]);
-  soundArrival();
   const overlay = document.createElement('div');
   overlay.id = 'flavia-notif-overlay';
   overlay.className = 'flavia-notif-overlay';
@@ -6863,6 +6867,10 @@ function showFlaviaMessageNotification(chapter) {
   window._pendingIntroChapterForNotif = chapter;
 }
 function openFlaviaIntroFromNotif() {
+  // Vibration + son ici : premier vrai geste utilisateur de la session, donc
+  // le navigateur les autorise (contrairement à un déclenchement automatique).
+  vibrateFeedback([80, 40, 80, 40, 160]);
+  soundArrival();
   const overlay = document.getElementById('flavia-notif-overlay');
   const chapter = window._pendingIntroChapterForNotif;
   window._pendingIntroChapterForNotif = null;
@@ -7255,6 +7263,10 @@ let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
+  // showInstallButton() se protège elle-même : le bouton ne sera réellement
+  // affiché que si le joueur est déjà connecté/inscrit. Si l'événement arrive
+  // avant la connexion, il suffira que le joueur se connecte pour que le
+  // bouton apparaisse (cf. les appels après chaque connexion réussie).
   showInstallButton();
 });
 
@@ -7266,6 +7278,11 @@ window.addEventListener('appinstalled', () => {
 });
 
 function showInstallButton() {
+  // Ne jamais afficher tant que le joueur n'est pas connecté/inscrit — pas au
+  // chargement de la landing/auth, seulement une fois entré dans l'app
+  // (appelé après chaque connexion réussie, cf. les 4 points d'entrée
+  // authentifiés plus haut dans le fichier).
+  if (document.getElementById('app').classList.contains('auth-mode')) return;
   // Ne pas afficher si déjà installé en mode standalone
   if (window.matchMedia('(display-mode: standalone)').matches) return;
   if (document.getElementById('install-banner')) return;
