@@ -7217,6 +7217,10 @@ function playTone(freq, dur, type = 'sine', vol = 0.28) {
   try {
     const ctx  = getAudioCtx();
     if (!ctx) return;
+    // Certains navigateurs (Chrome Android notamment) créent l'AudioContext
+    // à l'état "suspended" même à l'intérieur d'un vrai geste utilisateur —
+    // sans ce resume(), aucun son ne sort, sans la moindre erreur console.
+    if (ctx.state === 'suspended') ctx.resume();
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
