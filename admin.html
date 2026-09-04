@@ -2183,12 +2183,27 @@ function openChapterModal(chapterData) {
           <div class="form-group"><label>Icône du tampon</label>
             <input type="text" id="ch-stamp-icon" value="${c.stamp_icon || '🧭'}"
               placeholder="Ex : 🧭 🗺️ 🏆 🔍" style="font-size:20px;"/>
-            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Un emoji qui apparaîtra au centre du tampon</div>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Un emoji qui apparaîtra au centre du tampon (ignoré si une image de tampon est renseignée ci-dessous)</div>
           </div>
           <div class="form-group full"><label>Texte du tampon</label>
             <input type="text" id="ch-stamp-text" value="${c.stamp_text || 'Compagnon d\'Aventure'}"
               placeholder="Ex : Gardien des Secrets, Maître Explorateur..."/>
-            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Texte affiché dans le tampon à la fin du chapitre</div>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Texte affiché dans le tampon à la fin du chapitre (ignoré si une image de tampon est renseignée ci-dessous)</div>
+          </div>
+          <div class="form-group full"><label>Image du tampon <span class="label-hint">(remplace l'icône + texte ci-dessus si renseignée)</span></label>
+            <input type="hidden" id="ch-stamp-image-url" value="${c.stamp_image_url || ''}"/>
+            <div class="img-preview" id="stamp-preview" style="display:${c.stamp_image_url ? 'block' : 'none'};">
+              <img id="stamp-img" src="${c.stamp_image_url || ''}" alt="" style="height:130px;width:130px;object-fit:contain;background:repeating-conic-gradient(#e5e5e5 0% 25%,#fff 0% 50%) 50%/16px 16px;border-radius:50%;"/>
+              <button class="img-preview-remove" onclick="removeStampImage()">✕</button>
+            </div>
+            <div class="img-upload-zone" id="stamp-upload-zone" style="display:${c.stamp_image_url ? 'none' : 'flex'};">
+              <input type="file" accept="image/*" onchange="uploadStampImage(event)"/>
+              <div class="img-upload-icon">🎖️</div>
+              <div class="img-upload-label">
+                <strong>Clique pour choisir</strong> ton visuel de tampon
+                <span class="formats">PNG rond, fond transparent recommandé · Max 5 Mo</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2338,6 +2353,7 @@ async function saveChapter(chapterId) {
     is_published: document.getElementById('ch-published').value === 'true',
     stamp_icon: document.getElementById('ch-stamp-icon')?.value || '🧭',
     stamp_text: document.getElementById('ch-stamp-text')?.value || 'Compagnon d\'Aventure',
+    stamp_image_url: document.getElementById('ch-stamp-image-url')?.value || null,
     scenes: scenes
   };
 
@@ -2367,6 +2383,34 @@ async function editChapter(id) {
   if (chapters[0]) {
     openChapterModal(chapters[0]);
   }
+}
+
+// Upload de l'image du tampon : comme pour les scènes, l'URL est juste
+// stagée dans un champ caché + prévisualisée — la sauvegarde réelle en base
+// se fait au clic sur "Enregistrer" (saveChapter), pour fonctionner même sur
+// un chapitre pas encore créé (pas encore d'id).
+async function uploadStampImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
+  showToast('Upload en cours…');
+  try {
+    const url = await uploadImageToStorage(file, 'stamps');
+    document.getElementById('ch-stamp-image-url').value = url;
+    document.getElementById('stamp-img').src = url;
+    document.getElementById('stamp-preview').style.display = 'block';
+    document.getElementById('stamp-upload-zone').style.display = 'none';
+    showToast('Image du tampon uploadée ✓ (pense à Enregistrer)');
+  } catch (err) {
+    console.error('Erreur upload image tampon:', err);
+    showToast('Erreur : ' + err.message, true);
+  }
+}
+
+function removeStampImage() {
+  document.getElementById('ch-stamp-image-url').value = '';
+  document.getElementById('stamp-preview').style.display = 'none';
+  document.getElementById('stamp-upload-zone').style.display = 'flex';
 }
 
 async function deleteChapter(id) {

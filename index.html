@@ -1083,6 +1083,16 @@
     position: relative; transform: rotate(-12deg);
     box-shadow: 0 0 0 3px var(--terra), 0 0 0 8px rgba(196,98,45,0.2);
   }
+  /* Mode "image personnalisée" : on retire cercle/bordure/fond/icône/texte
+     par défaut, on garde uniquement .stamp-ink (l'ombre d'encre en dessous)
+     — le visuel du tampon vient entièrement de l'image uploadée. */
+  .stamp-circle.stamp-image-mode {
+    border: none; background: transparent; box-shadow: none;
+  }
+  .stamp-custom-img {
+    width: 100%; height: 100%; object-fit: contain; border-radius: 50%;
+    display: block;
+  }
   .stamp-circle-inner {
     position: absolute; inset: 8px; border-radius: 50%;
     border: 2px dashed rgba(196,98,45,0.5);
@@ -6952,6 +6962,7 @@ function startSceneChapter(chapter, introMode = false) {
     chapterTitle: chapter.title,
     stampIcon: chapter.stamp_icon || '🧭',
     stampText: chapter.stamp_text || 'Compagnon d\'Aventure',
+    stampImageUrl: chapter.stamp_image_url || '',
     introMode
   };
   document.getElementById('app').classList.add('chapter0-mode');
@@ -7138,18 +7149,28 @@ async function finishStoryChapterRead() {
   showChapterStamp({
     title: chapitre0State.chapterTitle || '',
     stamp_icon: chapitre0State.stampIcon,
-    stamp_text: chapitre0State.stampText
+    stamp_text: chapitre0State.stampText,
+    stamp_image_url: chapitre0State.stampImageUrl
   });
 }
 
 // Overlay "tampon" affiché à la fin d'un chapitre — un cachet qui s'écrase
-// sur le carnet, comme un tampon officiel posé sur du papier. Icône et texte
-// du tampon sont personnalisables par chapitre depuis l'admin (colonnes
-// flavia_chapters.stamp_icon / stamp_text).
+// sur le carnet, comme un tampon officiel posé sur du papier. Personnalisable
+// par chapitre depuis l'admin : soit icône + texte (par défaut), soit une
+// image uploadée qui remplace entièrement le rendu (flavia_chapters.stamp_icon
+// / stamp_text / stamp_image_url).
 function showChapterStamp(chapter) {
+  const stampImageUrl = chapter?.stamp_image_url || '';
   const stampIcon = chapter?.stamp_icon || '🧭';
   const stampText = chapter?.stamp_text || 'Compagnon d\'Aventure';
   const chapterTitle = chapter?.title || '';
+
+  const stampInnerHtml = stampImageUrl
+    ? `<img class="stamp-custom-img" src="${stampImageUrl}" alt="">`
+    : `<div class="stamp-circle-inner"></div>
+       <div style="font-size:48px;margin-bottom:4px;">${stampIcon}</div>
+       <div class="stamp-circle-text">${stampText}</div>
+       <div class="stamp-circle-arc">Récits d'Aventures</div>`;
 
   const overlay = document.createElement('div');
   overlay.id = 'chapter-stamp-overlay';
@@ -7158,11 +7179,8 @@ function showChapterStamp(chapter) {
     <div class="stamp-popup">
       <div class="stamp-popup-label">Chapitre terminé !</div>
       <div class="stamp-container">
-        <div class="stamp-circle">
-          <div class="stamp-circle-inner"></div>
-          <div style="font-size:48px;margin-bottom:4px;">${stampIcon}</div>
-          <div class="stamp-circle-text">${stampText}</div>
-          <div class="stamp-circle-arc">Récits d'Aventures</div>
+        <div class="stamp-circle${stampImageUrl ? ' stamp-image-mode' : ''}">
+          ${stampInnerHtml}
         </div>
         <div class="stamp-ink"></div>
         ${chapterTitle ? `<div class="stamp-chapter-title">${chapterTitle}</div>` : ''}
