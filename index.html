@@ -1052,6 +1052,7 @@
     color: var(--text-dark); cursor: pointer; font-family: inherit;
   }
   .adv-nb-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+  .adv-nb-choice-btn.error { border-color: #EF4444; background: #FEF2F2; }
   .adv-nb-freetext { display: none; margin-top: 14px; }
 
   /* ── TAMPON DE FIN DE CHAPITRE ──
@@ -3718,11 +3719,33 @@ function renderEnigmeMode() {
   step.choices = choices;
   console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
 
-  // Étape DÉCISION — afficher les choix (choix multiple qui change la suite du
-  // parcours via handleChoice()/goToNextStep() — logique de branchement inchangée)
-  if (step.step_type === 'decision' && step.choices && step.choices.length > 0) {
+  // Étape CONTINUER — pas d'énigme, juste un bouton (texte personnalisable côté admin)
+  // pour passer à la suite, sans aucune saisie ni bonne/mauvaise réponse.
+  if (step.step_type === 'continue') {
+    document.getElementById('mode-enigme').innerHTML = `
+      <div class="adv-nb-wrap">
+        ${advNbImageHtml(step.image_url)}
+        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+          <div class="adv-nb-text" id="adv-nb-text"></div>
+          <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>
+        </div>
+      </div>`;
+    showMode('enigme');
+    typewriterAdvNb(step.enigme || '', {
+      hasInteraction: false,
+      onRevealed: () => { const btn = document.getElementById('adv-nb-continue-btn'); if (btn) btn.style.display = 'block'; }
+    });
+    saveCurrentProgress();
+    return;
+  }
+
+  // Étapes DÉCISION / QUIZ — afficher les choix en boutons. Décision : n'importe quel
+  // choix fait avancer (juste vers une suite différente). Quiz : seul le choix marqué
+  // is_correct fait avancer ; un mauvais choix affiche error_message et laisse réessayer
+  // (géré dans handleChoice()).
+  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
     const choicesHtml = step.choices.map((c, i) => `
-      <button class="adv-nb-choice-btn" onclick="handleChoice(${i})">
+      <button class="adv-nb-choice-btn" id="adv-nb-choice-${i}" onclick="handleChoice(${i})">
         <span style="display:inline-flex;min-width:26px;height:26px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--terra);margin-right:9px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
       </button>`).join('');
 
@@ -3732,6 +3755,7 @@ function renderEnigmeMode() {
         <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
           <div class="adv-nb-text" id="adv-nb-text"></div>
           <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
+          <div class="error-msg" id="quiz-error-msg" style="display:none;"></div>
         </div>
       </div>`;
     showMode('enigme');
@@ -3743,8 +3767,8 @@ function renderEnigmeMode() {
     return;
   }
 
-  // Étape STANDARD — champ texte libre (une réponse, comme une date ou un mot,
-  // validée par checkAnswer() — logique de validation inchangée)
+  // Étape TEXTE LIBRE (et repli legacy) — champ texte libre (une réponse, comme une date
+  // ou un mot, validée par checkAnswer() — logique de validation inchangée)
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
       ${advNbImageHtml(step.image_url)}
@@ -4294,7 +4318,7 @@ function goToNextStep(choiceIndex) {
   const step = currentStep();
   if (!step) return;
 
-  if (step.step_type === 'decision' && step.choices && choiceIndex !== undefined) {
+  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && choiceIndex !== undefined) {
     // Parsing défensif : au cas où choices n'aurait pas déjà été normalisé en tableau
     let choices = step.choices;
     if (typeof choices === 'string') {
@@ -4355,6 +4379,25 @@ function handleChoice(choiceIndex) {
   }
 
   console.log('handleChoice: steps disponibles', currentAdv?.steps?.map(s => ({ order: s.order_num, title: s.title, id: s.id })));
+
+  // Mode QUIZ — un choix qui n'est pas la bonne réponse affiche le message d'erreur
+  // et laisse le joueur réessayer (ne fait pas avancer, contrairement au mode décision
+  // où n'importe quel choix mène simplement à une suite différente).
+  if (step.step_type === 'quiz' && !choice.is_correct) {
+    vibrateFeedback([100, 50, 100]);
+    soundError();
+    const btn = document.getElementById('adv-nb-choice-' + choiceIndex);
+    if (btn) {
+      btn.classList.add('error');
+      setTimeout(() => btn.classList.remove('error'), 1200);
+    }
+    const errEl = document.getElementById('quiz-error-msg');
+    if (errEl) {
+      errEl.textContent = choice.error_message || 'Pas tout à fait… essaie une autre réponse !';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
 
   // Animation boutons
   const buttons = document.querySelectorAll('#mode-enigme button[onclick^="handleChoice"]');

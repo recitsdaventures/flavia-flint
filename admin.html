@@ -1049,97 +1049,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
       <hr class="form-separator"/>
 
-      <!-- STORYTELLING INTRO -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-          <span style="font-size:20px;">🎬</span> Storytelling de l'aventure
-        </div>
-
-        <!-- INTRO -->
-        <div class="story-block">
-          <div class="story-block-header">
-            <div class="story-block-icon intro">🧭</div>
-            <div>
-              <div class="story-block-title">Introduction — Flavia présente la mission</div>
-              <div class="story-block-sub">Affiché avant le début de l'aventure, quand le joueur choisit cette chasse</div>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label style="font-size:12px;">Message de Flavia <span class="label-hint">(accroche de la mission)</span></label>
-                <textarea id="f-intro-text" rows="4" placeholder="Ex : Aventurier ! J'ai besoin de ton aide. Une carte mystérieuse vient d'apparaître sur mon bureau… L'Obscura a caché quelque chose dans ta ville et toi seul peux le trouver !"
-                  oninput="updatePreview('intro')"></textarea>
-              </div>
-              <div class="flavia-preview-label">Aperçu bulle joueur :</div>
-              <div class="flavia-preview">
-                <div class="flavia-bubble-avatar">🧭</div>
-                <div class="flavia-bubble" id="f-intro-preview" style="font-size:12px;opacity:0.7;font-style:italic;">Le texte apparaîtra ici…</div>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image d'illustration <span class="label-hint">(optionnel)</span></label>
-              <div class="img-preview" id="intro-img-preview">
-                <img id="intro-img-tag" src="" alt=""/>
-                <button class="img-preview-remove" onclick="removeImg('intro')">✕</button>
-              </div>
-              <div class="img-upload-zone" id="intro-upload-zone">
-                <input type="file" accept="image/*" onchange="handleImg(event,'intro')"/>
-                <div class="img-upload-icon">🖼️</div>
-                <div class="img-upload-label">
-                  <strong>Clique pour choisir</strong> ou glisse une image
-                  <span class="formats">JPG, PNG, WebP · Max 5 Mo</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- OUTRO -->
-        <div class="story-block">
-          <div class="story-block-header">
-            <div class="story-block-icon outro">🏆</div>
-            <div>
-              <div class="story-block-title">Conclusion — Fin de l'aventure</div>
-              <div class="story-block-sub">Affiché après la dernière étape, quand le joueur a terminé la chasse</div>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label style="font-size:12px;">Message final de Flavia</label>
-                <textarea id="f-outro-text" rows="4" placeholder="Ex : Incroyable ! Tu as réussi à percer le secret de l'Obscura. Tu es maintenant un véritable aventurier. Jusqu'à notre prochaine mission !"
-                  oninput="updatePreview('outro')"></textarea>
-              </div>
-              <div class="flavia-preview-label">Aperçu bulle joueur :</div>
-              <div class="flavia-preview">
-                <div class="flavia-bubble-avatar">🧭</div>
-                <div class="flavia-bubble" id="f-outro-preview" style="font-size:12px;opacity:0.7;font-style:italic;">Le texte apparaîtra ici…</div>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image de fin <span class="label-hint">(optionnel)</span></label>
-              <div class="img-preview" id="outro-img-preview">
-                <img id="outro-img-tag" src="" alt=""/>
-                <button class="img-preview-remove" onclick="removeImg('outro')">✕</button>
-              </div>
-              <div class="img-upload-zone" id="outro-upload-zone">
-                <input type="file" accept="image/*" onchange="handleImg(event,'outro')"/>
-                <div class="img-upload-icon">🖼️</div>
-                <div class="img-upload-label">
-                  <strong>Clique pour choisir</strong> ou glisse une image
-                  <span class="formats">JPG, PNG, WebP · Max 5 Mo</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <hr class="form-separator"/>
-
       <!-- ÉTAPES -->
       <div class="steps-section">
         <div class="steps-header">
@@ -1224,17 +1133,6 @@ let openStepUid = null;
 let uidCounter = 0;
 let lastOrderToUidMap = {};
 let lastUidToOrderMap = {};
-
-// ── PREVIEWS STORYTELLING ──
-function updatePreview(type) {
-  const text = document.getElementById('f-'+type+'-text').value.trim();
-  const el = document.getElementById('f-'+type+'-preview');
-  if (el) {
-    el.textContent = text || 'Le texte apparaîtra ici…';
-    el.style.opacity = text ? '1' : '0.7';
-    el.style.fontStyle = text ? 'normal' : 'italic';
-  }
-}
 
 // ── NAVIGATION ──
 function showPage(name, btn) {
@@ -3386,8 +3284,6 @@ function openModal(id) {
     document.getElementById('f-diff').value = adv.difficulty || 'Facile';
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
-    document.getElementById('f-intro-text').value = adv.intro_text || '';
-    document.getElementById('f-outro-text').value = adv.outro_text || '';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
     document.getElementById('f-box-solution').value = adv.box_solution || '';
     document.getElementById('f-badge-name').value = adv.badge_name || '';
@@ -3410,7 +3306,6 @@ function openModal(id) {
       document.getElementById('f-global-timer-fail').value = '';
     }
     generateQRForAdventure(adv.id);
-    updatePreview('intro'); updatePreview('outro');
     // Cover
     if (adv.cover_image_url) {
       document.getElementById('cover-img-tag').src = adv.cover_image_url;
@@ -3418,22 +3313,6 @@ function openModal(id) {
       document.getElementById('cover-upload-zone').style.display = 'none';
     } else {
       removeImg('cover');
-    }
-    // Intro image
-    if (adv.intro_image_url) {
-      document.getElementById('intro-img-tag').src = adv.intro_image_url;
-      document.getElementById('intro-img-preview').style.display = 'block';
-      document.getElementById('intro-upload-zone').style.display = 'none';
-    } else {
-      removeImg('intro');
-    }
-    // Outro image
-    if (adv.outro_image_url) {
-      document.getElementById('outro-img-tag').src = adv.outro_image_url;
-      document.getElementById('outro-img-preview').style.display = 'block';
-      document.getElementById('outro-upload-zone').style.display = 'none';
-    } else {
-      removeImg('outro');
     }
     // Image du badge
     if (adv.badge_image_url) {
@@ -3448,11 +3327,10 @@ function openModal(id) {
     document.getElementById('f-global-timer-fail').value = adv.timer_fail_step_order ? (lastOrderToUidMap[adv.timer_fail_step_order] || '') : '';
   } else {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
-    ['f-title','f-desc','f-location','f-duration','f-intro-text','f-outro-text'].forEach(id => document.getElementById(id).value = '');
+    ['f-title','f-desc','f-location','f-duration'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-diff').value = 'Facile';
     document.getElementById('f-age').value = '5–12 ans';
     document.getElementById('f-status').value = 'draft';
-    updatePreview('intro'); updatePreview('outro');
     resetAllImageFields();
     document.getElementById('f-box-hint').value = '';
     document.getElementById('f-box-solution').value = '';
@@ -3531,7 +3409,8 @@ function newStepObj() {
   return {
     uid: newUid(),
     title: '', lat: null, lng: null, radius_meters: 20,
-    story_text: '', enigme: '', answer: '', hint: '',
+    interaction_type: 'free_text', continue_label: '',
+    enigme: '', answer: '', hint: '',
     image_url: '', _pendingImgFile: null,
     has_step_timer: false, step_timer_seconds: null, step_timer_visible: true, timer_fail_target_uid: null,
     transitions: []
@@ -3552,7 +3431,7 @@ function loadStepsFromAdventure(dbSteps) {
     obj.lat = s.lat ?? null;
     obj.lng = s.lng ?? null;
     obj.radius_meters = s.radius_meters ?? 20;
-    obj.story_text = s.story_text || '';
+    obj.continue_label = s.continue_label || '';
     obj.enigme = s.enigme || '';
     obj.answer = s.answer || '';
     obj.hint = s.hint || '';
@@ -3570,9 +3449,22 @@ function loadStepsFromAdventure(dbSteps) {
     orderToUid[s.order_num] = obj.uid;
   });
 
-  // Reconstruit les transitions : décision → choix explicites ; standard → lien implicite order_num+1
+  // Reconstruit les transitions : décision/quiz → choix explicites ; sinon → lien implicite order_num+1.
+  // Déduit aussi interaction_type pour les anciennes étapes (pas encore de valeur explicite en base) :
+  // 'continue'/'free_text'/'quiz'/'decision' sont utilisés directement s'ils sont déjà présents (nouveau
+  // format), sinon on retombe sur une heuristique à partir de step_type/answer/choices (ancien format).
+  const EXPLICIT_TYPES = ['continue', 'free_text', 'quiz', 'decision'];
   scenarioSteps.forEach(obj => {
-    if (obj._legacyStepType === 'decision' && obj._legacyChoices.length > 0) {
+    if (EXPLICIT_TYPES.includes(obj._legacyStepType)) {
+      obj.interaction_type = obj._legacyStepType;
+    } else if (obj._legacyStepType === 'decision' && obj._legacyChoices.length > 0) {
+      const looksLikeQuiz = obj._legacyChoices.some(c => c.is_correct || c.error_message);
+      obj.interaction_type = looksLikeQuiz ? 'quiz' : 'decision';
+    } else {
+      obj.interaction_type = obj.answer ? 'free_text' : 'continue';
+    }
+
+    if ((obj.interaction_type === 'quiz' || obj.interaction_type === 'decision') && obj._legacyChoices.length > 0) {
       obj.transitions = obj._legacyChoices.map(c => ({
         label: c.label || '',
         target_uid: orderToUid[c.next_step_order] || null,
@@ -3621,7 +3513,7 @@ function computeTree() {
 }
 
 function stepSummary(step) {
-  const txt = (step.title || step.story_text || '').trim();
+  const txt = (step.title || step.enigme || '').trim();
   return txt ? (txt.slice(0, 46) + (txt.length > 46 ? '…' : '')) : 'Étape vide';
 }
 
@@ -3646,16 +3538,18 @@ function renderOutline() {
   if (scenarioSteps.length === 0) { updateGlobalTimerFailSelect(); return; }
 
   const { ordered, orphans } = computeTree();
+  const TYPE_ICONS = { continue: '➡️', free_text: '✏️', quiz: '🔘', decision: '🔀' };
   const rowHtml = (item) => {
     const { step, label, depth } = item;
     const nTrans = step.transitions.filter(t => t.target_uid).length;
     const rowClass = nTrans >= 2 ? 'branch' : (nTrans === 0 ? 'endpoint' : '');
     const tag = nTrans >= 2 ? `<span class="outline-tag branch">🔀 embranchement</span>`
               : nTrans === 0 ? `<span class="outline-tag endpoint">🏁 fin</span>` : '';
+    const typeIcon = TYPE_ICONS[step.interaction_type] || '';
     return `
       <div class="outline-row ${rowClass}" style="padding-left:${10 + depth * 22}px;" onclick="openStepPanel('${step.uid}')">
         <span class="outline-id">${label}</span>
-        <span class="outline-summary ${(step.title || step.story_text) ? '' : 'empty'}">${escapeHtml(stepSummary(step))}</span>
+        <span class="outline-summary ${(step.title || step.enigme) ? '' : 'empty'}">${typeIcon} ${escapeHtml(stepSummary(step))}</span>
         ${tag}
         <button type="button" class="outline-branch-btn" onclick="event.stopPropagation();addBranchQuick('${step.uid}')">+ embranchement</button>
       </div>`;
@@ -3692,6 +3586,12 @@ function addStepGlobal() {
 function addBranch(parentUid) {
   const parent = scenarioSteps.find(s => s.uid === parentUid);
   if (!parent) return null;
+  // Un vrai embranchement (2e transition) n'a de sens que pour les types quiz/décision
+  // (seuls affichés en boutons de choix dans l'app) — on bascule automatiquement le
+  // type de l'étape si elle était en "continuer"/"texte libre".
+  if (parent.transitions.length >= 1 && parent.interaction_type !== 'quiz' && parent.interaction_type !== 'decision') {
+    parent.interaction_type = 'decision';
+  }
   const child = newStepObj();
   scenarioSteps.push(child);
   parent.transitions.push({ label: '', target_uid: child.uid, is_correct: false, error_message: null });
@@ -3721,6 +3621,8 @@ function applyStarterTemplate(kind) {
     const e1 = newStepObj(), e2 = newStepObj(), e2a = newStepObj(), e2b = newStepObj(), e3 = newStepObj();
     e1.title = 'Départ';
     e2.title = 'Un choix à faire';
+    e2.interaction_type = 'decision';
+    e2.enigme = 'Quel chemin choisis-tu ?';
     e2a.title = 'Première piste';
     e2b.title = 'Deuxième piste';
     e3.title = 'Les deux pistes se rejoignent ici';
@@ -3754,7 +3656,8 @@ function openStepPanel(uid) {
   document.getElementById('panel-lng').value = step.lng ?? '';
   document.getElementById('panel-radius').value = step.radius_meters ?? 20;
   document.getElementById('panel-title').value = step.title || '';
-  document.getElementById('panel-story').value = step.story_text || '';
+  document.getElementById('panel-interaction-type').value = step.interaction_type || 'free_text';
+  document.getElementById('panel-continue-label').value = step.continue_label || '';
   document.getElementById('panel-enigme').value = step.enigme || '';
   document.getElementById('panel-answer').value = step.answer || '';
   document.getElementById('panel-hint').value = step.hint || '';
@@ -3773,7 +3676,9 @@ function openStepPanel(uid) {
     document.getElementById('panel-upload-zone').style.display = 'block';
   }
 
+  applyInteractionTypeVisibility(step.interaction_type || 'free_text');
   renderTransitionsInPanel(step);
+  populateSingleNextSelect(step);
   onLocationsCountChange();
   document.getElementById('step-panel-overlay').classList.add('open');
 }
@@ -3786,6 +3691,15 @@ function closeStepPanel() {
 
 function renderPanelBody() {
   return `
+    <div class="step-section-label">🎯 Type d'étape</div>
+    <div class="form-group" style="margin:0 0 14px;">
+      <select id="panel-interaction-type" onchange="onInteractionTypeChange()">
+        <option value="continue">➡️ Bouton "Continuer" (texte personnalisable)</option>
+        <option value="free_text">✏️ Texte libre (le joueur tape une réponse)</option>
+        <option value="quiz">🔘 Réponses multiples (quiz, une bonne réponse)</option>
+        <option value="decision">🔀 Réponses décisionnelles (le choix change la suite)</option>
+      </select>
+    </div>
     <div class="step-gps-section" id="panel-gps-section">
       <div class="step-section-label">📍 Localisation GPS</div>
       <div class="gps-grid">
@@ -3807,11 +3721,6 @@ function renderPanelBody() {
       <label style="font-size:12px;">Nom du lieu</label>
       <input type="text" id="panel-title" placeholder="Ex : La fontaine du village" oninput="syncPanelToStep()"/>
     </div>
-    <div class="step-section-label">💬 Storytelling de Flavia</div>
-    <div class="form-group" style="margin:0;">
-      <label style="font-size:12px;">Message de Flavia</label>
-      <textarea id="panel-story" rows="4" placeholder="Ce que Flavia dit à l'arrivée…" oninput="syncPanelToStep()"></textarea>
-    </div>
     <div style="margin:10px 0;">
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Image du lieu</label>
       <div class="img-preview" id="panel-img-preview">
@@ -3824,20 +3733,47 @@ function renderPanelBody() {
         <div class="img-upload-label"><strong>Clique pour choisir</strong><span class="formats">JPG, PNG, WebP · Max 5 Mo</span></div>
       </div>
     </div>
-    <div class="step-section-label">🔍 Énigme</div>
-    <div class="form-group" style="margin:0 0 10px;">
-      <label style="font-size:12px;">Texte de l'énigme</label>
-      <textarea id="panel-enigme" rows="2" placeholder="L'énigme posée au joueur…" oninput="syncPanelToStep()"></textarea>
+
+    <div id="panel-type-continue">
+      <div class="step-section-label">➡️ Bouton</div>
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;">Texte du bouton</label>
+        <input type="text" id="panel-continue-label" placeholder="Continuer →" oninput="syncPanelToStep()"/>
+      </div>
     </div>
-    <div class="form-group" style="margin:0 0 10px;">
-      <label style="font-size:12px;">Réponse attendue</label>
-      <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
+
+    <div id="panel-enigme-wrap">
+      <div class="step-section-label" id="panel-enigme-label">🔍 Énigme</div>
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;" id="panel-enigme-sublabel">Texte de l'énigme</label>
+        <textarea id="panel-enigme" rows="2" placeholder="L'énigme posée au joueur…" oninput="syncPanelToStep()"></textarea>
+      </div>
     </div>
-    <div class="form-group" style="margin:0;">
-      <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
-      <textarea id="panel-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village" oninput="syncPanelToStep()"></textarea>
-      <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
+    <div id="panel-type-freetext">
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;">Réponse attendue</label>
+        <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
+        <textarea id="panel-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village" oninput="syncPanelToStep()"></textarea>
+        <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
+      </div>
     </div>
+
+    <div id="panel-single-next-wrap">
+      <div class="step-section-label">➡️ Étape suivante</div>
+      <div class="form-group" style="margin:0;">
+        <select id="panel-next-step-select" onchange="updateSingleNextStep(this.value)"></select>
+      </div>
+    </div>
+
+    <div id="panel-choices-wrap">
+      <div class="step-section-label">🔀 Réponses</div>
+      <div id="panel-transitions-list"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addBranchFromPanel()" style="margin-top:4px;">+ Ajouter une réponse</button>
+    </div>
+
     <div class="step-section-label">⏱️ Timer de cette étape</div>
     <div style="margin-bottom:10px;">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
@@ -3864,10 +3800,6 @@ function renderPanelBody() {
         </div>
       </div>
     </div>
-    <div class="step-section-label">🔀 Embranchement</div>
-    <div style="font-size:12px;color:#6B7280;margin-bottom:10px;">Chaque transition mène à une autre étape. Une seule = étape suivante classique. Plusieurs = le joueur choisit son chemin.</div>
-    <div id="panel-transitions-list"></div>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="addBranchFromPanel()" style="margin-top:4px;">+ Ajouter un embranchement</button>
   `;
 }
 
@@ -3875,6 +3807,54 @@ function togglePanelTimer() {
   const checked = document.getElementById('panel-has-timer').checked;
   document.getElementById('panel-timer-options').style.display = checked ? 'block' : 'none';
   syncPanelToStep();
+}
+
+// ── TYPE D'ÉTAPE : bascule l'affichage des blocs pertinents selon le type choisi ──
+const ENIGME_LABELS = {
+  free_text: 'Texte de l\'énigme',
+  quiz: 'Question posée au joueur',
+  decision: 'Texte affiché avant le choix'
+};
+
+function applyInteractionTypeVisibility(type) {
+  document.getElementById('panel-type-continue').style.display = type === 'continue' ? 'block' : 'none';
+  document.getElementById('panel-enigme-wrap').style.display = type === 'continue' ? 'none' : 'block';
+  document.getElementById('panel-type-freetext').style.display = type === 'free_text' ? 'block' : 'none';
+  document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text') ? 'block' : 'none';
+  document.getElementById('panel-choices-wrap').style.display = (type === 'quiz' || type === 'decision') ? 'block' : 'none';
+  const enigmeLabel = document.getElementById('panel-enigme-sublabel');
+  if (enigmeLabel) enigmeLabel.textContent = ENIGME_LABELS[type] || 'Texte de l\'énigme';
+}
+
+function onInteractionTypeChange() {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  const type = document.getElementById('panel-interaction-type').value;
+  step.interaction_type = type;
+  applyInteractionTypeVisibility(type);
+  if (type === 'continue' || type === 'free_text') {
+    // Ces types ne branchent jamais : au plus une transition.
+    if (step.transitions.length > 1) step.transitions = step.transitions.slice(0, 1);
+    populateSingleNextSelect(step);
+  } else {
+    renderTransitionsInPanel(step);
+  }
+  renderOutline();
+}
+
+// ── ÉTAPE SUIVANTE (types sans embranchement : continue / texte libre) ──
+function populateSingleNextSelect(step) {
+  const sel = document.getElementById('panel-next-step-select');
+  if (!sel) return;
+  const currentTarget = step.transitions[0]?.target_uid || null;
+  populateStepTargetSelect(sel, currentTarget, step.uid);
+}
+
+function updateSingleNextStep(targetUid) {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  step.transitions = targetUid ? [{ label: '', target_uid: targetUid, is_correct: false, error_message: null }] : [];
+  renderOutline();
 }
 
 function handleStepImgPanel(event) {
@@ -3920,7 +3900,7 @@ function syncPanelToStep() {
   step.lng = parseFloat(document.getElementById('panel-lng').value) || null;
   step.radius_meters = parseInt(document.getElementById('panel-radius').value) || 20;
   step.title = document.getElementById('panel-title').value;
-  step.story_text = document.getElementById('panel-story').value;
+  step.continue_label = document.getElementById('panel-continue-label')?.value || '';
   step.enigme = document.getElementById('panel-enigme').value;
   step.answer = document.getElementById('panel-answer').value;
   step.hint = document.getElementById('panel-hint').value;
@@ -3936,30 +3916,33 @@ function syncPanelToStep() {
 function renderTransitionsInPanel(step) {
   const list = document.getElementById('panel-transitions-list');
   if (!list) return;
+  const isQuiz = step.interaction_type === 'quiz';
   if (step.transitions.length === 0) {
-    list.innerHTML = `<div style="font-size:12px;color:#6B7280;margin-bottom:8px;">Aucune transition : cette étape termine le scénario (ou une branche).</div>`;
+    list.innerHTML = `<div style="font-size:12px;color:#6B7280;margin-bottom:8px;">Aucune réponse pour l'instant — ajoute-en au moins deux.</div>`;
     return;
   }
-  const requireLabel = step.transitions.length >= 2;
+  // Types quiz/décision : les réponses s'affichent toujours comme des boutons dans
+  // l'app, le texte du choix est donc toujours obligatoire (pas de repli linéaire).
   list.innerHTML = step.transitions.map((t, i) => `
     <div class="transition-row">
       <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
-        <input type="text" id="transition-label-${i}" placeholder="${requireLabel ? 'Texte du choix (obligatoire) ex: Fouiller les ruines' : 'Texte du choix (optionnel si linéaire)'}"
-          value="${(t.label||'').replace(/"/g,'&quot;')}" class="${requireLabel && !t.label ? 'req-missing' : ''}"
+        <input type="text" id="transition-label-${i}" placeholder="Texte de la réponse (obligatoire) ex: Fouiller les ruines"
+          value="${(t.label||'').replace(/"/g,'&quot;')}" class="${!t.label ? 'req-missing' : ''}"
           oninput="updateTransition(${i}, 'label', this.value)"/>
         <button type="button" onclick="removeTransition(${i})" style="background:#FEF2F2;border:none;border-radius:6px;color:#DC2626;padding:8px;cursor:pointer;">🗑️</button>
       </div>
       <div style="margin-top:6px;">
         <select id="transition-target-${i}" onchange="updateTransition(${i}, 'target_uid', this.value)" style="font-size:12px;"></select>
       </div>
+      ${isQuiz ? `
       <input type="text" id="transition-error-${i}" placeholder="Message si mauvaise réponse (optionnel)"
         value="${(t.error_message||'').replace(/"/g,'&quot;')}"
         oninput="updateTransition(${i}, 'error_message', this.value)"
         style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid #D4C5A9;border-radius:6px;font-size:11px;box-sizing:border-box;"/>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px;color:#6B7280;">
         <input type="checkbox" ${t.is_correct ? 'checked' : ''} onchange="updateTransition(${i}, 'is_correct', this.checked)"/>
-        Mode quiz — c'est la bonne réponse
-      </label>
+        C'est la bonne réponse
+      </label>` : ''}
     </div>
   `).join('');
   step.transitions.forEach((t, i) => {
@@ -4009,8 +3992,9 @@ function computeFinalSteps() {
 
   for (const { step, label } of ordered) {
     const targets = step.transitions.filter(t => t.target_uid);
-    if (targets.length >= 2 && targets.some(t => !(t.label || '').trim())) {
-      throw new Error(`L'étape ${label} a un embranchement dont le texte de choix est vide.`);
+    const isChoiceType = step.interaction_type === 'quiz' || step.interaction_type === 'decision';
+    if (isChoiceType && targets.length > 0 && targets.some(t => !(t.label || '').trim())) {
+      throw new Error(`L'étape ${label} a une réponse dont le texte est vide.`);
     }
   }
 
@@ -4030,18 +4014,19 @@ function computeFinalSteps() {
   return finalList.map((o, i) => {
     const step = o.step;
     const transitions = step.transitions.filter(t => t.target_uid);
-    const stepType = transitions.length >= 2 ? 'decision' : 'standard';
+    const stepType = step.interaction_type || 'free_text';
+    const isChoiceType = stepType === 'quiz' || stepType === 'decision';
     return {
       order_num: i + 1,
       title: step.title || '',
       lat: step.lat, lng: step.lng, radius_meters: step.radius_meters || 20,
-      story_text: step.story_text || '',
+      continue_label: stepType === 'continue' ? (step.continue_label || '') : '',
       enigme: step.enigme || '',
-      answer: step.answer || '',
-      hint: step.hint || '',
+      answer: stepType === 'free_text' ? (step.answer || '') : '',
+      hint: stepType === 'free_text' ? (step.hint || '') : '',
       step_type: stepType,
       is_endpoint: transitions.length === 0,
-      choices: stepType === 'decision'
+      choices: isChoiceType
         ? transitions.map(t => ({ label: t.label, next_step_order: uidToOrder[t.target_uid] || null, is_correct: !!t.is_correct, error_message: t.error_message || null }))
         : null,
       has_step_timer: step.has_step_timer || false,
@@ -4055,12 +4040,6 @@ function computeFinalSteps() {
   });
 }
 
-// ── PREVIEWS ──
-function updatePreview(type) {
-  const text = document.getElementById('f-'+type+'-text').value.trim();
-  const el = document.getElementById('f-'+type+'-preview');
-  if (el) { el.textContent = text || 'Le texte apparaîtra ici…'; el.style.opacity = text ? '1' : '0.7'; el.style.fontStyle = text ? 'normal' : 'italic'; }
-}
 // ── UPLOAD IMAGE VERS SUPABASE STORAGE ──
 async function uploadImageToStorage(file, folder) {
   const ext = file.name.split('.').pop();
@@ -4111,7 +4090,7 @@ function removeImg(type) {
 // utilisé à l'ouverture de "Nouvelle aventure" pour ne jamais laisser l'aperçu de
 // l'aventure précédemment éditée traîner à l'écran.
 function resetAllImageFields() {
-  ['intro', 'outro', 'cover', 'badge'].forEach(type => removeImg(type));
+  ['cover', 'badge'].forEach(type => removeImg(type));
   window._pendingImgs = {};
 }
 // ── SAUVEGARDER DANS SUPABASE ──
@@ -4136,8 +4115,6 @@ async function saveAdventure(asDraft) {
     difficulty:      document.getElementById('f-diff').value,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
-    intro_text:       document.getElementById('f-intro-text').value,
-    outro_text:       document.getElementById('f-outro-text').value,
     box_hint:         document.getElementById('f-box-hint').value,
     box_solution:     document.getElementById('f-box-solution').value,
     has_global_timer: document.getElementById('f-has-global-timer')?.checked || false,
@@ -4161,20 +4138,6 @@ async function saveAdventure(asDraft) {
   try {
     // ── Upload images globales si nouvelles ──
     const pending = window._pendingImgs || {};
-    if (pending.intro) {
-      btnSave.textContent = '⏳ Upload image intro…';
-      advData.intro_image_url = await uploadImageToStorage(pending.intro, 'intros');
-    } else {
-      const existing = document.getElementById('intro-img-tag')?.src;
-      if (existing && existing.startsWith('http')) advData.intro_image_url = existing;
-    }
-    if (pending.outro) {
-      btnSave.textContent = '⏳ Upload image outro…';
-      advData.outro_image_url = await uploadImageToStorage(pending.outro, 'outros');
-    } else {
-      const existing = document.getElementById('outro-img-tag')?.src;
-      if (existing && existing.startsWith('http')) advData.outro_image_url = existing;
-    }
     if (pending.cover) {
       btnSave.textContent = '⏳ Upload image couverture…';
       advData.cover_image_url = await uploadImageToStorage(pending.cover, 'covers');
@@ -4246,19 +4209,16 @@ function showToast(msg, isError = false) {
 
 // ── NOMBRE DE LIEUX : masque le GPS par étape quand l'aventure se joue en 1 seul lieu ──
 function onLocationsCountChange() {
-  const count = parseInt(document.getElementById('f-locations-count').value);
-  const isSingle = count === 1;
-
-  // Étapes : masquer/afficher la section GPS de chaque étape déjà rendue
+  // Les coordonnées GPS par étape restent toujours accessibles, quel que soit le
+  // nombre de lieux déclaré — sans elles, l'aventure n'a pas de point sur la carte
+  // publique (carte.html se base sur les coordonnées de la 1ère étape).
   document.querySelectorAll('.step-gps-section').forEach(el => {
-    el.style.display = isSingle ? 'none' : 'block';
+    el.style.display = 'block';
   });
-
-  // Message d'info + bloc GPS unique au niveau de l'aventure
   const infoEl = document.getElementById('single-location-info');
-  if (infoEl) infoEl.style.display = isSingle ? 'block' : 'none';
+  if (infoEl) infoEl.style.display = 'none';
   const gpsEl = document.getElementById('single-location-gps');
-  if (gpsEl) gpsEl.style.display = isSingle ? 'block' : 'none';
+  if (gpsEl) gpsEl.style.display = 'none';
 }
 
 function toggleGlobalTimer() {
