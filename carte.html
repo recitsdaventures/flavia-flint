@@ -89,11 +89,11 @@
     box-shadow: 0 6px 24px rgba(0,0,0,0.35);
   }
   .leaflet-popup-tip { background: var(--beige-light); border: 1.5px solid var(--gold); }
-  .leaflet-popup-content { margin: 12px 14px; min-width: 200px; }
+  .leaflet-popup-content { margin: 12px 14px; min-width: 240px; }
   .leaflet-popup-close-button { color: var(--green-mid) !important; }
 
   .popup-cover {
-    width: 100%; height: auto; max-height: 200px; object-fit: contain;
+    width: 100%; height: auto; max-height: 240px; object-fit: contain;
     border-radius: 10px; margin-bottom: 8px; display: block;
     background: var(--beige-mid);
   }
@@ -244,7 +244,7 @@
         const marker = L.circleMarker([firstStep.lat, firstStep.lng], {
           radius: 14, fillColor: '#E8A020', color: 'white', weight: 2.5, fillOpacity: 0.92
         }).addTo(map);
-        marker.bindPopup(buildAdventurePopup(adv), { maxWidth: 260, className: 'ff-popup' });
+        marker.bindPopup(buildAdventurePopup(adv), { maxWidth: 300, minWidth: 240, className: 'ff-popup' });
       });
 
       (books || []).forEach(book => {
@@ -252,7 +252,7 @@
         const marker = L.circleMarker([book.lat, book.lng], {
           radius: 14, fillColor: '#2D5A8E', color: 'white', weight: 2.5, fillOpacity: 0.92
         }).addTo(map);
-        marker.bindPopup(buildBookPopup(book), { maxWidth: 260, className: 'ff-popup' });
+        marker.bindPopup(buildBookPopup(book), { maxWidth: 300, minWidth: 240, className: 'ff-popup' });
       });
 
       document.getElementById('map-loading').style.display = 'none';
