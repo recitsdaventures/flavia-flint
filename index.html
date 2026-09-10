@@ -777,7 +777,7 @@
   .splash-progress-track { height: 3px; background: rgba(255,255,255,0.25); border-radius: 2px; overflow: hidden; }
   .splash-progress-fill  {
     height: 100%; width: 0%; background: var(--terra); border-radius: 2px;
-    animation: fill-splash 2.3s ease-out forwards;
+    animation: fill-splash 4.8s ease-out forwards;
   }
   @keyframes fill-splash { from { width: 0%; } to { width: 100%; } }
   .splash-loading { color: var(--beige-light); font-size: 12px; text-align: center; opacity: 0.85; letter-spacing: 0.3px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
@@ -6865,7 +6865,7 @@ function setRankTab(tab, btn) {
   setTimeout(() => {
     splash.classList.add('fade-out');
     setTimeout(() => splash.classList.add('hidden'), 420);
-  }, 2500);
+  }, 5000);
 })();
 // Arme un écouteur one-shot sur le tout premier tap du joueur (écrire son
 // pseudo, appuyer sur "Continuer sans compte", etc.) pour déclencher la
