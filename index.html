@@ -756,30 +756,31 @@
   #splash {
     position: absolute; inset: 0; z-index: 9999;
     background: var(--green-dark);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 24px;
     transition: opacity 0.4s ease;
     overflow: hidden;
   }
+  .splash-bg-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; z-index: 1; display: block;
+  }
   .splash-content {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    /* Positionné juste sous le tagline déjà intégré à l'image (logo + titre +
+       accroche font partie du visuel), pas centré sur tout l'écran. */
+    position: absolute; left: 0; right: 0; top: 47%; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
     width: 100%;
   }
   #splash.fade-out { opacity: 0; pointer-events: none; }
   #splash.hidden   { display: none; }
 
-  .splash-title      { color: white; font-size: 22px; font-weight: 800; text-align: center; line-height: 1.2; }
-  .splash-title span { color: var(--amber); }
-  .splash-sub        { color: rgba(255,255,255,0.45); font-size: 13px; text-align: center; margin-top: 6px; display: block; }
   .splash-progress-wrap  { width: 180px; }
-  .splash-progress-track { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden; }
+  .splash-progress-track { height: 3px; background: rgba(255,255,255,0.25); border-radius: 2px; overflow: hidden; }
   .splash-progress-fill  {
     height: 100%; width: 0%; background: var(--terra); border-radius: 2px;
     animation: fill-splash 2.3s ease-out forwards;
   }
   @keyframes fill-splash { from { width: 0%; } to { width: 100%; } }
-  .splash-loading { color: var(--beige-light); font-size: 12px; text-align: center; opacity: 0.65; letter-spacing: 0.3px; }
+  .splash-loading { color: var(--beige-light); font-size: 12px; text-align: center; opacity: 0.85; letter-spacing: 0.3px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
   /* ── NOTIFICATION "MESSAGE REÇU DE FLAVIA" ──
      Affichée après le splash, avant la cinématique du Chapitre 0, pour créer
      une attente façon notification push plutôt qu'un enchaînement brutal. */
@@ -1177,35 +1178,15 @@
   ═══════════════════════════════════ -->
   <div id="splash">
 
-    <!-- Contenu au-dessus de la forêt -->
+    <!-- Visuel plein écran : logo + titre + accroche déjà intégrés à l'image -->
+    <img src="splash-bg.webp" class="splash-bg-img" alt=""/>
+
     <div class="splash-content">
-      <img src="logo.png" style="height:50px;object-fit:contain;display:block;margin:0 auto;background:transparent;filter:brightness(0) invert(1);mix-blend-mode:screen;">
-
-      <svg width="80" height="80" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="30" cy="30" r="28" fill="#F5EDD8" stroke="#2D4A2D" stroke-width="2.5"/>
-        <text x="30" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="#2D4A2D" font-family="sans-serif">N</text>
-        <text x="30" y="53" text-anchor="middle" font-size="7" font-weight="700" fill="#2D4A2D" font-family="sans-serif">S</text>
-        <g transform="translate(30,30)">
-          <g class="compass-needle">
-            <polygon points="0,-19 3.5,0 0,3 -3.5,0" fill="#C4622D"/>
-            <polygon points="0,19 3.5,0 0,-3 -3.5,0" fill="#D4C5A9"/>
-          </g>
-          <circle r="3.5" fill="#2D4A2D"/>
-        </g>
-      </svg>
-
-      <div style="text-align:center;">
-        <div class="splash-title">Les Aventures de<br><span>Flavia Flint</span></div>
-        <div class="splash-sub">Chasse au trésor géolocalisée</div>
-      </div>
-
       <div class="splash-progress-wrap">
         <div class="splash-progress-track"><div class="splash-progress-fill"></div></div>
       </div>
       <div class="splash-loading">Chargement de l'aventure…</div>
     </div>
-
-    <!-- Décor forêt en bas -->
   </div>
 
 
