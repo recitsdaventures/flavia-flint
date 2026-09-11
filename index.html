@@ -606,35 +606,47 @@
     object-fit: cover; object-position: center top;
   }
   .home-greeting-name { font-size: 13px; color: rgba(255,255,255,0.50); }
-  /* Bouton "Commencer une aventure" à cheval entre le hero et le fond parchemin :
-     positionné en absolute par rapport à .home-content-panel (position:relative),
-     remonté au-dessus de la limite hero/panneau. Effet cuir épais/usé via texture
-     tuilée + jeu d'ombres internes/externes (relief) + rivets aux 4 coins en CSS. */
+  /* Bouton "Commencer une aventure" à cheval entre le hero et le fond parchemin,
+     façon écusson de cuir légèrement pivoté : positionné en absolute par rapport
+     à .home-content-panel (position:relative), remonté au-dessus de la limite
+     hero/panneau. Effet cuir épais/usé via texture tuilée + relief (ombres) +
+     bord irrégulier "déchiré" (clip-path, échelle en %, donc responsive) +
+     couture pointillée en retrait + rivets aux 4 coins, tout en CSS. */
   .btn-start-adventure {
     position: absolute; top: -28px; left: 16px; right: 16px; z-index: 5;
-    background: #5C3820 url('leather-tile.webp') repeat;
-    background-size: 220px 220px;
-    color: #F5EDD8; border: 2px solid rgba(30,15,5,0.55); border-radius: 16px;
+    transform: rotate(-1.5deg);
+    background:
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%),
+      #5C3820 url('leather-tile.webp') repeat;
+    background-size: 100% 100%, 220px 220px;
+    color: #F5EDD8; border: none;
+    clip-path: polygon(0.00% 15.00%, 2.50% 0.00%, 6.82% 3.00%, 11.14% 3.00%, 15.45% 2.00%, 19.77% 4.00%, 24.09% 2.00%, 28.41% 1.60%, 32.73% 5.00%, 37.05% 3.00%, 41.36% 1.20%, 45.68% 5.00%, 50.00% 1.60%, 54.32% 2.00%, 58.64% 4.00%, 62.95% 5.00%, 67.27% 3.00%, 71.59% 3.00%, 75.91% 5.00%, 80.23% 4.00%, 84.55% 2.00%, 88.86% 1.60%, 93.18% 5.00%, 97.50% 0.00%, 100.00% 15.00%, 99.50% 50.00%, 100.00% 85.00%, 97.50% 100.00%, 93.18% 95.00%, 88.86% 98.40%, 84.55% 99.20%, 80.23% 96.00%, 75.91% 98.00%, 71.59% 97.00%, 67.27% 98.80%, 62.95% 95.00%, 58.64% 96.00%, 54.32% 98.00%, 50.00% 96.00%, 45.68% 98.00%, 41.36% 97.00%, 37.05% 97.00%, 32.73% 95.00%, 28.41% 96.00%, 24.09% 99.20%, 19.77% 98.40%, 15.45% 95.00%, 11.14% 98.80%, 6.82% 98.80%, 2.50% 100.00%, 0.00% 85.00%, 0.20% 50.00%);
     padding: 18px 20px; font-size: 16px; font-weight: 800;
     text-transform: uppercase; letter-spacing: 0.9px; cursor: pointer;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     box-shadow:
       inset 0 2px 2px rgba(255,255,255,0.18),
-      inset 0 -5px 9px rgba(0,0,0,0.45),
-      0 10px 22px rgba(0,0,0,0.35),
-      0 2px 0 rgba(0,0,0,0.5);
-    transition: transform 0.1s, box-shadow 0.15s;
+      inset 0 -5px 9px rgba(0,0,0,0.45);
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
+    transition: transform 0.1s, filter 0.15s;
   }
-  .btn-start-adventure:active { transform: scale(0.97); }
+  .btn-start-adventure::before {
+    content: ''; position: absolute; inset: 7px;
+    background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');
+    background-size: 100% 100%; background-repeat: no-repeat;
+    pointer-events: none;
+  }
+  .btn-start-adventure:active { transform: rotate(-1.5deg) scale(0.97); }
   .btn-rivet {
-    position: absolute; width: 9px; height: 9px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #EFE1C2 0%, #A9895A 45%, #4A3319 100%);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.55);
+    position: absolute; width: 7px; height: 7px;
+    border-radius: 46% 54% 52% 48%;
+    background: radial-gradient(circle at 35% 30%, #6b5a3c 0%, #392c1a 45%, #0f0904 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.7);
   }
-  .btn-rivet.tl { top: 8px; left: 10px; }
-  .btn-rivet.tr { top: 8px; right: 10px; }
-  .btn-rivet.bl { bottom: 8px; left: 10px; }
-  .btn-rivet.br { bottom: 8px; right: 10px; }
+  .btn-rivet.tl { top: 12px; left: 15px; }
+  .btn-rivet.tr { top: 12px; right: 15px; }
+  .btn-rivet.bl { bottom: 12px; left: 15px; }
+  .btn-rivet.br { bottom: 12px; right: 15px; }
   .hero-tagline { font-size: 12px; color: #4A5A4A; font-style: italic; }
 
   /* Zone panel parchemin sous le hero — texture seamless qui se répète,
