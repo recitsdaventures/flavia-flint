@@ -1440,9 +1440,9 @@
         ">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <div>
-              📖 L'Histoire de Flavia Flint
+              <img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> L'Histoire de Flavia Flint
               <div id="compass-balance-home" style="font-size:12px;font-weight:400;opacity:0.8;margin-top:3px;">
-                🧭 Chargement...
+                <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Chargement...
               </div>
             </div>
             <span style="color:#E8A020;font-size:18px;font-weight:700;">→</span>
@@ -1622,9 +1622,9 @@
             <text x="54"  y="166" text-anchor="middle" font-size="24" font-weight="900" fill="#E8A020">2</text>
             <text x="110" y="147" text-anchor="middle" font-size="28" font-weight="900" fill="#E8A020">1</text>
             <text x="166" y="177" text-anchor="middle" font-size="20" font-weight="900" fill="#E8A020">3</text>
-            <text x="110" y="66"  text-anchor="middle" font-size="42">🥇</text>
-            <text x="54"  y="98"  text-anchor="middle" font-size="28">🥈</text>
-            <text x="166" y="115" text-anchor="middle" font-size="24">🥉</text>
+            <image href="icon-medal-1.webp" x="89"  y="32" width="42" height="42"/>
+            <image href="icon-medal-2.webp" x="40"  y="76" width="28" height="28"/>
+            <image href="icon-medal-3.webp" x="154" y="96" width="24" height="24"/>
           </svg>
         </div>
         <div class="tuto-title">Grimpe au classement</div>
@@ -1974,10 +1974,10 @@
       <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="
         background:rgba(255,255,255,0.1);border:none;border-radius:8px;
         color:#F5EDD8;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
-      <span style="color:#E8A020;font-weight:700;flex:1;">📖 Histoire de Flavia Flint</span>
+      <span style="color:#E8A020;font-weight:700;flex:1;"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Histoire de Flavia Flint</span>
       <div style="background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px;
         color:#E8A020;font-size:13px;font-weight:700;" id="compass-balance-story">
-        🧭 ...
+        <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> ...
       </div>
     </div>
     <!-- Contenu -->
@@ -2072,7 +2072,7 @@
   <div id="screen-book-detail" class="screen">
     <div style="background:#1A3A5C;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
       <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
-      <span style="color:white;font-weight:700;flex:1;">📖 Livre Professeur Flint</span>
+      <span style="color:white;font-weight:700;flex:1;"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livre Professeur Flint</span>
     </div>
     <div id="book-detail-content" style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
       <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
@@ -2090,7 +2090,7 @@
     <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
 
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:40px;margin-bottom:8px;">🧭</div>
+        <div style="font-size:40px;margin-bottom:8px;"><img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/></div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;">Comment s'est passée l'aventure ?</div>
         <div style="font-size:13px;color:#9CA3AF;margin-top:4px;">Prend 30 secondes pour nous dire !</div>
       </div>
@@ -2449,6 +2449,13 @@ function avatarImgTag(avatarId, alt) {
   return `<img src="${avatarImgSrc(avatarId)}" alt="${alt || ''}"/>`;
 }
 
+// Pictogrammes illustrés de l'app (boussole, livre, cadenas, médailles…)
+// Par défaut la taille suit le font-size du conteneur (1em), comme un emoji.
+function iconImg(name, sizePx) {
+  const dim = sizePx ? `${sizePx}px` : '1em';
+  return `<img src="icon-${name}.webp" alt="" style="width:${dim};height:${dim};object-fit:contain;vertical-align:-0.15em;display:inline-block;"/>`;
+}
+
 function selectAvatar(el) {
   document.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
@@ -2601,7 +2608,7 @@ async function signOut() {
   currentPlayer = null;
   adventures = [];
   const balanceHome = document.getElementById('compass-balance-home');
-  if (balanceHome) balanceHome.textContent = '🧭 Chargement...';
+  if (balanceHome) balanceHome.innerHTML = `${iconImg('compass')} Chargement...`;
   document.getElementById('app').classList.add('auth-mode');
   goToScreen('auth', null);
 }
@@ -2645,7 +2652,7 @@ function enterGuestMode() {
   document.getElementById('app').classList.remove('auth-mode');
   if (deferredPrompt) showInstallButton();
   const balanceHome = document.getElementById('compass-balance-home');
-  if (balanceHome) balanceHome.textContent = '🧭 Connecte-toi pour en gagner';
+  if (balanceHome) balanceHome.innerHTML = `${iconImg('compass')} Connecte-toi pour en gagner`;
   loadAdventures();
   goToScreen('home', document.getElementById('nav-home'));
   startGlobalGPS();
@@ -2979,7 +2986,7 @@ function renderProfessorBooksSection() {
   if (!books.length) { container.innerHTML = ''; return; }
   container.innerHTML = `
     <div class="home-section-new" style="padding-top:4px;">
-      <div class="home-section-label">📖 Livres Professeur Flint</div>
+      <div class="home-section-label"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livres Professeur Flint</div>
     </div>
     <div class="home-adv-list">
       ${books.map(b => {
@@ -3621,7 +3628,7 @@ function renderCompassMode() {
       <div class="bubble flavia">Rends-toi à : <strong>${step.title || 'le prochain lieu'}</strong>. Je te guide !</div>
     </div>
     <div class="compass-card">
-      <h3>🧭 Direction</h3>
+      <h3>${iconImg('compass')} Direction</h3>
       <svg width="110" height="110" viewBox="0 0 110 110">
         <circle cx="55" cy="55" r="52" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="1.5"/>
         <text x="55" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#2D4A2D">N</text>
@@ -4440,7 +4447,7 @@ function renderGuestGate(screenId) {
   if (!screen) return;
   screen.innerHTML = `
     <div class="guest-gate">
-      <div class="guest-gate-icon">🔒</div>
+      <div class="guest-gate-icon"><img src="icon-lock.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/></div>
       <div class="guest-gate-title">Connecte-toi pour accéder</div>
       <div class="guest-gate-sub">Crée un compte gratuit pour sauvegarder ta progression, voir ton profil et rejoindre le classement !</div>
       <button class="btn-guest-login" onclick="leaveGuestMode()">Se connecter / S'inscrire</button>
@@ -4662,12 +4669,12 @@ async function loadProfile() {
       <div style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);border-radius:14px;padding:14px 16px;margin:16px 16px 0;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Boussoles</div>
-          <div style="color:white;font-size:28px;font-weight:800;margin-top:2px;">🧭 ${compassBalance}</div>
+          <div style="color:white;font-size:28px;font-weight:800;margin-top:2px;">${iconImg('compass')} ${compassBalance}</div>
         </div>
         <div style="text-align:right;">
           <div style="color:rgba(255,255,255,0.7);font-size:12px;">+${COMPASS_PER_ADVENTURE} par aventure terminée</div>
           <button onclick="goToScreen('flavia-story',null)" style="margin-top:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:white;padding:5px 12px;font-size:12px;cursor:pointer;">
-            📖 Voir l'histoire →
+            ${iconImg('book')} Voir l'histoire →
           </button>
         </div>
       </div>`;
@@ -5560,13 +5567,9 @@ function getRankName(xp) {
 }
 
 function getRankIcon(xp) {
-  if (xp >= 2500) return '👑';
-  if (xp >= 1500) return '🏆';
-  if (xp >= 1000) return '🗝️';
-  if (xp >= 600)  return '🏹';
-  if (xp >= 300)  return '⚔️';
-  if (xp >= 100)  return '🧭';
-  return '🌱';
+  // Même pictogramme (médaille) pour tous les paliers de rang/titre —
+  // seul le nom du rang (getRankName) change selon l'XP.
+  return iconImg('medal-rank');
 }
 
 async function loadRanking(tab = 'general') {
@@ -5750,7 +5753,7 @@ async function loadFriendsScores(friendIds, userId) {
 
     listEl.innerHTML = players.map((p, i) => {
       const isMe = p.id === userId;
-      const medals = ['🥇','🥈','🥉'];
+      const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
       return `
         <div style="
           display:flex;align-items:center;gap:12px;
@@ -5864,7 +5867,7 @@ async function loadScenarioLeaderboard(adventureId) {
       return;
     }
 
-    const medals = ['🥇','🥈','🥉'];
+    const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
     listEl.innerHTML = completions.map((c, i) => {
       const mins = Math.floor((c.total_duration_seconds || 0) / 60);
       const secs = (c.total_duration_seconds || 0) % 60;
@@ -6060,7 +6063,7 @@ function renderRankingList(container, players, myId) {
 }
 
 function renderRankRow(player, isMe) {
-  const medals = ['🥇','🥈','🥉'];
+  const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
   const rankDisplay = player.rank <= 3 ? medals[player.rank - 1] : `#${player.rank}`;
   return `
     <div style="display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : 'white'};border:${isMe ? '2px solid var(--terra)' : '1px solid var(--beige-dark)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
@@ -6155,8 +6158,8 @@ function renderPodium(players) {
 function updateCompassBalanceDisplay(balance) {
   const home  = document.getElementById('compass-balance-home');
   const story = document.getElementById('compass-balance-story');
-  if (home)  home.textContent  = `🧭 ${balance} boussole${balance > 1 ? 's' : ''}`;
-  if (story) story.textContent = `🧭 ${balance}`;
+  if (home)  home.innerHTML  = `${iconImg('compass')} ${balance} boussole${balance > 1 ? 's' : ''}`;
+  if (story) story.innerHTML = `${iconImg('compass')} ${balance}`;
 }
 
 async function awardCompasses(userId, amount) {
@@ -6187,9 +6190,9 @@ async function loadFlaviaStory() {
   if (isGuest() || !currentPlayer?.id) {
     content.innerHTML = `
       <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:48px;margin-bottom:12px;">📖</div>
+        <div style="font-size:48px;margin-bottom:12px;">${iconImg('book')}</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">Connecte-toi pour accéder à l'histoire</div>
-        <div style="font-size:13px;color:#9CA3AF;margin-bottom:20px;">Termine des aventures pour gagner des 🧭 boussoles et débloquer les chapitres</div>
+        <div style="font-size:13px;color:#9CA3AF;margin-bottom:20px;">Termine des aventures pour gagner des ${iconImg('compass')} boussoles et débloquer les chapitres</div>
         <button onclick="goToScreen('auth',null)" style="background:#C4622D;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
       </div>`;
     return;
@@ -6225,7 +6228,7 @@ async function loadFlaviaStory() {
             border:2px solid ${hasBeenRead ? '#D4C5A9' : '#E8A020'};
             display:flex;align-items:center;gap:12px;
           ">
-            <span style="font-size:24px;">${hasBeenRead ? '✅' : '📖'}</span>
+            <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
               ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#9CA3AF;">Appuie pour relire</div>'}
@@ -6243,17 +6246,17 @@ async function loadFlaviaStory() {
           border:1px solid #E5D9C0;opacity:${canAfford ? '1' : '0.75'};
         ">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-            <span style="font-size:24px;">🔒</span>
+            <span style="font-size:24px;">${iconImg('lock')}</span>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:700;color:${canAfford ? '#1A2A1A' : '#9CA3AF'};">${ch.title}</div>
-              <div style="font-size:12px;color:#9CA3AF;">Coût : 🧭 ${ch.unlock_cost} boussoles</div>
+              <div style="font-size:12px;color:#9CA3AF;">Coût : ${iconImg('compass')} ${ch.unlock_cost} boussoles</div>
             </div>
           </div>
           ${canAfford
             ? `<button onclick="unlockChapter('${ch.id}', ${ch.unlock_cost})" style="
                 width:100%;background:#C4622D;color:white;border:none;
                 border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
-                🧭 Débloquer pour ${ch.unlock_cost} boussoles
+                ${iconImg('compass')} Débloquer pour ${ch.unlock_cost} boussoles
               </button>`
             : `<div style="text-align:center;font-size:12px;color:#C4622D;font-weight:600;">
                 Il te manque ${missing} boussole${missing > 1 ? 's' : ''} — termine des aventures !
@@ -6264,7 +6267,7 @@ async function loadFlaviaStory() {
 
     content.innerHTML = `
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:48px;margin-bottom:8px;">📖</div>
+        <div style="font-size:48px;margin-bottom:8px;">${iconImg('book')}</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;">L'Histoire de Flavia Flint</div>
         <div style="font-size:13px;color:#9CA3AF;margin-top:4px;">Termine des aventures pour gagner des boussoles</div>
       </div>
@@ -6637,7 +6640,7 @@ function showBookStartForm(book) {
   if (!wrap) { showBookDetail(book.id); return; }
   wrap.innerHTML = `
     <div style="background:white;border-radius:14px;padding:16px;margin-bottom:14px;border:1.5px solid #C4622D;">
-      <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">📖 Démarrer le livre "${book.title}"</div>
+      <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">${iconImg('book')} Démarrer le livre "${book.title}"</div>
       <div style="margin-bottom:12px;">
         <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom d'équipe (optionnel)</label>
         <input type="text" id="book-team-name" placeholder="Ex : Les Aventuriers" style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
@@ -6743,7 +6746,7 @@ async function showAdventureRanking(advId, advTitle) {
       return;
     }
 
-    const medals = ['🥇','🥈','🥉'];
+    const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
     const myId = currentPlayer?.id;
 
     document.getElementById('adv-ranking-list').innerHTML = results.map((r, i) => {
@@ -7007,7 +7010,7 @@ function startSceneChapter(chapter, introMode = false) {
     mode: 'story',
     dbChapterId: chapter.id,
     chapterTitle: chapter.title,
-    stampIcon: chapter.stamp_icon || '🧭',
+    stampIcon: chapter.stamp_icon || iconImg('compass'),
     stampText: chapter.stamp_text || 'Compagnon d\'Aventure',
     stampImageUrl: chapter.stamp_image_url || '',
     introMode
@@ -7208,7 +7211,7 @@ async function finishStoryChapterRead() {
 // / stamp_text / stamp_image_url).
 function showChapterStamp(chapter) {
   const stampImageUrl = chapter?.stamp_image_url || '';
-  const stampIcon = chapter?.stamp_icon || '🧭';
+  const stampIcon = chapter?.stamp_icon || iconImg('compass');
   const stampText = chapter?.stamp_text || 'Compagnon d\'Aventure';
   const chapterTitle = chapter?.title || '';
 
@@ -7381,7 +7384,7 @@ function showInstallButton() {
     animation:slideUp 0.3s ease;
   `;
   banner.innerHTML = `
-    <div style="font-size:32px;">🧭</div>
+    <div style="font-size:32px;">${iconImg('compass')}</div>
     <div style="flex:1;">
       <div style="font-size:14px;font-weight:700;">Installer l'app !</div>
       <div style="font-size:12px;opacity:0.8;">Accède à Flavia Flint depuis ton écran d'accueil</div>
