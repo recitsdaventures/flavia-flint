@@ -606,22 +606,42 @@
     object-fit: cover; object-position: center top;
   }
   .home-greeting-name { font-size: 13px; color: rgba(255,255,255,0.50); }
+  /* Bouton "Commencer une aventure" à cheval entre le hero et le fond parchemin :
+     positionné en absolute par rapport à .home-content-panel (position:relative),
+     remonté au-dessus de la limite hero/panneau. Effet cuir épais/usé via texture
+     tuilée + jeu d'ombres internes/externes (relief) + rivets aux 4 coins en CSS. */
   .btn-start-adventure {
-    width: 100%;
-    background: linear-gradient(135deg, #C4622D 0%, #D97C40 100%);
-    color: white; border: none; border-radius: var(--radius-md);
+    position: absolute; top: -28px; left: 16px; right: 16px; z-index: 5;
+    background: #5C3820 url('leather-tile.webp') repeat;
+    background-size: 220px 220px;
+    color: #F5EDD8; border: 2px solid rgba(30,15,5,0.55); border-radius: 16px;
     padding: 18px 20px; font-size: 16px; font-weight: 800;
     text-transform: uppercase; letter-spacing: 0.9px; cursor: pointer;
-    box-shadow: 0 6px 24px rgba(196,98,45,0.40), 0 2px 6px rgba(0,0,0,0.15);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    box-shadow:
+      inset 0 2px 2px rgba(255,255,255,0.18),
+      inset 0 -5px 9px rgba(0,0,0,0.45),
+      0 10px 22px rgba(0,0,0,0.35),
+      0 2px 0 rgba(0,0,0,0.5);
     transition: transform 0.1s, box-shadow 0.15s;
   }
-  .btn-start-adventure:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(196,98,45,0.30); }
+  .btn-start-adventure:active { transform: scale(0.97); }
+  .btn-rivet {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #EFE1C2 0%, #A9895A 45%, #4A3319 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.55);
+  }
+  .btn-rivet.tl { top: 8px; left: 10px; }
+  .btn-rivet.tr { top: 8px; right: 10px; }
+  .btn-rivet.bl { bottom: 8px; left: 10px; }
+  .btn-rivet.br { bottom: 8px; right: 10px; }
   .hero-tagline { font-size: 12px; color: #4A5A4A; font-style: italic; }
 
-  /* Zone panel beige sous le hero */
+  /* Zone panel parchemin sous le hero — texture seamless qui se répète,
+     quelle que soit la hauteur du contenu (nombre d'aventures ajoutées) */
   .home-content-panel {
-    background: #F5EDD8;
-    border-radius: 28px 28px 0 0;
+    position: relative;
+    background: #F5EDD8 url('parchment-tile.webp') repeat;
     padding: 24px 16px;
     box-shadow: 0 -6px 24px rgba(0,0,0,0.20);
     flex: 1;
@@ -1428,12 +1448,15 @@
       <img src="hero-home.webp" alt="Les Aventures de Flavia Flint" class="home-hero-img"/>
     </div>
 
-    <!-- Zone contenu beige -->
+    <!-- Zone contenu parchemin -->
     <div class="home-content-panel">
 
-      <!-- Bouton principal -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:24px;">
-        <button class="btn-start-adventure" onclick="startTutorial()">▶ COMMENCER UNE AVENTURE</button>
+      <!-- Bouton principal — remonte à cheval sur le hero (position:absolute) -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:24px;padding-top:38px;">
+        <button class="btn-start-adventure" onclick="startTutorial()">
+          <span class="btn-rivet tl"></span><span class="btn-rivet tr"></span><span class="btn-rivet bl"></span><span class="btn-rivet br"></span>
+          ▶ COMMENCER UNE AVENTURE
+        </button>
         <div class="hero-tagline">Découvrez l'histoire de votre ville par le JEU !</div>
         <button onclick="goToScreen('flavia-story', null)" style="
           width:85%;margin:10px auto 0;display:block;
@@ -1483,7 +1506,6 @@
 
       <!-- Livres Professeur Flint -->
       <div id="professor-books-section"></div>
-
     </div>
   </div>
 
