@@ -666,6 +666,15 @@
   .home-section-label {
     font-size: 11px; font-weight: 800; color: #C4622D;
     text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .home-section-label .label-line {
+    flex: 1; height: 1px; min-width: 16px;
+    background-image: linear-gradient(to right, rgba(196,98,45,0.45) 55%, transparent 0%);
+    background-size: 6px 1px; background-repeat: repeat-x;
+  }
+  .home-section-label .label-compass {
+    width: 13px; height: 13px; flex-shrink: 0; opacity: 0.75;
   }
 
   /* ── CARROUSEL — boucle CSS infinie, aucun JS de défilement ── */
@@ -693,10 +702,13 @@
   /* ── LISTE AVENTURES ── */
   .home-adv-list { padding: 4px 0 20px; }
   .adv-card {
-    background: white; border-radius: var(--radius-lg);
-    border: 1px solid #E5D9C0;
+    background: #E9D4A3 url('card-parchment.webp') repeat;
+    background-size: 200px 200px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(120,74,28,0.18);
     margin-bottom: 12px; overflow: hidden; cursor: pointer;
-    transition: transform 0.1s; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.1s;
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
   }
   .adv-card:active { transform: scale(0.98); }
   .adv-card-banner {
@@ -1473,9 +1485,10 @@
         <button onclick="goToScreen('flavia-story', null)" style="
           width:85%;margin:10px auto 0;display:block;
           padding:14px 16px;border-radius:14px;
-          background:#FFFFFF;
-          border:2px solid #E8A020;
-          box-shadow:0 2px 8px rgba(0,0,0,0.08);
+          background:#E9D4A3 url('card-parchment.webp') repeat;
+          background-size:200px 200px;
+          border:1px solid rgba(120,74,28,0.18);
+          box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
           color:#1A2A1A;cursor:pointer;
           font-size:14px;font-weight:700;letter-spacing:0.3px;
         ">
@@ -1486,14 +1499,14 @@
                 <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Chargement...
               </div>
             </div>
-            <span style="color:#E8A020;font-size:18px;font-weight:700;">→</span>
+            <span style="color:#C4622D;font-size:20px;font-weight:700;">›</span>
           </div>
         </button>
       </div>
 
       <!-- Carrousel Nouveautés -->
       <div class="home-section-new">
-        <div class="home-section-label">Nouveautés</div>
+        <div class="home-section-label">Nouveautés<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
         <div class="carousel-wrapper">
           <div class="carousel-track" id="carousel-track">
             <div class="carousel-item" style="opacity:0.35;pointer-events:none;">
@@ -1508,7 +1521,7 @@
 
       <!-- Toutes les aventures -->
       <div class="home-section-new" style="padding-top:4px;">
-        <div class="home-section-label">Toutes les aventures</div>
+        <div class="home-section-label">Toutes les aventures<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
       </div>
       <div class="home-adv-list">
         <div id="adventure-cards-list">
@@ -2942,14 +2955,16 @@ function renderAdventureCards() {
   container.innerHTML = adventures.map(adv => {
     return `
       <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')" style="
-        background:white;
+        background:#E9D4A3 url('card-parchment.webp') repeat;
+        background-size:200px 200px;
+        border:1px solid rgba(120,74,28,0.18);
         border-radius:16px;
         padding:12px;
         margin-bottom:10px;
         display:flex;
         gap:12px;
         align-items:center;
-        box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
         cursor:pointer;
         transition:transform 0.15s ease;
       ">
@@ -3014,6 +3029,9 @@ function renderAdventureCards() {
               ">${adv.difficulty}</span>` : ''}
           </div>
         </div>
+
+        <!-- Chevron -->
+        <span style="color:#C4622D;font-size:20px;font-weight:700;flex-shrink:0;">›</span>
       </div>`;
   }).join('');
   renderCarousel();
@@ -3026,7 +3044,7 @@ function renderProfessorBooksSection() {
   if (!books.length) { container.innerHTML = ''; return; }
   container.innerHTML = `
     <div class="home-section-new" style="padding-top:4px;">
-      <div class="home-section-label"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livres Professeur Flint</div>
+      <div class="home-section-label"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livres Professeur Flint<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
     </div>
     <div class="home-adv-list">
       ${books.map(b => {
