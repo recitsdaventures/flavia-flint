@@ -27,6 +27,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<!-- Police carnet d'explorateur (titres de section) -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -61,7 +63,7 @@
     width: 100%; max-width: 430px;
     height: 100%; max-height: 932px;
     margin: 0 auto;
-    background: var(--beige-light);
+    background: var(--beige-light) url('parchment-tile.webp') repeat;
     display: flex; flex-direction: column;
     overflow: hidden;
     position: relative;
@@ -243,8 +245,10 @@
 
   .adventure-popup {
     position: absolute; bottom: 80px; left: 10px; right: 10px;
-    background: var(--white); border-radius: var(--radius-lg);
-    padding: 14px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border: 1px solid rgba(120,74,28,0.18);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px; box-shadow: 0 8px 28px rgba(0,0,0,0.25);
     z-index: 500; display: none; animation: slideUp 0.2s ease;
   }
   .adventure-popup.show { display: block; }
@@ -271,7 +275,7 @@
   /* ══════════════════════════════
      ÉCRAN AVENTURE EN COURS
   ══════════════════════════════ */
-  #screen-adventure { background: var(--beige-light); position: relative; }
+  #screen-adventure { background: var(--beige-light) url('parchment-tile.webp') repeat; position: relative; }
 
   .adv-header { background: var(--green-dark); padding: 12px 16px 16px; flex-shrink: 0; }
   .adv-header-top {
@@ -354,8 +358,10 @@
 
   /* Boussole card */
   .compass-card {
-    background: var(--white); border-radius: var(--radius-lg);
-    border: 1.5px solid var(--beige-dark);
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(120,74,28,0.18);
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
     padding: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
@@ -366,7 +372,12 @@
   .compass-hint   { font-size: 12px; color: var(--text-mid); line-height: 1.4; text-align: center; background: var(--beige-light); padding: 8px 12px; border-radius: var(--radius-sm); }
 
   /* Énigme card */
-  .enigme-card { background: var(--white); border-radius: var(--radius-lg); border: 1.5px solid var(--beige-dark); padding: 16px; }
+  .enigme-card {
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border-radius: var(--radius-lg); border: 1px solid rgba(120,74,28,0.18);
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
+    padding: 16px;
+  }
   .enigme-label {
     font-size: 11px; font-weight: 700; color: var(--terra);
     text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
@@ -429,7 +440,7 @@
   /* ══════════════════════════════
      ÉCRAN PROFIL
   ══════════════════════════════ */
-  #screen-profile { background: var(--beige-light); overflow-y: auto; }
+  #screen-profile { background: var(--beige-light) url('parchment-tile.webp') repeat; overflow-y: auto; }
 
   .profile-hero {
     background: var(--green-dark);
@@ -457,9 +468,11 @@
     margin: -18px 16px 0; gap: 10px; position: relative; z-index: 2;
   }
   .stat-card {
-    background: var(--white); border-radius: var(--radius-md);
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border-radius: var(--radius-md);
     padding: 12px 8px; text-align: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 1px solid var(--beige-dark);
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
+    border: 1px solid rgba(120,74,28,0.18);
   }
   .stat-num   { font-size: 22px; font-weight: 800; color: var(--green-dark); }
   .stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
@@ -483,8 +496,8 @@
   /* ══════════════════════════════
      ÉCRAN CLASSEMENT
   ══════════════════════════════ */
-  #screen-ranking          { background: var(--beige-light); }
-  #screen-adventure-ranking { background: var(--beige-light); flex-direction: column; }
+  #screen-ranking          { background: var(--beige-light) url('parchment-tile.webp') repeat; }
+  #screen-adventure-ranking { background: var(--beige-light) url('parchment-tile.webp') repeat; flex-direction: column; }
 
   .ranking-tabs {
     display: flex; background: #1A2A1A;
@@ -503,9 +516,11 @@
 
   .rank-item {
     display: flex; align-items: center; gap: 10px;
-    background: var(--white); border-radius: var(--radius-md);
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border-radius: var(--radius-md);
     padding: 10px 14px; margin-bottom: 8px;
-    border: 1px solid var(--beige-dark);
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
+    border: 1px solid rgba(120,74,28,0.18);
   }
   .rank-item.me     { border-color: var(--terra); background: #FFF7F4; }
   .rank-item.gold   .rank-num { color: #F59E0B; }
@@ -664,18 +679,14 @@
     margin: 0 0 4px;
   }
   .home-section-label {
-    font-size: 15px; font-weight: 800; color: #C4622D;
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
+    font-family: 'Roboto Slab', Georgia, serif;
+    font-size: 15px; font-weight: 700; color: #C4622D;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
   }
   .home-section-label .label-line {
     flex: 1; height: 2px; min-width: 16px;
-    background-image: repeating-linear-gradient(to right,
-      #C4622D 0, #C4622D 6px,
-      transparent 6px, transparent 9px,
-      #C4622D 9px, #C4622D 11px,
-      transparent 11px, transparent 14px);
-    background-repeat: repeat-x;
+    background-color: #C4622D;
   }
   .home-section-label .label-compass {
     width: 18px; height: 18px; flex-shrink: 0; opacity: 0.9;
@@ -1107,11 +1118,13 @@
   }
   .adv-nb-choice-btn {
     width: 100%; padding: 13px 16px; text-align: left;
-    background: white; border: 1.5px solid var(--beige-dark);
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border: 1px solid rgba(120,74,28,0.18);
+    box-shadow: 0 3px 10px rgba(58,32,10,0.14);
     border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
     color: var(--text-dark); cursor: pointer; font-family: inherit;
   }
-  .adv-nb-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
+  .adv-nb-choice-btn:active { background-color: var(--beige-mid); border-color: var(--terra); }
   .adv-nb-choice-btn.error { border-color: #EF4444; background: #FEF2F2; }
   .adv-nb-freetext { display: none; margin-top: 14px; }
 
@@ -1848,7 +1861,7 @@
       </div>
 
       <div class="section-title" style="margin-top:4px;">Statistiques</div>
-      <div style="background:var(--white); border-radius:var(--radius-md); border:1px solid var(--beige-dark); padding:14px; margin-bottom:24px;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat; background-size:200px 200px; border-radius:var(--radius-md); border:1px solid rgba(120,74,28,0.18); box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14); padding:14px; margin-bottom:24px;">
         <table style="width:100%; font-size:14px; border-collapse:collapse;">
           <tr>
             <td style="padding:6px 0; color:var(--text-mid);">Scénarios terminés</td>
@@ -1999,7 +2012,7 @@
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);width:220px;height:220px;border:3px solid #E8A020;border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);pointer-events:none;"></div>
       <div style="position:absolute;bottom:30%;color:white;font-size:13px;text-align:center;padding:0 20px;">Pointe la caméra vers le QR code dans la boîte</div>
     </div>
-    <div id="qr-result-msg" style="padding:16px;text-align:center;background:#F5EDD8;display:none;flex-shrink:0;">
+    <div id="qr-result-msg" style="padding:16px;text-align:center;background:#F5EDD8 url('parchment-tile.webp') repeat;display:none;flex-shrink:0;">
       <div style="font-size:24px;margin-bottom:8px;">✅</div>
       <div style="font-weight:700;color:#1A2A1A;">QR code validé !</div>
       <div style="font-size:13px;color:#6B7280;margin-top:4px;">Redirection vers le questionnaire...</div>
@@ -2038,7 +2051,7 @@
       </div>
     </div>
     <!-- Contenu -->
-    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;" id="flavia-story-content">
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;" id="flavia-story-content">
       <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
     </div>
   </div>
@@ -2051,10 +2064,10 @@
       <button onclick="goToScreen('home',document.getElementById('nav-home'))" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;">← Retour</button>
       <span style="color:white;font-weight:700;">✍️ Devenir auteur certifié</span>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;">
 
       <!-- Présentation -->
-      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:20px;margin-bottom:8px;">✍️</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Programme Auteurs Flavia Flint</div>
         <div style="font-size:13px;color:#6B7280;line-height:1.6;">
@@ -2064,7 +2077,7 @@
       </div>
 
       <!-- Avantages -->
-      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">Ce que tu obtiens :</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;gap:10px;align-items:flex-start;">
@@ -2091,7 +2104,7 @@
 
       <!-- Formulaire -->
       <div id="author-request-form-wrap">
-        <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #E5D9C0;">
+        <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:14px;">Candidature</div>
 
           <div style="margin-bottom:12px;">
@@ -2131,7 +2144,7 @@
       <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:white;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
       <span style="color:white;font-weight:700;flex:1;"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livre Professeur Flint</span>
     </div>
-    <div id="book-detail-content" style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
+    <div id="book-detail-content" style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;">
       <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
     </div>
   </div>
@@ -2144,7 +2157,7 @@
       <span style="color:white;font-weight:700;flex:1;">📝 Ton avis compte !</span>
       <button onclick="skipSatisfaction()" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:rgba(255,255,255,0.7);padding:6px 12px;cursor:pointer;font-size:13px;">Passer</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8;">
+    <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;">
 
       <div style="text-align:center;margin-bottom:20px;">
         <div style="font-size:40px;margin-bottom:8px;"><img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/></div>
@@ -2153,7 +2166,7 @@
       </div>
 
       <!-- Question 1 : Note étoiles -->
-      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">
           Tu as aimé cette aventure ? ⭐
         </div>
@@ -2168,7 +2181,7 @@
       </div>
 
       <!-- Question 2 : Tampons -->
-      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:4px;">
           🔖 Combien de tampons as-tu récupérés ?
         </div>
@@ -2190,7 +2203,7 @@
       </div>
 
       <!-- Question 3 : Commentaire libre -->
-      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">
           💬 Un commentaire ? (optionnel)
         </div>
@@ -4660,7 +4673,7 @@ async function loadProfile() {
             <div class="section-title" style="margin-bottom:12px;">🏅 Badges Partenaires</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
               ${partnerBadges.map(b => `
-                <div style="background:white;border-radius:12px;padding:10px;text-align:center;border:1px solid #E5D9C0;">
+                <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 3px 10px rgba(58,32,10,0.16);">
                   <div style="font-size:32px;margin-bottom:4px;">🏅</div>
                   <div style="font-size:11px;font-weight:700;color:#1A2A1A;line-height:1.2;">${b.partner_qr_codes?.badge_name || '?'}</div>
                   <div style="font-size:10px;color:#9CA3AF;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
@@ -4680,8 +4693,10 @@ async function loadProfile() {
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${playerTitles.map(t => `
             <div style="
-              background:${t.is_equipped ? '#FFF7F4' : 'white'};
-              border:${t.is_equipped ? '2px solid #C4622D' : '1px solid #E5D9C0'};
+              background:${t.is_equipped ? '#FFF7F4' : "#E9D4A3 url('card-parchment.webp') repeat"};
+              background-size:${t.is_equipped ? 'auto' : '200px 200px'};
+              border:${t.is_equipped ? '2px solid #C4622D' : '1px solid rgba(120,74,28,0.18)'};
+              box-shadow:${t.is_equipped ? 'none' : '0 3px 10px rgba(58,32,10,0.16)'};
               border-radius:12px;padding:10px 14px;
               display:flex;align-items:center;gap:10px;
             ">
@@ -4702,7 +4717,7 @@ async function loadProfile() {
       </div>` : `
       <div style="margin:16px 0;">
         <div class="section-title" style="margin-bottom:12px;">🎖️ Mes Titres</div>
-        <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:white;border:1px solid #E5D9C0;border-radius:12px;">
+        <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;box-shadow:0 3px 10px rgba(58,32,10,0.16);">
           Termine des aventures pour débloquer tes premiers titres !
         </div>
       </div>`;
@@ -4724,7 +4739,7 @@ async function loadProfile() {
       ? Math.round((xp - currentRank.min) / (nextRank.min - currentRank.min) * 100)
       : 100;
     document.getElementById('profile-rank-progress').innerHTML = `
-      <div style="background:white;border-radius:14px;border:1px solid var(--beige-dark);padding:14px;margin:16px 16px 0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;margin:16px 16px 0;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:700;color:var(--text-dark);">
             ${getRankIcon(xp)} ${getRankName(xp)}
@@ -4850,7 +4865,7 @@ async function showAllTitles() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;';
   modal.innerHTML = `
     <div style="
-      background:#F5EDD8;min-height:100%;
+      background:#F5EDD8 url('parchment-tile.webp') repeat;min-height:100%;
       max-width:500px;margin:0 auto;padding:0 0 40px;
     ">
       <!-- Header -->
@@ -4878,7 +4893,8 @@ async function showAllTitles() {
               const owned = ownedIds.has(t.id);
               return `
                 <div style="
-                  background:${owned ? 'white' : '#F0EDE6'};
+                  background:${owned ? "#E9D4A3 url('card-parchment.webp') repeat" : '#F0EDE6'};
+                  background-size:${owned ? '200px 200px' : 'auto'};
                   border:1px solid ${owned ? '#C4622D' : '#D4C5A9'};
                   border-radius:10px;padding:12px 14px;margin-bottom:8px;
                   display:flex;align-items:center;gap:12px;
@@ -4903,7 +4919,7 @@ async function showAllTitles() {
                 </div>`;
             }).join('')}
           </div>`).join('') : `
-          <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:white;border:1px solid #E5D9C0;border-radius:12px;">
+          <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;">
             Aucun titre disponible pour le moment.
           </div>`}
       </div>
@@ -5002,7 +5018,7 @@ function renderBioSectionHtml(player) {
       </div>
 
       <!-- Mode lecture -->
-      <div id="profile-view-mode" style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;">
+      <div id="profile-view-mode" style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;">
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;gap:10px;align-items:center;">
             <span style="font-size:16px;">👥</span>
@@ -5023,7 +5039,7 @@ function renderBioSectionHtml(player) {
       </div>
 
       <!-- Mode édition (caché par défaut) -->
-      <div id="profile-edit-mode" style="display:none;background:white;border-radius:14px;border:1.5px solid #C4622D;padding:14px;">
+      <div id="profile-edit-mode" style="display:none;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1.5px solid #C4622D;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;">
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div>
             <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom de l'équipe / famille</label>
@@ -5162,7 +5178,7 @@ function renderSocialXpSectionHtml() {
   </div>
 
   <!-- Abonnement Instagram -->
-  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+  <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
       <span style="font-size:24px;">📸</span>
       <div style="flex:1;">
@@ -5188,7 +5204,7 @@ function renderSocialXpSectionHtml() {
   </div>
 
   <!-- Abonnement Facebook -->
-  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+  <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
       <span style="font-size:24px;">👍</span>
       <div style="flex:1;">
@@ -5214,7 +5230,7 @@ function renderSocialXpSectionHtml() {
   </div>
 
   <!-- Avis Google -->
-  <div style="background:white;border-radius:14px;border:1px solid #E5D9C0;padding:14px;margin-bottom:10px;">
+  <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);padding:14px;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
       <span style="font-size:24px;">⭐</span>
       <div style="flex:1;">
@@ -5546,7 +5562,7 @@ function showAuthorStatusMessage(icon, title, sub) {
   if (statusEl) {
     statusEl.style.display = 'block';
     statusEl.innerHTML = `
-      <div style="background:white;border-radius:14px;padding:24px;text-align:center;border:1px solid #E5D9C0;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:24px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:32px;margin-bottom:8px;">${icon}</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">${title}</div>
         <div style="font-size:13px;color:#6B7280;">${sub}</div>
@@ -5596,7 +5612,7 @@ async function submitAuthorRequest() {
 function buildRankingEmptyState() {
   const ghostOpacities = [0.5, 0.4, 0.3, 0.2, 0.12];
   const ghostRows = ghostOpacities.map(op => `
-    <div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #E5D9C0;border-radius:12px;padding:10px 14px;margin-bottom:8px;opacity:${op};">
+    <div style="display:flex;align-items:center;gap:10px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;padding:10px 14px;margin-bottom:8px;opacity:${op};">
       <div style="width:24px;height:14px;border-radius:4px;background:#D4C5A9;"></div>
       <div style="width:36px;height:36px;border-radius:50%;background:#D4C5A9;flex-shrink:0;"></div>
       <div style="flex:1;">
@@ -5707,7 +5723,7 @@ async function loadFriendsRanking() {
     <div style="padding:0 0 16px;">
 
       <!-- Recherche ami -->
-      <div style="background:white;border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:14px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:13px;font-weight:700;color:#1A2A1A;margin-bottom:10px;">🔍 Ajouter un ami</div>
         <div style="display:flex;gap:8px;">
           <input type="text" id="friend-search-input" placeholder="Pseudo de l'aventurier..."
@@ -5724,7 +5740,7 @@ async function loadFriendsRanking() {
       <!-- Liste amis -->
       <div id="friends-ranking-list">
         ${friends.length === 0 ? `
-          <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="text-align:center;padding:30px 20px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
             <div style="font-size:40px;margin-bottom:12px;">👥</div>
             <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Aucun ami encore</div>
             <div style="font-size:13px;color:#6B7280;line-height:1.5;">
@@ -5818,7 +5834,7 @@ async function loadFriendsScores(friendIds, userId) {
 
     if (!players.length) {
       listEl.innerHTML = `
-        <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="text-align:center;padding:30px 20px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:40px;margin-bottom:12px;">👥</div>
           <div style="font-size:16px;font-weight:700;color:#1A2A1A;">Aucun ami trouvé</div>
         </div>`;
@@ -5832,7 +5848,8 @@ async function loadFriendsScores(friendIds, userId) {
         <div style="
           display:flex;align-items:center;gap:12px;
           padding:12px 14px;margin-bottom:8px;
-          background:${isMe ? '#FFF7F4' : 'white'};
+          background:${isMe ? '#FFF7F4' : "#E9D4A3 url('card-parchment.webp') repeat"};
+          background-size:${isMe ? 'auto' : '200px 200px'};
           border-radius:14px;
           border-left:3px solid ${isMe ? '#C4622D' : 'transparent'};
           box-shadow:0 2px 8px rgba(0,0,0,0.05);
@@ -5894,7 +5911,7 @@ async function loadScenarioRanking() {
     <div style="padding:0 0 16px;">
 
       <!-- Sélecteur de scénario -->
-      <div style="background:white;border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:14px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:13px;font-weight:700;color:#1A2A1A;margin-bottom:10px;">Choisir un scénario</div>
         <select id="scenario-select" onchange="loadScenarioLeaderboard(this.value)" style="
           width:100%;padding:10px 12px;border:1.5px solid #E5D9C0;
@@ -5907,7 +5924,7 @@ async function loadScenarioRanking() {
 
       <!-- Classement du scénario sélectionné -->
       <div id="scenario-leaderboard">
-        <div style="text-align:center;padding:30px 20px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="text-align:center;padding:30px 20px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:40px;margin-bottom:12px;">🏁</div>
           <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Qui est le plus rapide ?</div>
           <div style="font-size:13px;color:#6B7280;">Sélectionne un scénario pour voir le classement chrono.</div>
@@ -5933,7 +5950,7 @@ async function loadScenarioLeaderboard(adventureId) {
 
     if (!completions.length) {
       listEl.innerHTML = `
-        <div style="text-align:center;padding:30px;background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="text-align:center;padding:30px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:36px;margin-bottom:10px;">⏳</div>
           <div style="font-size:15px;font-weight:700;color:#1A2A1A;">Aucune complétion encore</div>
           <div style="font-size:13px;color:#6B7280;margin-top:4px;">Sois le premier à terminer ce scénario !</div>
@@ -5951,8 +5968,9 @@ async function loadScenarioLeaderboard(adventureId) {
         <div style="
           display:flex;align-items:center;gap:12px;
           padding:12px 14px;margin-bottom:8px;
-          background:white;border-radius:14px;
-          box-shadow:0 2px 8px rgba(0,0,0,0.05);
+          background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;
+          border:1px solid rgba(120,74,28,0.18);
+          box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
         ">
           <div style="width:28px;text-align:center;font-size:${i<3?'20px':'14px'};font-weight:700;color:${i>=3?'#9CA3AF':'inherit'};">
             ${i < 3 ? medals[i] : '#'+(i+1)}
@@ -6096,7 +6114,7 @@ async function renderAdventureRankings() {
           letter-spacing:1px;margin-bottom:12px;">🏆 Classements par aventure</div>
         ${advs.map(adv => `
           <div style="display:flex;align-items:center;justify-content:space-between;
-            background:white;border:1px solid #E5D9C0;border-radius:12px;
+            background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;
             padding:12px 14px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
               ${compassIconSVG(20, '#2D4A2D')}
@@ -6140,7 +6158,7 @@ function renderRankRow(player, isMe) {
   const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
   const rankDisplay = player.rank <= 3 ? medals[player.rank - 1] : `#${player.rank}`;
   return `
-    <div style="display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : 'white'};border:${isMe ? '2px solid var(--terra)' : '1px solid var(--beige-dark)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : "#E9D4A3 url('card-parchment.webp') repeat"};background-size:${isMe ? 'auto' : '200px 200px'};border:${isMe ? '2px solid var(--terra)' : '1px solid rgba(120,74,28,0.18)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
       <div style="font-size:18px;font-weight:800;min-width:32px;text-align:center;color:${player.rank === 1 ? '#F59E0B' : player.rank === 2 ? '#9CA3AF' : player.rank === 3 ? '#B45309' : 'var(--text-mid)'};">
         ${rankDisplay}
       </div>
@@ -6297,8 +6315,9 @@ async function loadFlaviaStory() {
         // DÉBLOQUÉ
         return `
           <div onclick="readChapter('${ch.id}')" style="
-            background:white;border-radius:14px;padding:14px 16px;
+            background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:14px 16px;
             margin-bottom:10px;cursor:pointer;
+            box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
             border:2px solid ${hasBeenRead ? '#D4C5A9' : '#E8A020'};
             display:flex;align-items:center;gap:12px;
           ">
@@ -6315,9 +6334,9 @@ async function loadFlaviaStory() {
       const missing = ch.unlock_cost - balance;
       return `
         <div style="
-          background:${canAfford ? 'white' : '#F9F9F9'};
+          background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;
           border-radius:14px;padding:14px 16px;margin-bottom:10px;
-          border:1px solid #E5D9C0;opacity:${canAfford ? '1' : '0.75'};
+          border:1px solid rgba(120,74,28,0.18);opacity:${canAfford ? '1' : '0.75'};
         ">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
             <span style="font-size:24px;">${iconImg('lock')}</span>
@@ -6619,7 +6638,10 @@ function showPartnerBadgeResult(partnerQR, alreadyCollected) {
   `;
   overlay.innerHTML = `
     <div style="
-      background:#F5EDD8;border-radius:20px;padding:30px 24px;
+      background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;
+      border:1px solid rgba(120,74,28,0.18);
+      box-shadow:0 8px 28px rgba(0,0,0,0.25);
+      border-radius:20px;padding:30px 24px;
       text-align:center;max-width:300px;width:90%;
       animation:scaleIn 0.3s ease;
     ">
@@ -6713,7 +6735,7 @@ function showBookStartForm(book) {
   const wrap = document.getElementById('book-start-form-wrap');
   if (!wrap) { showBookDetail(book.id); return; }
   wrap.innerHTML = `
-    <div style="background:white;border-radius:14px;padding:16px;margin-bottom:14px;border:1.5px solid #C4622D;">
+    <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:14px;border:1.5px solid #C4622D;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
       <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:12px;">${iconImg('book')} Démarrer le livre "${book.title}"</div>
       <div style="margin-bottom:12px;">
         <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Nom d'équipe (optionnel)</label>
