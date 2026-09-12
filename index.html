@@ -443,7 +443,8 @@
   #screen-profile { background: var(--beige-light) url('parchment-tile.webp') repeat; overflow-y: auto; }
 
   .profile-hero {
-    background: var(--green-dark);
+    background: var(--green-dark) url('profile-hero-bg.webp') no-repeat center top;
+    background-size: cover;
     padding: 20px 16px 30px;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
@@ -6919,9 +6920,9 @@ function goToScreen(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  // Masquer le header sur home et tutorial (ils ont leur propre header inline)
+  // Masquer le header sur home, tutorial et profil (ils ont leur propre header inline / n'en ont pas besoin)
   const appHeader = document.querySelector('.app-header');
-  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial') ? 'none' : '';
+  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial' || name === 'profile') ? 'none' : '';
 
   if (name === 'map') {
     setTimeout(() => {
