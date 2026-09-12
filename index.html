@@ -144,6 +144,12 @@
     background: transparent;
     transition: background 0.15s;
   }
+  .nav-btn:not(:first-child)::after {
+    content: '';
+    position: absolute; top: 8px; bottom: 8px; left: 0; width: 1.5px;
+    background-image: repeating-linear-gradient(to bottom, rgba(10,5,2,0.7) 0px, rgba(10,5,2,0.7) 3px, transparent 3px, transparent 7px);
+    pointer-events: none;
+  }
   .nav-btn.active { color: #E8A020; }
   .nav-btn.active::before { background: #E8A020; }
   .nav-btn .nav-icon { width: 22px; height: 22px; display: block; }
