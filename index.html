@@ -87,12 +87,6 @@
     border-bottom: 2px solid rgba(0,0,0,0.4);
     box-shadow: 0 3px 10px rgba(0,0,0,0.3), inset 0 -4px 8px rgba(0,0,0,0.4);
   }
-  .app-header::before {
-    content: ''; position: absolute; inset: 5px;
-    background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');
-    background-size: 100% 100%; background-repeat: no-repeat;
-    pointer-events: none;
-  }
   .app-header .logo { display: flex; align-items: center; gap: 8px; }
   .app-header .logo-icon {
     width: 34px; height: 34px; border-radius: 50%;
@@ -132,12 +126,6 @@
     border-top: 2px solid rgba(0,0,0,0.4);
     box-shadow: 0 -3px 10px rgba(0,0,0,0.3), inset 0 4px 8px rgba(0,0,0,0.4);
   }
-  .bottom-nav::before {
-    content: ''; position: absolute; inset: 5px;
-    background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');
-    background-size: 100% 100%; background-repeat: no-repeat;
-    pointer-events: none;
-  }
   .nav-btn {
     flex: 1; border: none; background: none; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -155,12 +143,6 @@
     height: 3px; border-radius: 0 0 3px 3px;
     background: transparent;
     transition: background 0.15s;
-  }
-  .nav-btn:not(:first-child)::after {
-    content: '';
-    position: absolute; top: 8px; bottom: 8px; left: 0; width: 1.5px;
-    background-image: repeating-linear-gradient(to bottom, rgba(10,5,2,0.7) 0px, rgba(10,5,2,0.7) 3px, transparent 3px, transparent 7px);
-    pointer-events: none;
   }
   .nav-btn.active { color: #E8A020; }
   .nav-btn.active::before { background: #E8A020; }
