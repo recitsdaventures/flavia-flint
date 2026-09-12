@@ -110,19 +110,32 @@
 
   /* ── BOTTOM NAV ── */
   .bottom-nav {
-    background: #1A2A1A;
+    position: relative;
+    background:
+      radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.5) 100%),
+      #5C3820 url('leather-tile.webp') repeat;
+    background-size: 100% 100%, 180px 180px;
     display: flex; flex-shrink: 0;
     padding: 8px 0 14px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 2px solid rgba(0,0,0,0.4);
+    box-shadow: 0 -3px 10px rgba(0,0,0,0.3), inset 0 4px 8px rgba(0,0,0,0.4);
+  }
+  .bottom-nav::before {
+    content: ''; position: absolute; inset: 5px;
+    background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');
+    background-size: 100% 100%; background-repeat: no-repeat;
+    pointer-events: none;
   }
   .nav-btn {
     flex: 1; border: none; background: none; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     padding: 6px 0 2px;
-    color: rgba(255,255,255,0.40);
+    color: rgba(245,237,216,0.55);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
     font-size: 10px; font-weight: 500;
     transition: color 0.15s;
     position: relative;
+    z-index: 1;
   }
   .nav-btn::before {
     content: '';
@@ -4775,14 +4788,15 @@ async function loadProfile() {
     // Solde de boussoles (monnaie de l'Histoire de Flavia Flint)
     const compassBalance = currentPlayer.compass_balance || 0;
     document.getElementById('profile-compass-card').innerHTML = `
-      <div style="background:linear-gradient(135deg,#1A3A5C,#2D5A8E);border-radius:14px;padding:14px 16px;margin:16px 16px 0;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Boussoles</div>
-          <div style="color:white;font-size:28px;font-weight:800;margin-top:2px;">${iconImg('compass')} ${compassBalance}</div>
+      <div style="position:relative;overflow:hidden;background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%), #5C3820 url('leather-tile.webp') repeat;background-size:100% 100%, 180px 180px;border-radius:14px;border:1px solid rgba(0,0,0,0.4);box-shadow:0 5px 16px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.14), inset 0 -6px 10px rgba(0,0,0,0.5);padding:14px 16px;margin:16px 16px 0;display:flex;align-items:center;justify-content:space-between;">
+        <div style="position:absolute;inset:6px;background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;"></div>
+        <div style="position:relative;">
+          <div style="color:var(--amber);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">Boussoles</div>
+          <div style="color:#F5EDD8;font-size:28px;font-weight:800;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">${iconImg('compass')} ${compassBalance}</div>
         </div>
-        <div style="text-align:right;">
-          <div style="color:rgba(255,255,255,0.7);font-size:12px;">+${COMPASS_PER_ADVENTURE} par aventure terminée</div>
-          <button onclick="goToScreen('flavia-story',null)" style="margin-top:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:white;padding:5px 12px;font-size:12px;cursor:pointer;">
+        <div style="position:relative;text-align:right;">
+          <div style="color:rgba(245,237,216,0.75);font-size:12px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">+${COMPASS_PER_ADVENTURE} par aventure terminée</div>
+          <button onclick="goToScreen('flavia-story',null)" style="margin-top:6px;background:rgba(232,160,32,0.18);border:1px solid rgba(232,160,32,0.5);border-radius:8px;color:#F5EDD8;padding:5px 12px;font-size:12px;cursor:pointer;">
             ${iconImg('book')} Voir l'histoire →
           </button>
         </div>
