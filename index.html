@@ -1494,9 +1494,9 @@
         ">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <div>
-              <img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> L'Histoire de Flavia Flint
+              <img src="icon-book.webp" alt="" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:-0.3em;display:inline-block;"/> L'Histoire de Flavia Flint
               <div id="compass-balance-home" style="font-size:12px;font-weight:400;opacity:0.8;margin-top:3px;">
-                <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Chargement...
+                <img src="icon-compass.webp" alt="" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:-0.3em;display:inline-block;"/> Chargement...
               </div>
             </div>
             <span style="color:#C4622D;font-size:20px;font-weight:700;">›</span>
@@ -2503,10 +2503,11 @@ function avatarImgTag(avatarId, alt) {
 }
 
 // Pictogrammes illustrés de l'app (boussole, livre, cadenas, médailles…)
-// Par défaut la taille suit le font-size du conteneur (1em), comme un emoji.
+// Par défaut la taille suit le font-size du conteneur (1.4em, un peu plus grand
+// qu'un simple emoji pour rester bien lisible), sauf si un sizePx explicite est passé.
 function iconImg(name, sizePx) {
-  const dim = sizePx ? `${sizePx}px` : '1em';
-  return `<img src="icon-${name}.webp" alt="" style="width:${dim};height:${dim};object-fit:contain;vertical-align:-0.15em;display:inline-block;"/>`;
+  const dim = sizePx ? `${sizePx}px` : '1.4em';
+  return `<img src="icon-${name}.webp" alt="" style="width:${dim};height:${dim};object-fit:contain;vertical-align:-0.3em;display:inline-block;"/>`;
 }
 
 function selectAvatar(el) {
@@ -3054,7 +3055,7 @@ function renderProfessorBooksSection() {
   if (!books.length) { container.innerHTML = ''; return; }
   container.innerHTML = `
     <div class="home-section-new" style="padding-top:4px;">
-      <div class="home-section-label"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livres Professeur Flint<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
+      <div class="home-section-label"><img src="icon-book.webp" alt="" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:-0.3em;display:inline-block;"/> Livres Professeur Flint<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
     </div>
     <div class="home-adv-list">
       ${books.map(b => {
@@ -4515,7 +4516,7 @@ function renderGuestGate(screenId) {
   if (!screen) return;
   screen.innerHTML = `
     <div class="guest-gate">
-      <div class="guest-gate-icon"><img src="icon-lock.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/></div>
+      <div class="guest-gate-icon"><img src="icon-lock.webp" alt="" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:-0.3em;display:inline-block;"/></div>
       <div class="guest-gate-title">Connecte-toi pour accéder</div>
       <div class="guest-gate-sub">Crée un compte gratuit pour sauvegarder ta progression, voir ton profil et rejoindre le classement !</div>
       <button class="btn-guest-login" onclick="leaveGuestMode()">Se connecter / S'inscrire</button>
