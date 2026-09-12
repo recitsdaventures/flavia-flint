@@ -3030,6 +3030,16 @@ function renderAdventureCards() {
           </div>
         </div>
 
+        <!-- Illustration croquis -->
+        ${adv.sketch_image_url ? `
+          <img src="${adv.sketch_image_url}" alt="" style="
+            width:44px;
+            height:44px;
+            object-fit:contain;
+            flex-shrink:0;
+            margin-right:2px;
+          "/>` : ''}
+
         <!-- Chevron -->
         <span style="color:#C4622D;font-size:20px;font-weight:700;flex-shrink:0;">›</span>
       </div>`;

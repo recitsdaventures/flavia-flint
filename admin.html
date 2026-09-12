@@ -996,6 +996,21 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           </div>
         </div>
         <div class="form-group full">
+          <label>Illustration croquis <span class="label-hint">(affichée à droite de la card dans "Toutes les aventures" — style croquis au crayon à papier, fond transparent recommandé)</span></label>
+          <div class="img-preview" id="sketch-img-preview" style="display:none;">
+            <img id="sketch-img-tag" src="" alt="" style="height:100px;"/>
+            <button class="img-preview-remove" onclick="removeImg('sketch')">✕</button>
+          </div>
+          <div class="img-upload-zone" id="sketch-upload-zone">
+            <input type="file" accept="image/*" onchange="handleImg(event,'sketch')"/>
+            <div class="img-upload-icon">✏️</div>
+            <div class="img-upload-label">
+              <strong>Clique pour choisir</strong> l'illustration croquis
+              <span class="formats">PNG (fond transparent) · Max 5 Mo</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
           <div style="background:#EFF6EF;border:1px solid #CFE3CF;border-radius:10px;padding:12px 14px;font-size:13px;color:#2D4A2D;">
             ✅ Le QR code de fin est généré automatiquement après la première sauvegarde du scénario.
           </div>
@@ -3340,6 +3355,14 @@ function openModal(id) {
     } else {
       removeImg('badge');
     }
+    // Illustration croquis
+    if (adv.sketch_image_url) {
+      document.getElementById('sketch-img-tag').src = adv.sketch_image_url;
+      document.getElementById('sketch-img-preview').style.display = 'block';
+      document.getElementById('sketch-upload-zone').style.display = 'none';
+    } else {
+      removeImg('sketch');
+    }
     loadStepsFromAdventure(adv.steps || []);
     onLocationsCountChange();
     document.getElementById('f-global-timer-fail').value = adv.timer_fail_step_order ? (lastOrderToUidMap[adv.timer_fail_step_order] || '') : '';
@@ -4108,7 +4131,7 @@ function removeImg(type) {
 // utilisé à l'ouverture de "Nouvelle aventure" pour ne jamais laisser l'aperçu de
 // l'aventure précédemment éditée traîner à l'écran.
 function resetAllImageFields() {
-  ['cover', 'badge'].forEach(type => removeImg(type));
+  ['cover', 'badge', 'sketch'].forEach(type => removeImg(type));
   window._pendingImgs = {};
 }
 // ── SAUVEGARDER DANS SUPABASE ──
@@ -4169,6 +4192,13 @@ async function saveAdventure(asDraft) {
     } else {
       const existing = document.getElementById('badge-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.badge_image_url = existing;
+    }
+    if (pending.sketch) {
+      btnSave.textContent = '⏳ Upload image croquis…';
+      advData.sketch_image_url = await uploadImageToStorage(pending.sketch, 'sketches');
+    } else {
+      const existing = document.getElementById('sketch-img-tag')?.src;
+      if (existing && existing.startsWith('http')) advData.sketch_image_url = existing;
     }
 
     btnSave.textContent = '⏳ Sauvegarde…';
