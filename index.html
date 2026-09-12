@@ -664,17 +664,21 @@
     margin: 0 0 4px;
   }
   .home-section-label {
-    font-size: 11px; font-weight: 800; color: #C4622D;
-    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
+    font-size: 15px; font-weight: 800; color: #C4622D;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
     display: flex; align-items: center; gap: 8px;
   }
   .home-section-label .label-line {
-    flex: 1; height: 1px; min-width: 16px;
-    background-image: linear-gradient(to right, rgba(196,98,45,0.45) 55%, transparent 0%);
-    background-size: 6px 1px; background-repeat: repeat-x;
+    flex: 1; height: 2px; min-width: 16px;
+    background-image: repeating-linear-gradient(to right,
+      #C4622D 0, #C4622D 6px,
+      transparent 6px, transparent 9px,
+      #C4622D 9px, #C4622D 11px,
+      transparent 11px, transparent 14px);
+    background-repeat: repeat-x;
   }
   .home-section-label .label-compass {
-    width: 13px; height: 13px; flex-shrink: 0; opacity: 0.75;
+    width: 18px; height: 18px; flex-shrink: 0; opacity: 0.9;
   }
 
   /* ── CARROUSEL — boucle CSS infinie, aucun JS de défilement ── */
@@ -1506,7 +1510,7 @@
 
       <!-- Carrousel Nouveautés -->
       <div class="home-section-new">
-        <div class="home-section-label">Nouveautés<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
+        <div class="home-section-label"><img class="label-compass" src="icon-compass.webp" alt=""/>Nouveautés<span class="label-line"></span></div>
         <div class="carousel-wrapper">
           <div class="carousel-track" id="carousel-track">
             <div class="carousel-item" style="opacity:0.35;pointer-events:none;">
@@ -1521,7 +1525,7 @@
 
       <!-- Toutes les aventures -->
       <div class="home-section-new" style="padding-top:4px;">
-        <div class="home-section-label">Toutes les aventures<span class="label-line"></span><img class="label-compass" src="icon-compass.webp" alt=""/></div>
+        <div class="home-section-label"><img class="label-compass" src="icon-compass.webp" alt=""/>Toutes les aventures<span class="label-line"></span></div>
       </div>
       <div class="home-adv-list">
         <div id="adventure-cards-list">
