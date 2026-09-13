@@ -1930,16 +1930,24 @@
     </div>
 
     <div style="
-      background:white;
+      position:relative;overflow:hidden;
+      background:
+        radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%),
+        #5C3820 url('leather-tile.webp') repeat;
+      background-size:100% 100%, 180px 180px;
       padding:6px;
       margin:0 16px 16px;
-      border-radius:12px;
+      border-radius:14px;
+      border:1px solid rgba(0,0,0,0.4);
+      box-shadow:0 5px 16px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.14), inset 0 -6px 10px rgba(0,0,0,0.5);
       display:flex;
       gap:4px;
-      box-shadow:0 2px 8px rgba(0,0,0,0.06);
       flex-shrink:0;
     ">
+      <div style="position:absolute;inset:6px;background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;"></div>
+
       <button onclick="setRankTab('general',this)" id="rank-tab-general" style="
+        position:relative;z-index:1;
         flex:1;padding:9px 0;
         background:#2D4A2D;
         border:none;border-radius:8px;
@@ -1948,16 +1956,18 @@
       ">Général</button>
 
       <button onclick="setRankTab('friends',this)" id="rank-tab-friends" style="
+        position:relative;z-index:1;
         flex:1;padding:9px 0;
         background:none;border:none;border-radius:8px;
-        color:#6B7280;font-size:13px;font-weight:600;
+        color:rgba(245,237,216,0.65);font-size:13px;font-weight:600;
         cursor:pointer;transition:all 0.15s;
       ">Amis</button>
 
       <button onclick="setRankTab('scenario',this)" id="rank-tab-scenario" style="
+        position:relative;z-index:1;
         flex:1;padding:9px 0;
         background:none;border:none;border-radius:8px;
-        color:#6B7280;font-size:13px;font-weight:600;
+        color:rgba(245,237,216,0.65);font-size:13px;font-weight:600;
         cursor:pointer;transition:all 0.15s;
       ">Par scénario</button>
     </div>
@@ -6894,7 +6904,7 @@ function setRankTab(tab, btn) {
     const el = document.getElementById('rank-tab-'+t);
     if (el) {
       el.style.background = 'none';
-      el.style.color = '#6B7280';
+      el.style.color = 'rgba(245,237,216,0.65)';
       el.style.fontWeight = '600';
     }
   });
