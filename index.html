@@ -926,33 +926,73 @@
   /* ══════════════════════════════
      LANDING PAGE
   ══════════════════════════════ */
-  #screen-landing { background: var(--green-dark); overflow-y: auto; position: relative; }
-  #screen-landing::before {
-    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
-    background-size: 22px 22px;
-  }
+  #screen-landing { background: #16241A; overflow-y: auto; }
+  /* Fond illustré (logo, titre, sous-titre, boussole, sac à dos... déjà dans l'image) —
+     conteneur mis à l'échelle exacte de l'image (aspect-ratio) pour ne jamais la déformer ;
+     seuls les 3 cartes + les 2 boutons + le footer sont du vrai HTML, positionnés dans la
+     zone basse "vide" de l'illustration. */
   .landing-wrap {
-    position: relative; z-index: 1;
-    padding: 54px 22px 40px;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 24px; min-height: 100%; text-align: center;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 930 / 1692;
+    background: url('landing-bg.webp') no-repeat top center;
+    background-size: 100% 100%;
   }
-  .landing-compass { font-size: 80px; line-height: 1; animation: land-float 3s ease-in-out infinite; }
-  @keyframes land-float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-12px); } }
-  .landing-title      { font-size: 36px; font-weight: 800; color: white; line-height: 1.1; }
-  .landing-title span { color: var(--amber); }
-  .landing-sub { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.5; margin-top: -8px; }
+  .landing-content {
+    position: absolute; left: 0; right: 0; top: 33%; bottom: 0;
+    padding: 0 22px 28px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
   .landing-features { display: flex; flex-direction: column; gap: 10px; width: 100%; }
   .landing-feature {
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
-    border-radius: var(--radius-md); padding: 14px 16px;
-    display: flex; align-items: center; gap: 14px; text-align: left;
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border: 1px solid rgba(120,74,28,0.18);
+    border-radius: var(--radius-md); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; text-align: left;
+    box-shadow: 0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
   }
-  .landing-feature-icon  { font-size: 26px; flex-shrink: 0; }
-  .landing-feature-title { color: white; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-  .landing-feature-desc  { color: rgba(255,255,255,0.5); font-size: 12px; }
-  .landing-ctas { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .landing-feature-icon {
+    width: 50px; height: 50px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .landing-feature-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .landing-feature-title { color: #1A2A1A; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .landing-feature-desc  { color: #6B5A3E; font-size: 12px; }
+  .landing-feature-illus { width: 54px; height: 54px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .landing-feature-illus img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .landing-feature-arrow { color: rgba(120,74,28,0.45); font-size: 18px; flex-shrink: 0; }
+  .landing-ctas { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+  /* Bouton cuir + couture + rivets, réutilisable (variante non pivotée/non déchirée de
+     .btn-start-adventure, pour un CTA "normal" en flux plutôt qu'un écusson en overlay). */
+  .btn-leather {
+    position: relative;
+    background:
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%),
+      #5C3820 url('leather-tile.webp') repeat;
+    background-size: 100% 100%, 220px 220px;
+    color: #F5EDD8; border: none; border-radius: var(--radius-md);
+    width: 100%; padding: 15px 20px; font-size: 16px; font-weight: 800;
+    letter-spacing: 0.4px; cursor: pointer;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    box-shadow:
+      inset 0 2px 2px rgba(255,255,255,0.18),
+      inset 0 -5px 9px rgba(0,0,0,0.45),
+      0 8px 16px rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform 0.1s;
+  }
+  .btn-leather:active { transform: scale(0.97); }
+  .btn-leather::before {
+    content: ''; position: absolute; inset: 6px;
+    background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20344%2045%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20x%3D%221.2%22%20y%3D%221.2%22%20width%3D%22341.6%22%20height%3D%2242.6%22%20rx%3D%228%22%20fill%3D%22none%22%20stroke%3D%22%23160B04%22%20stroke-width%3D%221.3%22%20stroke-dasharray%3D%229%2C4%2C5%2C3%2C13%2C4%2C6%2C5%22%20stroke-linecap%3D%22butt%22%20opacity%3D%220.82%22%20vector-effect%3D%22non-scaling-stroke%22/%3E%3C/svg%3E');
+    background-size: 100% 100%; background-repeat: no-repeat;
+    pointer-events: none;
+  }
+  .btn-leather-icon {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+  }
   /* ══════════════════════════════════════════
      CHAPITRE 0 — Cinématique de recrutement
      (préfixe "c0-" pour éviter toute collision
@@ -1336,39 +1376,46 @@
   ═══════════════════════════════════ -->
   <div id="screen-landing" class="screen">
     <div class="landing-wrap">
-      <img src="logo.png" style="height:100px;object-fit:contain;">
-      <div>
-        <div class="landing-title" style="font-size:28px;line-height:1.2;">Les Aventures de<br><span>Flavia Flint</span></div>
-        <div class="landing-sub">La chasse au trésor géolocalisée<br/>pour toute la famille</div>
-      </div>
-      <div class="landing-features">
-        <div class="landing-feature">
-          <div class="landing-feature-icon">📍</div>
-          <div>
-            <div class="landing-feature-title">Aventures géolocalisées</div>
-            <div class="landing-feature-desc">Explorez votre ville comme jamais</div>
+      <div class="landing-content">
+        <div class="landing-features">
+          <div class="landing-feature">
+            <div class="landing-feature-icon"><img src="feature-icon-location.webp" alt=""></div>
+            <div style="flex:1;min-width:0;">
+              <div class="landing-feature-title">Aventures géolocalisées</div>
+              <div class="landing-feature-desc">Explorez votre ville comme jamais</div>
+            </div>
+            <div class="landing-feature-illus"><img src="feature-illus-location.webp" alt=""></div>
+            <div class="landing-feature-arrow">›</div>
+          </div>
+          <div class="landing-feature">
+            <div class="landing-feature-icon"><img src="feature-icon-riddle.webp" alt=""></div>
+            <div style="flex:1;min-width:0;">
+              <div class="landing-feature-title">Énigmes et mystères</div>
+              <div class="landing-feature-desc">Des défis pour petits et grands</div>
+            </div>
+            <div class="landing-feature-illus"><img src="feature-illus-riddle.webp" alt=""></div>
+            <div class="landing-feature-arrow">›</div>
+          </div>
+          <div class="landing-feature">
+            <div class="landing-feature-icon"><img src="feature-icon-badges.webp" alt=""></div>
+            <div style="flex:1;min-width:0;">
+              <div class="landing-feature-title">Badges et récompenses</div>
+              <div class="landing-feature-desc">Collectionnez vos victoires</div>
+            </div>
+            <div class="landing-feature-illus"><img src="feature-illus-badges.webp" alt=""></div>
+            <div class="landing-feature-arrow">›</div>
           </div>
         </div>
-        <div class="landing-feature">
-          <div class="landing-feature-icon">🔍</div>
-          <div>
-            <div class="landing-feature-title">Énigmes et mystères</div>
-            <div class="landing-feature-desc">Des défis pour petits et grands</div>
-          </div>
+        <div class="landing-ctas">
+          <button class="btn-leather" onclick="goFromLanding('signup')">
+            <span class="btn-leather-icon"><img src="icon-compass.webp" alt="" style="width:15px;height:15px;object-fit:contain;display:block;"/></span>
+            Commencer l'aventure →
+            <span class="btn-rivet tl"></span><span class="btn-rivet tr"></span><span class="btn-rivet bl"></span><span class="btn-rivet br"></span>
+          </button>
+          <button class="btn-outline" onclick="goFromLanding('login')">J'ai déjà un compte</button>
         </div>
-        <div class="landing-feature">
-          <div class="landing-feature-icon">🏆</div>
-          <div>
-            <div class="landing-feature-title">Badges et récompenses</div>
-            <div class="landing-feature-desc">Collectionnez vos victoires</div>
-          </div>
-        </div>
+        <div class="landing-footer" style="text-align:center;">Version bêta · Pour enfants de 5 à 12 ans</div>
       </div>
-      <div class="landing-ctas">
-        <button class="btn-primary" onclick="goFromLanding('signup')">Commencer l'aventure →</button>
-        <button class="btn-outline" onclick="goFromLanding('login')">J'ai déjà un compte</button>
-      </div>
-      <div class="landing-footer">Version bêta · Pour enfants de 5 à 12 ans</div>
     </div>
   </div>
 
@@ -5673,10 +5720,11 @@ function loadRankingTab(tab) {
   console.log('[loadRankingTab] dispatch vers onglet:', tab);
   currentRankingTab = tab;
   if (tab === 'friends') {
-    renderPodium([]); // le podium XP général n'a pas de sens sur l'onglet amis
+    // Le podium en haut reste sur le top 3 XP général (déjà chargé une fois
+    // en arrivant sur l'écran) — on ne le vide plus : ça laissait 3 silhouettes
+    // vides à la place des vraies photos, qui ressemblait à un bug.
     loadFriendsRanking();
   } else if (tab === 'scenario') {
-    renderPodium([]); // idem : classement chrono par scénario, pas de podium XP
     loadScenarioRanking();
   } else {
     loadRanking('general');
@@ -5735,6 +5783,10 @@ async function loadFriendsRanking() {
   // Charger les scores des amis
   if (friends.length > 0) {
     await loadFriendsScores(friends, userId);
+  } else {
+    // Pas encore d'amis : le podium général n'a pas de sens ici non plus,
+    // on le vide (silhouettes) plutôt que d'afficher le top 3 global.
+    renderPodium([]);
   }
 }
 
@@ -5810,6 +5862,9 @@ async function loadFriendsScores(friendIds, userId) {
     const players = await supaFetch(query);
     console.log('[loadFriendsScores] réponse Supabase:', players?.length, players);
 
+    // Podium en haut = top 3 de CE classement amis (et non le top 3 général)
+    renderPodium(players);
+
     const listEl = document.getElementById('friends-ranking-list');
     if (!listEl) { console.error('[loadFriendsScores] #friends-ranking-list introuvable (contenu déjà remplacé ?)'); return; }
 
@@ -5875,6 +5930,9 @@ async function loadScenarioRanking() {
     return;
   }
 
+  // Tant qu'aucun scénario n'est choisi, aucun top 3 n'a de sens : podium vide.
+  renderPodium([]);
+
   contentEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-light);">⏳ Chargement…</div>';
 
   let adventures;
@@ -5928,6 +5986,18 @@ async function loadScenarioLeaderboard(adventureId) {
     console.log('[loadScenarioLeaderboard] requête Supabase:', query);
     const completions = await supaFetch(query);
     console.log('[loadScenarioLeaderboard] réponse Supabase:', completions?.length, completions);
+
+    // Podium en haut = top 3 le plus rapide sur CE scénario (temps chrono, pas XP)
+    const podiumTop3 = completions.slice(0, 3).map(c => ({
+      pseudo: c.players?.pseudo,
+      avatar_emoji: c.players?.avatar_emoji,
+      duration_seconds: c.total_duration_seconds || 0,
+    }));
+    renderPodium(podiumTop3, p => {
+      const mins = Math.floor(p.duration_seconds / 60);
+      const secs = p.duration_seconds % 60;
+      return `⏱ ${mins}:${String(secs).padStart(2, '0')}`;
+    });
 
     if (!completions.length) {
       listEl.innerHTML = `
@@ -6169,16 +6239,21 @@ function renderPodiumSlot(player, { left, top, width, height, textTop, textColor
   const text = player
     ? `<div style="position:absolute;left:${textLeft}%;top:${textTop}%;transform:translateX(-50%);width:30%;text-align:center;line-height:1.3;">
          <div style="font-size:11px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${player.pseudo || '?'}</div>
-         <div style="font-size:11px;font-weight:800;color:${textColor};">${(player.total_xp || 0).toLocaleString('fr')} XP</div>
+         <div style="font-size:11px;font-weight:800;color:${textColor};">${player.podiumValue || ''}</div>
        </div>`
     : `<div style="position:absolute;left:${textLeft}%;top:${textTop}%;transform:translateX(-50%);width:30%;text-align:center;font-size:11px;font-weight:600;line-height:1.3;color:rgba(26,42,26,0.35);">- - -</div>`;
   return avatar + text;
 }
 
-function renderPodium(players) {
-  const p1 = players[0];
-  const p2 = players[1];
-  const p3 = players[2];
+// getValue calcule le texte affiché sous le pseudo (XP par défaut — utilisé pour
+// le classement général ET le classement entre amis, tous deux triés par XP).
+// L'onglet "Par scénario" passe son propre formatteur (temps chrono).
+function renderPodium(players, getValue) {
+  getValue = getValue || (p => `${(p.total_xp || 0).toLocaleString('fr')} XP`);
+  const withValue = p => p ? { ...p, podiumValue: getValue(p) } : p;
+  const p1 = withValue(players[0]);
+  const p2 = withValue(players[1]);
+  const p3 = withValue(players[2]);
 
   // textTop diffère entre le podium central (piédestal plus haut, chiffre "1" plus bas)
   // et les deux côtés, pour garder un espacement visuel cohérent sous chaque chiffre.
