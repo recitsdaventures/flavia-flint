@@ -673,6 +673,44 @@
   }
   .notif-badge.visible { display: block; }
 
+  /* ══════════════════════════════
+     ÉCRAN HISTOIRE DE FLAVIA FLINT — HERO
+     Pas de header standard ni de barre secondaire sur cet écran : l'illustration
+     fournie (bureau d'explorateur, boussole, lanterne) sert de bandeau et porte
+     directement les contrôles (retour / boussoles / cloche / réglages).
+  ══════════════════════════════ */
+  .fs-hero {
+    position: relative;
+    width: 100%; flex-shrink: 0;
+    aspect-ratio: 860 / 529;
+    background: url('flavia-story-hero.webp') top center no-repeat;
+    background-size: 100% auto;
+  }
+  .fs-hero::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 90px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0));
+    pointer-events: none;
+  }
+  .fs-hero-back,
+  .fs-hero-icon-btn {
+    background: rgba(0,0,0,0.32); backdrop-filter: blur(2px);
+    border: none; border-radius: 50%;
+    width: 36px; height: 36px;
+    color: #F5EDD8; font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fs-hero-back { position: absolute; top: 14px; left: 14px; z-index: 2; }
+  .fs-hero-icons {
+    position: absolute; top: 14px; right: 14px; z-index: 2;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .fs-hero-compass {
+    background: rgba(0,0,0,0.32); backdrop-filter: blur(2px);
+    border-radius: 20px; padding: 8px 14px;
+    color: var(--amber); font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; white-space: nowrap;
+  }
+
   /* ── TOAST ── */
   #toast {
     position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -2157,15 +2195,20 @@
        ÉCRAN HISTOIRE DE FLAVIA FLINT
   ═══════════════════════════════════ -->
   <div id="screen-flavia-story" class="screen">
-    <!-- Header -->
-    <div style="background:#2D4A2D;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
-      <button onclick="goToScreen('home', document.getElementById('nav-home'))" style="
-        background:rgba(255,255,255,0.1);border:none;border-radius:8px;
-        color:#F5EDD8;padding:6px 12px;cursor:pointer;font-size:13px;">← Retour</button>
-      <span style="color:#E8A020;font-weight:700;flex:1;"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Histoire de Flavia Flint</span>
-      <div style="background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px;
-        color:#E8A020;font-size:13px;font-weight:700;" id="compass-balance-story">
-        <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> ...
+    <!-- Hero : image dédiée fournie par l'utilisateur, sans header standard ni
+         barre secondaire — bouton retour, cloche, réglages et solde de boussoles
+         incrustés directement sur l'illustration. -->
+    <div class="fs-hero">
+      <button class="fs-hero-back" onclick="goToScreen('home', document.getElementById('nav-home'))">←</button>
+      <div class="fs-hero-icons">
+        <div class="fs-hero-compass" id="compass-balance-story">
+          <img src="icon-compass.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> ...
+        </div>
+        <div class="bell-wrap">
+          <button id="btn-bell-story" class="fs-hero-icon-btn" onclick="handleBellClick()">🔔</button>
+          <span class="notif-badge" id="notif-badge-story"></span>
+        </div>
+        <button id="settings-btn-story" class="fs-hero-icon-btn" onclick="toggleSettingsMenu()">⚙️</button>
       </div>
     </div>
     <!-- Contenu -->
@@ -2883,9 +2926,12 @@ function showToast(msg, duration = 3000) {
 }
 
 function handleBellClick() {
-  const badge = document.getElementById('notif-badge');
-  if (badge && badge.classList.contains('visible')) {
-    badge.classList.remove('visible');
+  // Plusieurs cloches peuvent coexister dans l'app (header standard + hero de
+  // l'écran Histoire de Flavia Flint) : on synchronise toutes les .notif-badge.
+  const badges = document.querySelectorAll('.notif-badge');
+  const hasVisible = Array.from(badges).some(b => b.classList.contains('visible'));
+  if (hasVisible) {
+    badges.forEach(b => b.classList.remove('visible'));
     showToast('🗺️ Nouvelle aventure disponible ! Découvre-la sur la carte.', 3500);
     localStorage.setItem('ff_last_adventure_count', String(adventures.length));
   } else {
@@ -2916,10 +2962,11 @@ function toggleSettingsMenu() {
 
 // Fermer si clic en dehors
 document.addEventListener('click', function(e) {
-  const menu    = document.getElementById('settings-menu');
-  const btn     = document.getElementById('settings-btn');
-  const btnHome = document.getElementById('settings-btn-home');
-  if (menu && !menu.contains(e.target) && e.target !== btn && e.target !== btnHome) {
+  const menu = document.getElementById('settings-menu');
+  // Plusieurs boutons réglages coexistent (header standard, accueil, hero de
+  // l'écran Histoire de Flavia Flint) : on les exclut tous du clic-extérieur.
+  const isGearBtn = e.target.closest('#settings-btn, #settings-btn-home, #settings-btn-story');
+  if (menu && !menu.contains(e.target) && !isGearBtn) {
     menu.style.display = 'none';
   }
 });
@@ -2932,8 +2979,7 @@ function checkAdventureNotif() {
   const prev = parseInt(localStorage.getItem('ff_last_adventure_count') || '0', 10);
   const curr = adventures.length;
   if (curr > prev && prev > 0) {
-    const badge = document.getElementById('notif-badge');
-    if (badge) badge.classList.add('visible');
+    document.querySelectorAll('.notif-badge').forEach(b => b.classList.add('visible'));
   }
   if (prev === 0) {
     localStorage.setItem('ff_last_adventure_count', String(curr));
@@ -6569,13 +6615,10 @@ async function loadFlaviaStory() {
         </div>`;
     }).join('');
 
-    content.innerHTML = `
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:48px;margin-bottom:8px;">${iconImg('book')}</div>
-        <div style="font-size:16px;font-weight:700;color:#1A2A1A;">L'Histoire de Flavia Flint</div>
-        <div style="font-size:13px;color:#9CA3AF;margin-top:4px;">Termine des aventures pour gagner des boussoles</div>
-      </div>
-      ${chaptersHtml}`;
+    // Le titre "L'Histoire de Flavia Flint" et la formule "Termine des aventures
+    // pour gagner des boussoles" sont désormais incrustés dans l'image hero
+    // (fs-hero) en haut de l'écran — plus besoin de les répéter ici.
+    content.innerHTML = chaptersHtml;
 
   } catch (e) {
     console.error('Erreur chargement histoire Flavia:', e);
@@ -7130,9 +7173,10 @@ function goToScreen(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  // Masquer le header sur home et tutorial (ils ont leur propre header inline / n'en ont pas besoin)
+  // Masquer le header standard sur home, tutorial et flavia-story (ils ont leur
+  // propre header inline / hero avec contrôles incrustés, ou n'en ont pas besoin)
   const appHeader = document.querySelector('.app-header');
-  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial') ? 'none' : '';
+  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial' || name === 'flavia-story') ? 'none' : '';
 
   if (name === 'map') {
     setTimeout(() => {
