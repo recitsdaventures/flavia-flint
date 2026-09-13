@@ -153,16 +153,27 @@
   ══════════════════════════════ */
   #screen-auth { background: var(--green-dark); overflow-y: auto; }
 
-  .auth-wrap {
-    padding: 52px 20px 36px;
-    display: flex; flex-direction: column; gap: 18px;
-    min-height: 100%;
+  /* Bandeau haut : réutilise l'illustration de la page de présentation,
+     recadrée sur sa portion supérieure (logo + titre + sous-titre déjà
+     intégrés à l'image) via background-size/position plutôt qu'un
+     second fichier image. */
+  .auth-banner {
+    position: relative;
+    width: 100%; flex-shrink: 0;
+    aspect-ratio: 860 / 540;
+    background: url('landing-bg.webp') top center no-repeat;
+    background-size: 100% auto;
   }
-  .auth-logo { text-align: center; margin-bottom: 6px; }
-  .auth-logo-icon { font-size: 56px; line-height: 1; margin-bottom: 10px; }
-  .auth-logo-title { font-size: 24px; font-weight: 800; color: white; line-height: 1.25; letter-spacing: 0.3px; }
-  .auth-logo-title span { color: var(--amber); }
-  .auth-logo-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+  .auth-banner::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+    background: linear-gradient(to bottom, rgba(45,74,45,0), var(--green-dark));
+    pointer-events: none;
+  }
+
+  .auth-wrap {
+    padding: 22px 20px 36px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
 
   .auth-tabs {
     display: flex; background: rgba(0,0,0,0.2);
@@ -1423,13 +1434,8 @@
        ÉCRAN AUTH
   ═══════════════════════════════════ -->
   <div id="screen-auth" class="screen active">
+    <div class="auth-banner"></div>
     <div class="auth-wrap">
-
-      <div class="auth-logo" style="margin-bottom:24px;">
-        <img src="logo.png" style="height:50px;object-fit:contain;display:block;margin:0 auto;margin-bottom:20px;background:transparent;filter:brightness(0) invert(1);mix-blend-mode:screen;">
-        <div class="auth-logo-title">Les Aventures de<br><span>Flavia Flint</span></div>
-        <div class="auth-logo-sub">Chasse au trésor géolocalisée</div>
-      </div>
 
       <div class="auth-tabs">
         <button class="auth-tab active" onclick="showAuthTab('login')">Connexion</button>
