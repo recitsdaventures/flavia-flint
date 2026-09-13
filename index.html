@@ -151,7 +151,15 @@
   /* ══════════════════════════════
      ÉCRAN AUTH
   ══════════════════════════════ */
-  #screen-auth { background: var(--green-dark); overflow-y: auto; }
+  /* Même vert texturé que la barre de navigation du bas (.bottom-nav),
+     plutôt qu'un vert uni — vignette radiale fixée au viewport (pour ne
+     pas s'étirer sur toute la hauteur scrollable) + texture carrelée. */
+  #screen-auth {
+    background:
+      radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.5) 100%) center / 100% 100% no-repeat fixed,
+      #14210F url('green-crackle-bg.webp') center / 260px 260px repeat;
+    overflow-y: auto;
+  }
 
   /* Bandeau haut : réutilise l'illustration de la page de présentation,
      recadrée sur sa toute première portion (logo + lierre + boussole)
@@ -167,7 +175,7 @@
   }
   .auth-banner::after {
     content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
-    background: linear-gradient(to bottom, rgba(45,74,45,0), var(--green-dark));
+    background: linear-gradient(to bottom, rgba(20,33,15,0), #14210F);
     pointer-events: none;
   }
   .auth-back {
