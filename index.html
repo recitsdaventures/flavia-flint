@@ -524,21 +524,6 @@
     padding: 16px 16px 30px;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
-  .profile-hero-topbar {
-    width: 100%;
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .profile-hero-topbar .profile-hero-logo {
-    height: 22px; object-fit: contain; display: block;
-    filter: brightness(0) invert(1); mix-blend-mode: screen;
-  }
-  .profile-hero-topbar .profile-hero-settings-btn {
-    background: rgba(0,0,0,0.35); border: none; border-radius: 50%;
-    width: 34px; height: 34px; font-size: 17px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: white; backdrop-filter: blur(3px); flex-shrink: 0;
-  }
   .profile-avatar {
     width: 80px; height: 80px; border-radius: 50%;
     background: var(--terra); border: 3px solid var(--amber);
@@ -1992,10 +1977,6 @@
   ═══════════════════════════════════ -->
   <div id="screen-profile" class="screen">
     <div class="profile-hero">
-      <div class="profile-hero-topbar">
-        <img class="profile-hero-logo" src="logo.png" alt=""/>
-        <button class="profile-hero-settings-btn" onclick="toggleSettingsMenu()">⚙️</button>
-      </div>
       <div class="profile-avatar" id="profile-avatar-el"><img src="avatar-1.webp" alt=""/></div>
       <div id="profile-identity-block"></div>
     </div>
@@ -4721,8 +4702,11 @@ async function loadProfile() {
       console.error('Erreur chargement titres:', e);
     }
     const equippedTitle = playerTitles.find(t => t.is_equipped);
-    const equippedTitleHtml = equippedTitle
-      ? `<div style="color:#E8A020;font-size:13px;margin-top:4px;">${equippedTitle.titles?.name || ''}</div>`
+    const equippedTitleName = equippedTitle?.titles?.name || '';
+    // On n'affiche le titre équipé que s'il diffère du rang déjà affiché juste au-dessus
+    // (par défaut le titre équipé porte le même nom que le rang — inutile de le répéter).
+    const equippedTitleHtml = (equippedTitleName && equippedTitleName !== getRankName(currentPlayer.total_xp || 0))
+      ? `<div style="color:#E8A020;font-size:13px;margin-top:4px;">${equippedTitleName}</div>`
       : '';
 
     // Progression complétée (sert à compter les scénarios distincts commencés/terminés).
@@ -7059,9 +7043,9 @@ function goToScreen(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  // Masquer le header sur home, tutorial et profil (ils ont leur propre header inline / n'en ont pas besoin)
+  // Masquer le header sur home et tutorial (ils ont leur propre header inline / n'en ont pas besoin)
   const appHeader = document.querySelector('.app-header');
-  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial' || name === 'profile') ? 'none' : '';
+  if (appHeader) appHeader.style.display = (name === 'home' || name === 'tutorial') ? 'none' : '';
 
   if (name === 'map') {
     setTimeout(() => {
