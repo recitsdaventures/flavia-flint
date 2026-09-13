@@ -4693,21 +4693,23 @@ function leaveGuestMode() {
 const BADGE_ROW_LIMIT = 5;
 let _allScenarioBadgesHtml = '';
 
-function badgeTileHtml(c) {
+// b : { imageUrl, icon, label } — forme commune aux badges de scénario
+// (adventure_completions) et aux tampons de chapitre Flavia Flint (player_unlocked_chapters).
+function badgeTileHtml(b) {
   return `
     <div class="badge-item">
       <div class="badge-circle-sm" style="background:var(--green-dark);">${
-        c.adventures?.badge_image_url
-          ? `<img src="${c.adventures.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
-          : '🏅'
+        b.imageUrl
+          ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+          : (b.icon || '🏅')
       }</div>
-      <div class="badge-label">${c.adventures?.badge_name || c.adventures?.title || 'Badge'}</div>
+      <div class="badge-label">${b.label}</div>
     </div>`;
 }
 
-// Affiche les écussons du plus récent au plus ancien (déjà l'ordre de uniqueScenarioBadges,
-// trié via completed_at.desc), limités à une seule ligne — au-delà, une tuile "+N" ouvre
-// la collection complète (qui peut alors passer à la ligne).
+// Affiche les écussons (badges de scénario + tampons de chapitre Flavia Flint)
+// du plus récent au plus ancien, sur une seule ligne — au-delà de BADGE_ROW_LIMIT,
+// une tuile "+N" ouvre la collection complète (qui peut alors passer à la ligne).
 function renderScenarioBadges(badges) {
   const grid = document.getElementById('profile-badges-grid');
   if (!grid) return;
@@ -4824,10 +4826,11 @@ async function loadProfile() {
     document.getElementById('profile-tbl-rank').textContent      = rank ? '#' + rank : '–';
 
     // Grille badges — un badge par scénario terminé (image du badge si définie, sinon 🏅)
+    // + un tampon par chapitre de l'histoire de Flavia Flint effectivement lu.
     let scenarioBadges = [];
     try {
       scenarioBadges = await supaFetch(
-        `adventure_completions?player_id=eq.${currentPlayer.id}&select=adventure_id,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`
+        `adventure_completions?player_id=eq.${currentPlayer.id}&select=adventure_id,completed_at,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`
       );
     } catch (e) {
       console.error('Erreur chargement badges scénarios:', e);
@@ -4839,8 +4842,36 @@ async function loadProfile() {
       seenAdvIds.add(c.adventure_id);
       return true;
     });
-    document.getElementById('profile-stat-badges').textContent = uniqueScenarioBadges.length;
-    renderScenarioBadges(uniqueScenarioBadges);
+
+    let readChapters = [];
+    try {
+      readChapters = await supaFetch(
+        `player_unlocked_chapters?player_id=eq.${currentPlayer.id}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`
+      );
+    } catch (e) {
+      console.error('Erreur chargement chapitres Flavia lus:', e);
+    }
+
+    const scenarioBadgeEntries = uniqueScenarioBadges.map(c => ({
+      date: c.completed_at ? new Date(c.completed_at) : new Date(0),
+      imageUrl: c.adventures?.badge_image_url || '',
+      icon: '🏅',
+      label: c.adventures?.badge_name || c.adventures?.title || 'Badge'
+    }));
+    const chapterBadgeEntries = (readChapters || [])
+      .filter(u => u.flavia_chapters)
+      .map(u => ({
+        date: u.unlocked_at ? new Date(u.unlocked_at) : new Date(0),
+        imageUrl: u.flavia_chapters?.stamp_image_url || '',
+        icon: u.flavia_chapters?.stamp_icon || '🧭',
+        label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre'
+      }));
+    // Du plus récent au plus ancien, toutes sources de badges confondues.
+    const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries]
+      .sort((a, b) => b.date - a.date);
+
+    document.getElementById('profile-stat-badges').textContent = allBadgeEntries.length;
+    renderScenarioBadges(allBadgeEntries);
 
     // Badges partenaires (QR codes collector scannés chez nos partenaires)
     try {
