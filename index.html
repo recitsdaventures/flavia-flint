@@ -154,63 +154,106 @@
   #screen-auth { background: var(--green-dark); overflow-y: auto; }
 
   /* Bandeau haut : réutilise l'illustration de la page de présentation,
-     recadrée sur sa portion supérieure (logo + titre + sous-titre déjà
-     intégrés à l'image) via background-size/position plutôt qu'un
-     second fichier image. */
+     recadrée sur sa toute première portion (logo + lierre + boussole)
+     via background-size/position plutôt qu'un second fichier image —
+     le titre/sous-titre redeviennent du texte HTML pour pouvoir changer
+     selon l'onglet Connexion / Inscription. */
   .auth-banner {
     position: relative;
     width: 100%; flex-shrink: 0;
-    aspect-ratio: 860 / 540;
+    aspect-ratio: 860 / 210;
     background: url('landing-bg.webp') top center no-repeat;
     background-size: 100% auto;
   }
   .auth-banner::after {
-    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
     background: linear-gradient(to bottom, rgba(45,74,45,0), var(--green-dark));
     pointer-events: none;
   }
+  .auth-back {
+    position: absolute; top: 14px; left: 14px; z-index: 2;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(0,0,0,0.28); border: none;
+    color: #F5EDD8; font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+
+  .auth-headline-wrap { padding: 0 22px 20px; text-align: center; }
+  .auth-headline { font-size: 24px; font-weight: 800; color: white; line-height: 1.25; }
+  .auth-headline span { color: var(--amber); }
+  .auth-subline { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 8px; line-height: 1.45; }
 
   .auth-wrap {
-    padding: 22px 20px 36px;
-    display: flex; flex-direction: column; gap: 18px;
+    padding: 0 20px 32px;
+    display: flex; flex-direction: column; gap: 14px;
   }
 
-  .auth-tabs {
-    display: flex; background: rgba(0,0,0,0.2);
-    border-radius: var(--radius-md); padding: 4px; gap: 4px;
-  }
+  .auth-tabs { display: flex; gap: 6px; padding: 0 2px; }
   .auth-tab {
-    flex: 1; padding: 10px 8px; border: none; border-radius: var(--radius-sm);
-    background: none; color: rgba(255,255,255,0.5);
-    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    flex: 1; padding: 13px 8px; border: none;
+    border-radius: 14px 14px 0 0;
+    background: rgba(0,0,0,0.22);
+    color: rgba(245,237,216,0.55);
+    font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s;
   }
-  .auth-tab.active { background: white; color: var(--green-dark); }
+  .auth-tab.active {
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    color: var(--text-dark);
+  }
 
   .auth-card {
-    background: var(--beige-light); border-radius: var(--radius-lg);
-    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
+    border: 1px solid rgba(120,74,28,0.18); border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    padding: 20px 18px 22px; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.16);
   }
   .auth-field { display: flex; flex-direction: column; gap: 6px; }
-  .auth-field label { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+  .auth-field label { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+  .field-icon-wrap { position: relative; display: flex; align-items: center; }
+  .field-icon-wrap svg {
+    position: absolute; left: 14px; width: 17px; height: 17px; pointer-events: none;
+    color: rgba(120,74,28,0.55);
+  }
+  .field-icon-wrap input { padding-left: 42px !important; }
   .auth-field input {
-    border: 1.5px solid var(--beige-dark);
+    border: 1.5px solid rgba(120,74,28,0.25);
     border-radius: var(--radius-sm); padding: 12px 14px;
     font-size: 15px; color: var(--text-dark);
-    background: white; outline: none;
-    transition: border-color 0.15s;
+    background: rgba(255,255,255,0.6); outline: none;
+    transition: border-color 0.15s, background 0.15s;
     -webkit-appearance: none; width: 100%; box-sizing: border-box;
   }
-  .auth-field input:focus { border-color: var(--green-mid); }
+  .auth-field input:focus { border-color: var(--green-mid); background: white; }
 
   /* ── MOT DE PASSE TOGGLE ── */
-  .pw-wrap { position: relative; }
+  .pw-wrap { position: relative; display: flex; align-items: center; }
   .pw-wrap input { padding-right: 42px; width: 100%; box-sizing: border-box; }
   .pw-toggle {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     background: none; border: none; padding: 2px; cursor: pointer;
-    font-size: 17px; line-height: 1; color: rgba(0,0,0,0.3); transition: color 0.15s;
+    font-size: 17px; line-height: 1; color: rgba(0,0,0,0.3); transition: color 0.15s; z-index: 1;
   }
   .pw-toggle:hover { color: rgba(0,0,0,0.6); }
+
+  /* ── DIVIDER "OU" + GOOGLE + SWITCH (façon maquette) ── */
+  .auth-or-row { display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+  .auth-or-row .auth-or-line { flex: 1; height: 1px; background: rgba(255,255,255,0.15); }
+  .auth-or-row .auth-or-diamond { color: var(--amber); font-size: 10px; }
+  .auth-or-row .auth-or-txt { font-size: 12px; color: rgba(255,255,255,0.4); }
+  .btn-google {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #F5EDD8; border: 1.5px solid rgba(120,74,28,0.2);
+    border-radius: var(--radius-md); padding: 13px;
+    font-size: 14px; font-weight: 700; color: var(--text-dark); cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-google:active { background: #E9DFC7; }
+  .auth-switch { text-align: center; font-size: 13px; color: rgba(255,255,255,0.55); }
+  .auth-switch button {
+    background: none; border: none; color: var(--amber); font-weight: 700;
+    cursor: pointer; text-decoration: underline; padding: 0; font-size: 13px;
+  }
 
   /* ── SE SOUVENIR DE MOI ── */
   .remember-row { display: flex; align-items: center; gap: 8px; margin: -2px 0 2px; }
@@ -237,6 +280,7 @@
     background: none; border: none; color: rgba(255,255,255,0.55);
     font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; text-align: center;
   }
+  #auth-forgot-row { margin-top: -4px; }
 
   /* ══════════════════════════════
      ÉCRAN CARTE
@@ -1434,8 +1478,15 @@
        ÉCRAN AUTH
   ═══════════════════════════════════ -->
   <div id="screen-auth" class="screen active">
-    <div class="auth-banner"></div>
+    <div class="auth-banner">
+      <button class="auth-back" onclick="goToScreen('landing', null)" aria-label="Retour">←</button>
+    </div>
     <div class="auth-wrap">
+
+      <div class="auth-headline-wrap">
+        <div class="auth-headline" id="auth-headline">Ravi de <span>vous revoir</span> !</div>
+        <div class="auth-subline" id="auth-subline">Connectez-vous pour continuer votre aventure.</div>
+      </div>
 
       <div class="auth-tabs">
         <button class="auth-tab active" onclick="showAuthTab('login')">Connexion</button>
@@ -1446,12 +1497,16 @@
       <div class="auth-card" id="auth-login">
         <div class="auth-field">
           <label for="login-email">Email</label>
-          <input type="email" id="login-email" placeholder="ton@email.com" autocomplete="email"
-                 onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()"/>
+          <div class="field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>
+            <input type="email" id="login-email" placeholder="ton@email.com" autocomplete="email"
+                   onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()"/>
+          </div>
         </div>
         <div class="auth-field">
           <label for="login-password">Mot de passe</label>
-          <div class="pw-wrap">
+          <div class="pw-wrap field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" id="login-password" placeholder="••••••••"
                    autocomplete="current-password"
                    onkeydown="if(event.key==='Enter') handleLogin()"/>
@@ -1463,15 +1518,21 @@
           <label for="login-remember">Se souvenir de moi</label>
         </div>
         <div class="auth-error" id="login-error"></div>
-        <button class="btn-primary" id="btn-login" onclick="handleLogin()">Se connecter →</button>
+        <button class="btn-leather" id="btn-login" onclick="handleLogin()">
+          <span class="btn-leather-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E8A020"><path d="M6 4l14 8-14 8V4z"/></svg></span>
+          Se connecter →
+        </button>
       </div>
-      <button class="auth-link" onclick="forgotPassword()">Mot de passe oublié ?</button>
+      <button class="auth-link" id="auth-forgot-row" onclick="forgotPassword()">Mot de passe oublié ?</button>
 
       <!-- Inscription -->
       <div class="auth-card" id="auth-signup" style="display:none;">
         <div class="auth-field">
           <label for="signup-pseudo">Ton pseudo d'aventurier</label>
-          <input type="text" id="signup-pseudo" placeholder="Le Renard" autocomplete="nickname"/>
+          <div class="field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="signup-pseudo" placeholder="Le Renard" autocomplete="nickname"/>
+          </div>
         </div>
         <div class="auth-field">
           <label>Choisis ton avatar</label>
@@ -1486,15 +1547,22 @@
         </div>
         <div class="auth-field">
           <label for="signup-email">Email</label>
-          <input type="email" id="signup-email" placeholder="ton@email.com" autocomplete="email"/>
+          <div class="field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>
+            <input type="email" id="signup-email" placeholder="ton@email.com" autocomplete="email"/>
+          </div>
         </div>
         <div class="auth-field">
           <label for="signup-city">Ville</label>
-          <input type="text" id="signup-city" placeholder="Ex : Draguignan" autocomplete="address-level2"/>
+          <div class="field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <input type="text" id="signup-city" placeholder="Ex : Draguignan" autocomplete="address-level2"/>
+          </div>
         </div>
         <div class="auth-field">
           <label for="signup-password">Mot de passe</label>
-          <div class="pw-wrap">
+          <div class="pw-wrap field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" id="signup-password" placeholder="6 caractères minimum"
                    autocomplete="new-password"
                    onkeydown="if(event.key==='Enter') handleSignup()"/>
@@ -1514,16 +1582,30 @@
           </label>
         </div>
         <div class="auth-error" id="signup-error"></div>
-        <button class="btn-primary" id="btn-signup" onclick="handleSignup()">Créer mon compte →</button>
+        <button class="btn-leather" id="btn-signup" onclick="handleSignup()">
+          <span class="btn-leather-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E8A020"><path d="M6 4l14 8-14 8V4z"/></svg></span>
+          Créer mon compte →
+        </button>
+      </div>
+
+      <div class="auth-or-row">
+        <div class="auth-or-line"></div><span class="auth-or-diamond">◆</span><span class="auth-or-txt">ou</span><span class="auth-or-diamond">◆</span><div class="auth-or-line"></div>
+      </div>
+      <button class="btn-google" onclick="handleGoogleAuth()">
+        <svg viewBox="0 0 48 48" width="18" height="18">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.5 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.5 35.2 26.9 36 24 36c-5.3 0-9.7-3.5-11.3-8.3l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.8-2.8 5.1-5.2 6.7l6.5 5.5C40.1 37.1 44 31.5 44 24c0-1.3-.1-2.7-.4-3.5z"/>
+        </svg>
+        Continuer avec Google
+      </button>
+      <div class="auth-switch" id="auth-switch-row">
+        Pas encore de compte ? <button onclick="showAuthTab('signup')">Créer un compte</button>
       </div>
 
       <!-- Mode invité -->
-      <div style="margin-top:8px; padding:0 0 24px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15);"></div>
-          <span style="font-size:12px;color:rgba(255,255,255,0.40);">ou</span>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15);"></div>
-        </div>
+      <div style="margin-top:10px; padding:0 0 20px; text-align:center;">
         <button class="btn-guest" onclick="enterGuestMode()">Continuer sans compte →</button>
         <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.30);">Exploration libre, sans sauvegarde</div>
       </div>
@@ -2533,6 +2615,28 @@ function showAuthTab(tab) {
   document.getElementById('auth-signup').style.display = tab === 'signup' ? 'flex' : 'none';
   document.getElementById('login-error').textContent  = '';
   document.getElementById('signup-error').textContent = '';
+
+  const headlineEl = document.getElementById('auth-headline');
+  const sublineEl  = document.getElementById('auth-subline');
+  const forgotEl   = document.getElementById('auth-forgot-row');
+  const switchEl   = document.getElementById('auth-switch-row');
+  if (tab === 'signup') {
+    if (headlineEl) headlineEl.innerHTML = 'Rejoignez <span>l\'aventure</span> !';
+    if (sublineEl)  sublineEl.textContent = 'Créez votre compte et partez à la découverte des trésors de votre région.';
+    if (forgotEl)   forgotEl.style.display = 'none';
+    if (switchEl)   switchEl.innerHTML = 'Vous avez déjà un compte ? <button onclick="showAuthTab(\'login\')">Se connecter</button>';
+  } else {
+    if (headlineEl) headlineEl.innerHTML = 'Ravi de <span>vous revoir</span> !';
+    if (sublineEl)  sublineEl.textContent = 'Connectez-vous pour continuer votre aventure.';
+    if (forgotEl)   forgotEl.style.display = '';
+    if (switchEl)   switchEl.innerHTML = 'Pas encore de compte ? <button onclick="showAuthTab(\'signup\')">Créer un compte</button>';
+  }
+}
+
+function handleGoogleAuth() {
+  const loginVisible = document.getElementById('auth-login').style.display !== 'none';
+  const errEl = document.getElementById(loginVisible ? 'login-error' : 'signup-error');
+  if (errEl) errEl.textContent = 'La connexion Google arrive bientôt !';
 }
 
 // Retourne le fichier image correspondant à un avatar_emoji stocké
