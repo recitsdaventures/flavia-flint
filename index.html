@@ -4942,7 +4942,14 @@ async function loadProfile() {
           🎖️ Voir tous les titres disponibles
         </button>
       </div>`;
-    if (titlesSectionEl) titlesSectionEl.innerHTML = showAllTitlesBtnHtml + titlesHtml;
+    // Section "Mes Titres" + bouton "Voir tous les titres" masqués pour l'instant
+    // (le titre sous le pseudo, lui, continue de se mettre à jour automatiquement
+    // avec l'XP). Remettre la ligne ci-dessous pour la réactiver :
+    // titlesSectionEl.innerHTML = showAllTitlesBtnHtml + titlesHtml;
+    if (titlesSectionEl) {
+      titlesSectionEl.innerHTML = '';
+      titlesSectionEl.style.display = 'none';
+    }
 
     // Barre de progression vers le rang suivant
     const currentRank  = getPlayerRank(xp);
