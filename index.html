@@ -561,13 +561,27 @@
   }
 
   .badges-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-  .badge-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .badge-hex-sm {
+  /* Rangée compacte (par défaut) : les écussons restent sur une seule ligne,
+     ordonnés du plus récent au plus ancien ; au-delà de la limite, une tuile
+     "+N" ouvre la vue complète (.badges-grid, qui peut alors passer à la ligne). */
+  .badges-row {
+    display: flex; flex-wrap: nowrap; gap: 10px; margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .badge-item { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; width: 56px; }
+  .badge-circle-sm {
     width: 56px; height: 56px; background: var(--green-dark);
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center; font-size: 24px;
   }
-  .badge-hex-sm.locked { background: var(--beige-dark); filter: grayscale(1); }
+  .badge-circle-sm.locked { background: var(--beige-dark); filter: grayscale(1); }
+  .badge-more-btn {
+    background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  }
+  .badge-more-tile {
+    background: var(--beige-mid); border: 2px dashed rgba(120,74,28,0.35);
+    color: var(--text-mid); font-size: 15px; font-weight: 700;
+  }
   .badge-label { font-size: 10px; color: var(--text-light); text-align: center; line-height: 1.2; }
 
   /* ══════════════════════════════
@@ -4675,6 +4689,56 @@ function leaveGuestMode() {
   goToScreen('auth', null);
 }
 
+// Nombre d'écussons affichés sur une seule ligne avant de proposer "Voir plus".
+const BADGE_ROW_LIMIT = 5;
+let _allScenarioBadgesHtml = '';
+
+function badgeTileHtml(c) {
+  return `
+    <div class="badge-item">
+      <div class="badge-circle-sm" style="background:var(--green-dark);">${
+        c.adventures?.badge_image_url
+          ? `<img src="${c.adventures.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+          : '🏅'
+      }</div>
+      <div class="badge-label">${c.adventures?.badge_name || c.adventures?.title || 'Badge'}</div>
+    </div>`;
+}
+
+// Affiche les écussons du plus récent au plus ancien (déjà l'ordre de uniqueScenarioBadges,
+// trié via completed_at.desc), limités à une seule ligne — au-delà, une tuile "+N" ouvre
+// la collection complète (qui peut alors passer à la ligne).
+function renderScenarioBadges(badges) {
+  const grid = document.getElementById('profile-badges-grid');
+  if (!grid) return;
+  if (!badges.length) {
+    grid.className = 'badges-row';
+    grid.innerHTML = '<div style="color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
+    return;
+  }
+  _allScenarioBadgesHtml = badges.map(badgeTileHtml).join('');
+  if (badges.length <= BADGE_ROW_LIMIT) {
+    grid.className = 'badges-row';
+    grid.innerHTML = _allScenarioBadgesHtml;
+    return;
+  }
+  const visible     = badges.slice(0, BADGE_ROW_LIMIT - 1);
+  const hiddenCount = badges.length - visible.length;
+  grid.className = 'badges-row';
+  grid.innerHTML = visible.map(badgeTileHtml).join('') + `
+    <button class="badge-item badge-more-btn" onclick="expandBadgesGrid()" type="button">
+      <div class="badge-circle-sm badge-more-tile">+${hiddenCount}</div>
+      <div class="badge-label">Voir plus</div>
+    </button>`;
+}
+
+function expandBadgesGrid() {
+  const grid = document.getElementById('profile-badges-grid');
+  if (!grid || !_allScenarioBadgesHtml) return;
+  grid.className = 'badges-grid';
+  grid.innerHTML = _allScenarioBadgesHtml;
+}
+
 async function loadProfile() {
   if (!currentPlayer) return;
   try {
@@ -4776,19 +4840,7 @@ async function loadProfile() {
       return true;
     });
     document.getElementById('profile-stat-badges').textContent = uniqueScenarioBadges.length;
-
-    const grid = document.getElementById('profile-badges-grid');
-    grid.innerHTML = uniqueScenarioBadges.length
-      ? uniqueScenarioBadges.map(c => `
-        <div class="badge-item">
-          <div class="badge-hex-sm" style="background:var(--green-dark);">${
-            c.adventures?.badge_image_url
-              ? `<img src="${c.adventures.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
-              : '🏅'
-          }</div>
-          <div class="badge-label">${c.adventures?.badge_name || c.adventures?.title || 'Badge'}</div>
-        </div>`).join('')
-      : '<div style="grid-column:1/-1; color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
+    renderScenarioBadges(uniqueScenarioBadges);
 
     // Badges partenaires (QR codes collector scannés chez nos partenaires)
     try {
