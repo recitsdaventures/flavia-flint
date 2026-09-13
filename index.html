@@ -4767,13 +4767,10 @@ async function loadProfile() {
     } catch (e) {
       console.error('Erreur chargement titres:', e);
     }
-    const equippedTitle = playerTitles.find(t => t.is_equipped);
-    const equippedTitleName = equippedTitle?.titles?.name || '';
-    // On n'affiche le titre équipé que s'il diffère du rang déjà affiché juste au-dessus
-    // (par défaut le titre équipé porte le même nom que le rang — inutile de le répéter).
-    const equippedTitleHtml = (equippedTitleName && equippedTitleName !== getRankName(currentPlayer.total_xp || 0))
-      ? `<div style="color:#E8A020;font-size:13px;margin-top:4px;">${equippedTitleName}</div>`
-      : '';
+    // Ligne du titre équipé masquée pour l'instant sous le pseudo, en cohérence avec
+    // la section "Mes Titres" elle-même masquée dans loadProfile() plus bas — le rang
+    // (rankLine) affiché juste au-dessus suffit et se met à jour seul avec l'XP.
+    const equippedTitleHtml = '';
 
     // Progression complétée (sert à compter les scénarios distincts commencés/terminés).
     // Le badge et l'XP ne sont plus stockés par étape mais au niveau de l'aventure —
