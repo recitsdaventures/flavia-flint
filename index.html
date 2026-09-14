@@ -898,17 +898,18 @@
     gap: 8px; padding: 52px 16px 12px;
   }
   .tuto-btn-pill {
-    background: rgba(255,255,255,0.12); border: none; border-radius: 20px;
-    padding: 7px 14px; color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 600;
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(3px); border: none; border-radius: 20px;
+    padding: 7px 14px; color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 600;
     cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
-  .tuto-btn-pill:active { background: rgba(255,255,255,0.22); }
+  .tuto-btn-pill:active { background: rgba(0,0,0,0.5); }
   .tuto-slides-wrap { flex: 1; position: relative; }
   .tuto-slide {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: flex-end;
-    padding: 100px 28px 128px; text-align: center;
+    padding: 100px 28px 64px; text-align: center;
     opacity: 0; transition: opacity 0.50s ease; pointer-events: none;
     background-size: cover; background-position: top center; background-repeat: no-repeat;
   }
@@ -938,17 +939,18 @@
   /* Dots */
   .tuto-dots {
     display: flex; justify-content: center; gap: 8px;
-    position: absolute; bottom: 70px; left: 0; right: 0; z-index: 10;
+    position: absolute; bottom: 34px; left: 0; right: 0; z-index: 10;
   }
   .tuto-dot {
     width: 8px; height: 8px; border-radius: 50%;
-    background: rgba(255,255,255,0.22); cursor: pointer;
+    background: rgba(255,255,255,0.45); cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
     transition: background 0.25s, transform 0.25s;
   }
   .tuto-dot.active { background: var(--amber); transform: scale(1.35); }
-  /* Progress bar */
-  .tuto-progress-wrap { padding: 0 28px 28px; position: relative; z-index: 5; flex-shrink: 0; }
-  .tuto-progress-track { height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  /* Progress bar — superposée en bas du visuel (n'occupe plus sa propre ligne) */
+  .tuto-progress-wrap { position: absolute; left: 0; right: 0; bottom: 14px; padding: 0 28px; z-index: 6; }
+  .tuto-progress-track { height: 4px; background: rgba(255,255,255,0.28); border-radius: 2px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
   .tuto-progress-fill  { height: 100%; background: var(--amber); border-radius: 2px; width: 0%; transition: width 4s linear; }
 
   /* GPS ALERT */
