@@ -936,6 +936,21 @@
     box-shadow: 0 4px 16px rgba(196,98,45,0.50);
   }
   .tuto-cta:active { transform: scale(0.96); }
+  /* Popup final (dernier slide) — scrim + carte centrée, même logique
+     d'apparition que le tampon de fin de chapitre. */
+  .tuto-final-popup {
+    position: absolute; inset: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    padding: 28px; background: rgba(0,0,0,0.45);
+    opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+  }
+  .tuto-final-popup.visible { opacity: 1; pointer-events: auto; }
+  .tuto-final-card {
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    max-width: 300px; width: 100%;
+    animation: popupAppear 0.4s cubic-bezier(0.68,-0.55,0.265,1.55) forwards;
+  }
+  .tuto-final-card .tuto-cta { margin-top: 0; width: 100%; }
   /* Dots */
   .tuto-dots {
     display: flex; justify-content: center; gap: 8px;
@@ -1132,6 +1147,10 @@
   #app.adventure-immersive-mode .app-header,
   #app.adventure-immersive-mode .bottom-nav,
   #app.adventure-immersive-mode .adv-header { display: none !important; }
+
+  /* Mode immersif tutoriel : masque la barre de nav du bas pour que le
+     visuel occupe tout l'écran (cf. startTutorial()/skipTutorial()). */
+  #app.tutorial-mode .bottom-nav { display: none !important; }
 
   #screen-chapitre0 { background: var(--green-dark); position: relative; }
 
@@ -1828,8 +1847,15 @@
       </div>
 
       <!-- Slide 5 — Chasse au trésor ultime -->
-      <div class="tuto-slide" id="tuto-5">
-        <div class="tuto-sub">Grimpe dans le classement annuel pour tenter de remporter une récompense en argent. Les règles complètes arrivent bientôt !</div>
+      <div class="tuto-slide" id="tuto-5"></div>
+    </div>
+
+    <!-- Popup final : apparaît une fois la barre de progression du dernier
+         slide terminée, pour laisser le visuel bien visible pendant le
+         chargement au lieu de le masquer avec le texte/bouton en permanence. -->
+    <div class="tuto-final-popup" id="tuto-final-popup">
+      <div class="tuto-final-card">
+        <div class="tuto-sub">Chaque année, une grande chasse au trésor est organisée : un véritable trésor et de nombreux lots à gagner !</div>
         <button class="tuto-cta" onclick="skipTutorial()">C'est parti ! 🚀</button>
       </div>
     </div>
@@ -2947,6 +2973,7 @@ function startTutorial() {
   tutoSlide    = 0;
   tutoIsPaused = false;
   goToScreen('tutorial', null);
+  document.getElementById('app')?.classList.add('tutorial-mode');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   showTutoSlide(0);
 }
@@ -2957,6 +2984,9 @@ function showTutoSlide(idx) {
   document.querySelectorAll('.tuto-slide').forEach((s, i) => s.classList.toggle('active', i === tutoSlide));
   // Dots
   document.querySelectorAll('.tuto-dot').forEach((d, i) => d.classList.toggle('active', i === tutoSlide));
+  // Le popup final ne concerne que le dernier slide — on le masque dès
+  // qu'on navigue ailleurs (dots, pause/reprise, etc.)
+  hideTutoFinalPopup();
   // Barre de progression
   const fill = document.getElementById('tuto-progress-fill');
   if (fill) {
@@ -2967,11 +2997,23 @@ function showTutoSlide(idx) {
       fill.style.width = '100%';
     });
   }
-  // Auto-avance si pas en pause et pas dernière slide
+  // Auto-avance si pas en pause : slide suivant, ou popup final sur le dernier slide
   clearTimeout(tutoTimer);
-  if (!tutoIsPaused && tutoSlide < TUTO_N - 1) {
-    tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
+  if (!tutoIsPaused) {
+    if (tutoSlide < TUTO_N - 1) {
+      tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
+    } else {
+      tutoTimer = setTimeout(showTutoFinalPopup, TUTO_DELAY);
+    }
   }
+}
+
+function showTutoFinalPopup() {
+  document.getElementById('tuto-final-popup')?.classList.add('visible');
+}
+
+function hideTutoFinalPopup() {
+  document.getElementById('tuto-final-popup')?.classList.remove('visible');
 }
 
 function toggleTutoPause() {
@@ -2979,9 +3021,13 @@ function toggleTutoPause() {
   const btn = document.getElementById('tuto-pause-btn');
   if (btn) btn.textContent = tutoIsPaused ? '▶ Reprendre' : '⏸ Pause';
   if (!tutoIsPaused) {
-    // Reprendre l'auto-avance depuis le slide courant
+    // Reprendre l'auto-avance depuis le slide courant (ou le popup final)
     clearTimeout(tutoTimer);
-    if (tutoSlide < TUTO_N - 1) tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
+    if (tutoSlide < TUTO_N - 1) {
+      tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
+    } else {
+      tutoTimer = setTimeout(showTutoFinalPopup, TUTO_DELAY);
+    }
     // Relancer la barre
     const fill = document.getElementById('tuto-progress-fill');
     if (fill) {
@@ -2998,6 +3044,8 @@ function toggleTutoPause() {
 function skipTutorial() {
   clearTimeout(tutoTimer);
   tutoIsPaused = false;
+  document.getElementById('app')?.classList.remove('tutorial-mode');
+  hideTutoFinalPopup();
   goToScreen('home', document.getElementById('nav-home'));
   document.getElementById('nav-home')?.classList.add('active');
 }
