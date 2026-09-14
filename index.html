@@ -685,6 +685,17 @@
     aspect-ratio: 860 / 529;
     background: url('flavia-story-hero.webp') top center no-repeat;
     background-size: 100% auto;
+    z-index: 1;
+  }
+  /* Le panneau de contenu remonte sur le bas de l'image (zone de transition
+     "papier déchiré" déjà présente dans l'illustration) : la première case
+     de chapitre se retrouve ainsi à cheval sur la limite hero/fond, comme le
+     bouton "Commencer l'aventure" sur l'écran Accueil. */
+  #flavia-story-content {
+    position: relative; z-index: 2;
+    margin-top: -32px;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 20px rgba(0,0,0,0.18);
   }
   .fs-hero::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 90px;
@@ -1093,6 +1104,13 @@
     background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
     display: flex; align-items: center; justify-content: center;
   }
+  /* Variante compacte du bouton cuir, pour les listes (chapitres Flavia Flint,
+     etc.) où un bouton pleine taille serait trop imposant répété plusieurs
+     fois — même texture/relief/couture, juste plus petit. */
+  .btn-leather.btn-leather-sm {
+    padding: 12px 16px; font-size: 14px;
+  }
+  .btn-leather-sm .btn-leather-icon { width: 22px; height: 22px; }
   /* ══════════════════════════════════════════
      CHAPITRE 0 — Cinématique de recrutement
      (préfixe "c0-" pour éviter toute collision
@@ -6569,21 +6587,26 @@ async function loadFlaviaStory() {
       const canAfford   = balance >= ch.unlock_cost;
 
       if (isUnlocked) {
-        // DÉBLOQUÉ
+        // DÉBLOQUÉ — bouton cuir "Lire" / "Relire", cohérent avec les
+        // chapitres verrouillés (même traitement pour tous les boutons).
         return `
           <div onclick="readChapter('${ch.id}')" style="
             background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:14px 16px;
             margin-bottom:10px;cursor:pointer;
             box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
             border:2px solid ${hasBeenRead ? '#D4C5A9' : '#E8A020'};
-            display:flex;align-items:center;gap:12px;
           ">
-            <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
-            <div style="flex:1;">
-              <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
-              ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#9CA3AF;">Appuie pour relire</div>'}
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
+                ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : ''}
+              </div>
             </div>
-            <span style="color:#C4622D;font-size:18px;">›</span>
+            <button class="btn-leather btn-leather-sm" onclick="event.stopPropagation();readChapter('${ch.id}')">
+              <span class="btn-leather-icon">${iconImg('book', 15)}</span>
+              ${hasBeenRead ? 'Relire' : 'Lire'}
+            </button>
           </div>`;
       }
 
@@ -6595,7 +6618,7 @@ async function loadFlaviaStory() {
           border-radius:14px;padding:14px 16px;margin-bottom:10px;
           border:1px solid rgba(120,74,28,0.18);opacity:${canAfford ? '1' : '0.75'};
         ">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
             <span style="font-size:24px;">${iconImg('lock')}</span>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:700;color:${canAfford ? '#1A2A1A' : '#9CA3AF'};">${ch.title}</div>
@@ -6603,10 +6626,9 @@ async function loadFlaviaStory() {
             </div>
           </div>
           ${canAfford
-            ? `<button onclick="unlockChapter('${ch.id}', ${ch.unlock_cost})" style="
-                width:100%;background:#C4622D;color:white;border:none;
-                border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">
-                ${iconImg('compass')} Débloquer pour ${ch.unlock_cost} boussoles
+            ? `<button class="btn-leather btn-leather-sm" onclick="unlockChapter('${ch.id}', ${ch.unlock_cost})">
+                <span class="btn-leather-icon">${iconImg('compass', 15)}</span>
+                Débloquer pour ${ch.unlock_cost} boussoles
               </button>`
             : `<div style="text-align:center;font-size:12px;color:#C4622D;font-weight:600;">
                 Il te manque ${missing} boussole${missing > 1 ? 's' : ''} — termine des aventures !
