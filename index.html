@@ -907,20 +907,25 @@
   .tuto-slide {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 100px 36px 110px; text-align: center;
+    align-items: center; justify-content: flex-end;
+    padding: 100px 28px 128px; text-align: center;
     opacity: 0; transition: opacity 0.50s ease; pointer-events: none;
+    background-size: cover; background-position: top center; background-repeat: no-repeat;
   }
   .tuto-slide.active { opacity: 1; pointer-events: auto; }
-  .tuto-svg-wrap {
-    width: 220px; height: 220px; margin-bottom: 28px;
-    animation: tuto-bounce 2s ease-in-out infinite;
-    flex-shrink: 0;
+  /* Visuels illustrés (titre déjà incrusté dans chaque image) — un par slide. */
+  #tuto-0 { background-image: url('flavia-1.webp'); }
+  #tuto-1 { background-image: url('flavia-2.webp'); }
+  #tuto-2 { background-image: url('flavia-3.webp'); }
+  #tuto-3 { background-image: url('flavia-4.webp'); }
+  #tuto-4 { background-image: url('flavia-5.webp'); }
+  #tuto-5 { background-image: url('flavia-6.webp'); }
+  .tuto-sub {
+    font-size: 14px; color: white; line-height: 1.55; max-width: 300px;
+    background: rgba(0,0,0,0.38); backdrop-filter: blur(3px);
+    border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   }
-  .tuto-svg-wrap svg { width: 100%; height: 100%; }
-  @keyframes tuto-bounce { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-12px); } }
-  .tuto-title { font-size: 22px; font-weight: 800; color: white; margin-bottom: 10px; line-height: 1.25; }
-  .tuto-sub   { font-size: 15px; color: rgba(240,232,208,0.70); line-height: 1.6; max-width: 280px; }
   .tuto-cta {
     margin-top: 28px;
     background: linear-gradient(135deg, #C4622D 0%, #D97C40 100%);
@@ -1797,160 +1802,31 @@
 
       <!-- Slide 0 — Bienvenue -->
       <div class="tuto-slide active" id="tuto-0">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="110" cy="110" r="100" fill="#2D5A2D" stroke="#E8A020" stroke-width="5"/>
-            <circle cx="110" cy="110" r="80" fill="none" stroke="rgba(232,160,32,0.25)" stroke-width="2"/>
-            <circle cx="110" cy="110" r="60" fill="none" stroke="rgba(232,160,32,0.12)" stroke-width="1.5"/>
-            <!-- Graduations -->
-            <line x1="110" y1="15" x2="110" y2="30" stroke="#E8A020" stroke-width="3" stroke-linecap="round"/>
-            <line x1="110" y1="190" x2="110" y2="205" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
-            <line x1="15" y1="110" x2="30" y2="110" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
-            <line x1="190" y1="110" x2="205" y2="110" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
-            <!-- N S O E -->
-            <text x="110" y="45" text-anchor="middle" font-size="18" font-weight="900" fill="#E8A020">N</text>
-            <text x="110" y="190" text-anchor="middle" font-size="15" font-weight="700" fill="rgba(255,255,255,0.45)">S</text>
-            <text x="28" y="115" text-anchor="middle" font-size="15" font-weight="700" fill="rgba(255,255,255,0.45)">O</text>
-            <text x="192" y="115" text-anchor="middle" font-size="15" font-weight="700" fill="rgba(255,255,255,0.45)">E</text>
-            <!-- Aiguille nord (terra) -->
-            <polygon points="110,42 118,110 110,100 102,110" fill="#C4622D"/>
-            <!-- Aiguille sud (blanc) -->
-            <polygon points="110,178 118,110 110,120 102,110" fill="rgba(255,255,255,0.35)"/>
-            <!-- Centre -->
-            <circle cx="110" cy="110" r="10" fill="#1A3A1A" stroke="#E8A020" stroke-width="2.5"/>
-            <circle cx="110" cy="110" r="4" fill="#E8A020"/>
-          </svg>
-        </div>
-        <div class="tuto-title">Bienvenue chez<br>Flavia Flint !</div>
         <div class="tuto-sub">Une chasse au trésor géolocalisée dans ta ville t'attend !</div>
       </div>
 
       <!-- Slide 1 — Suis la boussole -->
       <div class="tuto-slide" id="tuto-1">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Fond carte -->
-            <rect x="20" y="30" width="180" height="160" rx="16" fill="#2D5A2D" stroke="#E8A020" stroke-width="3"/>
-            <rect x="32" y="44" width="156" height="132" rx="10" fill="#3D7A3D"/>
-            <!-- Routes stylisées -->
-            <path d="M50 120 Q90 90 140 100 Q170 108 188 120" stroke="#4A8C4A" stroke-width="14" fill="none" stroke-linecap="round"/>
-            <path d="M50 120 Q90 90 140 100 Q170 108 188 120" stroke="#2D5A2D" stroke-width="4" fill="none" stroke-dasharray="8,6" stroke-linecap="round"/>
-            <path d="M110 44 L110 176" stroke="#4A8C4A" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.5"/>
-            <!-- Zones vertes -->
-            <ellipse cx="70" cy="90" rx="22" ry="16" fill="#5A9A5A" opacity="0.6"/>
-            <ellipse cx="160" cy="140" rx="18" ry="14" fill="#5A9A5A" opacity="0.6"/>
-            <!-- Pin épingle -->
-            <circle cx="130" cy="88" r="18" fill="#C4622D"/>
-            <path d="M130 106 L122 128 L130 124 L138 128 Z" fill="#C4622D"/>
-            <circle cx="130" cy="88" r="8" fill="white"/>
-            <!-- Cercle pulsation -->
-            <circle cx="130" cy="88" r="28" fill="none" stroke="rgba(196,98,45,0.35)" stroke-width="3"/>
-            <circle cx="130" cy="88" r="40" fill="none" stroke="rgba(196,98,45,0.15)" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="tuto-title">Suis la boussole</div>
         <div class="tuto-sub">Rends-toi aux lieux indiqués par Flavia. La carte te guide pas à pas !</div>
       </div>
 
       <!-- Slide 2 — Résous les énigmes -->
       <div class="tuto-slide" id="tuto-2">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Loupe corps -->
-            <circle cx="92" cy="92" r="68" fill="#2D5A2D" stroke="#E8A020" stroke-width="5"/>
-            <circle cx="92" cy="92" r="54" fill="#3D7A3D"/>
-            <!-- Reflet loupe -->
-            <circle cx="92" cy="92" r="54" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2"/>
-            <path d="M68 68 Q80 62 96 68" stroke="rgba(255,255,255,0.20)" stroke-width="4" fill="none" stroke-linecap="round"/>
-            <!-- Point d'interrogation -->
-            <text x="92" y="114" text-anchor="middle" font-size="70" font-weight="900" fill="#E8A020">?</text>
-            <!-- Manche -->
-            <line x1="134" y1="134" x2="196" y2="196" stroke="#C4622D" stroke-width="16" stroke-linecap="round"/>
-            <line x1="134" y1="134" x2="196" y2="196" stroke="rgba(255,255,255,0.15)" stroke-width="4" stroke-linecap="round"/>
-            <!-- Étoiles déco -->
-            <circle cx="48" cy="48" r="4" fill="#E8A020" opacity="0.7"/>
-            <circle cx="140" cy="42" r="3" fill="#E8A020" opacity="0.5"/>
-            <circle cx="155" cy="65" r="2.5" fill="#E8A020" opacity="0.4"/>
-          </svg>
-        </div>
-        <div class="tuto-title">Résous les énigmes</div>
         <div class="tuto-sub">Chaque étape cache un mystère. Observe, réfléchis et trouve la bonne réponse !</div>
       </div>
 
       <!-- Slide 3 — Gagne des points -->
       <div class="tuto-slide" id="tuto-3">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Trophée corps -->
-            <path d="M70 55 L150 55 L142 125 Q110 148 78 125 Z" fill="#E8A020"/>
-            <path d="M70 55 L150 55 L142 125 Q110 148 78 125 Z" fill="url(#trophyGrad)" opacity="0.4"/>
-            <defs>
-              <linearGradient id="trophyGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="white" stop-opacity="0.4"/>
-                <stop offset="100%" stop-color="transparent"/>
-              </linearGradient>
-            </defs>
-            <!-- Reflet -->
-            <path d="M80 60 Q95 56 108 62" stroke="rgba(255,255,255,0.50)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-            <!-- Anses -->
-            <path d="M70 65 Q44 65 44 94 Q44 118 70 118" stroke="#C4622D" stroke-width="9" fill="none" stroke-linecap="round"/>
-            <path d="M150 65 Q176 65 176 94 Q176 118 150 118" stroke="#C4622D" stroke-width="9" fill="none" stroke-linecap="round"/>
-            <!-- Pied -->
-            <rect x="100" y="148" width="20" height="24" rx="3" fill="#D4C5A9"/>
-            <rect x="82" y="170" width="56" height="13" rx="5" fill="#C4622D"/>
-            <!-- Étoiles -->
-            <text x="55" y="48" font-size="22" text-anchor="middle">⭐</text>
-            <text x="110" y="36" font-size="28" text-anchor="middle">⭐</text>
-            <text x="166" y="44" font-size="20" text-anchor="middle">⭐</text>
-            <!-- XP badge -->
-            <circle cx="155" cy="108" r="20" fill="#1A3A1A" stroke="#E8A020" stroke-width="2.5"/>
-            <text x="155" y="115" text-anchor="middle" font-size="14" font-weight="900" fill="#E8A020">XP</text>
-          </svg>
-        </div>
-        <div class="tuto-title">Gagne des points<br>et des badges !</div>
         <div class="tuto-sub">Résous les énigmes, économise tes indices : chaque étape réussie te rapporte de l'XP !</div>
       </div>
 
       <!-- Slide 4 — Le classement -->
       <div class="tuto-slide" id="tuto-4">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Podium -->
-            <rect x="28"  y="128" width="52" height="62" rx="6" fill="#3D7A3D" stroke="#E8A020" stroke-width="2"/>
-            <rect x="84"  y="92"  width="52" height="98" rx="6" fill="#4A8C4A" stroke="#E8A020" stroke-width="3"/>
-            <rect x="140" y="150" width="52" height="40" rx="6" fill="#2D5A2D" stroke="#E8A020" stroke-width="2"/>
-            <text x="54"  y="166" text-anchor="middle" font-size="24" font-weight="900" fill="#E8A020">2</text>
-            <text x="110" y="147" text-anchor="middle" font-size="28" font-weight="900" fill="#E8A020">1</text>
-            <text x="166" y="177" text-anchor="middle" font-size="20" font-weight="900" fill="#E8A020">3</text>
-            <image href="icon-medal-1.webp" x="89"  y="32" width="42" height="42"/>
-            <image href="icon-medal-2.webp" x="40"  y="76" width="28" height="28"/>
-            <image href="icon-medal-3.webp" x="154" y="96" width="24" height="24"/>
-          </svg>
-        </div>
-        <div class="tuto-title">Grimpe au classement</div>
         <div class="tuto-sub">Classement général, entre amis, ou par aventure : défie les autres explorateurs !</div>
       </div>
 
       <!-- Slide 5 — Chasse au trésor ultime -->
       <div class="tuto-slide" id="tuto-5">
-        <div class="tuto-svg-wrap">
-          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Coffre -->
-            <rect x="45" y="112" width="130" height="68" rx="10" fill="#C4622D" stroke="#E8A020" stroke-width="4"/>
-            <path d="M45 112 Q110 72 175 112 L175 132 Q110 96 45 132 Z" fill="#D97C40" stroke="#E8A020" stroke-width="4"/>
-            <rect x="100" y="114" width="20" height="26" rx="4" fill="#1A3A1A" stroke="#E8A020" stroke-width="2"/>
-            <!-- Pièces -->
-            <circle cx="70"  cy="107" r="10" fill="#E8A020"/>
-            <circle cx="95"  cy="100" r="9"  fill="#F4C752"/>
-            <circle cx="125" cy="102" r="10" fill="#E8A020"/>
-            <circle cx="150" cy="108" r="9"  fill="#F4C752"/>
-            <!-- Étincelles -->
-            <text x="32"  y="62" font-size="22" text-anchor="middle">✨</text>
-            <text x="188" y="78" font-size="18" text-anchor="middle">✨</text>
-            <text x="110" y="42" font-size="26" text-anchor="middle">✨</text>
-          </svg>
-        </div>
-        <div class="tuto-title">La chasse au trésor<br>ultime</div>
         <div class="tuto-sub">Grimpe dans le classement annuel pour tenter de remporter une récompense en argent. Les règles complètes arrivent bientôt !</div>
         <button class="tuto-cta" onclick="skipTutorial()">C'est parti ! 🚀</button>
       </div>
