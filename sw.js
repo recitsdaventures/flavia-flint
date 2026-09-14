@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flavia-flint-v3';
+const CACHE_NAME = 'flavia-flint-v4';
 
 // App shell — vérifié en réseau en priorité pour récupérer le code à jour,
 // avec repli sur le cache hors-ligne.
