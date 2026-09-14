@@ -6587,26 +6587,22 @@ async function loadFlaviaStory() {
       const canAfford   = balance >= ch.unlock_cost;
 
       if (isUnlocked) {
-        // DÉBLOQUÉ — bouton cuir "Lire" / "Relire", cohérent avec les
-        // chapitres verrouillés (même traitement pour tous les boutons).
+        // DÉBLOQUÉ — pas de bouton (surcharge visuelle inutile puisque toute
+        // la carte est déjà cliquable) : juste la ligne info + chevron.
         return `
           <div onclick="readChapter('${ch.id}')" style="
             background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:14px 16px;
             margin-bottom:10px;cursor:pointer;
             box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);
             border:2px solid ${hasBeenRead ? '#D4C5A9' : '#E8A020'};
+            display:flex;align-items:center;gap:12px;
           ">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-              <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
-              <div style="flex:1;">
-                <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
-                ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : ''}
-              </div>
+            <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
+              ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#9CA3AF;">Appuie pour relire</div>'}
             </div>
-            <button class="btn-leather btn-leather-sm" onclick="event.stopPropagation();readChapter('${ch.id}')">
-              <span class="btn-leather-icon">${iconImg('book', 15)}</span>
-              ${hasBeenRead ? 'Relire' : 'Lire'}
-            </button>
+            <span style="color:#C4622D;font-size:18px;">›</span>
           </div>`;
       }
 
