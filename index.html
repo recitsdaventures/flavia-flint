@@ -1377,9 +1377,12 @@
     font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700;
     color: var(--text-dark); animation: fadeInUp 0.4s ease 0.45s both;
   }
+  /* Moment de récompense (une fois par chapitre) -> même famille que les
+     boutons cuir d'engagement (débloquer un chapitre, commencer l'aventure) ;
+     .stamp-close-btn n'apporte plus que la mise en page/l'animation du popup,
+     le style visuel vient de .btn-leather. */
   .stamp-close-btn {
-    width: 100%; margin-top: 4px; padding: 14px; background: var(--terra); color: white;
-    border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+    width: 100%; margin-top: 4px;
     animation: fadeInUp 0.4s ease 0.55s both;
   }
   @keyframes stampDrop {
@@ -7603,7 +7606,10 @@ function showChapterStamp(chapter) {
         </div>
         <div class="stamp-ink"></div>
         ${chapterTitle ? `<div class="stamp-chapter-title">${chapterTitle}</div>` : ''}
-        <button class="stamp-close-btn" onclick="closeStampAndReturn()">Continuer →</button>
+        <button class="btn-leather stamp-close-btn" onclick="closeStampAndReturn()">
+          <span class="btn-leather-icon">${iconImg('book', 15)}</span>
+          Continuer →
+        </button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
