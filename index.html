@@ -927,17 +927,11 @@
     border-radius: 14px; padding: 12px 16px;
     box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   }
-  .tuto-cta {
-    margin-top: 28px;
-    background: linear-gradient(135deg, #C4622D 0%, #D97C40 100%);
-    color: white; border: none; border-radius: var(--radius-md);
-    padding: 16px 36px; font-size: 15px; font-weight: 800;
-    cursor: pointer; transition: transform 0.1s;
-    box-shadow: 0 4px 16px rgba(196,98,45,0.50);
-  }
-  .tuto-cta:active { transform: scale(0.96); }
   /* Popup final (dernier slide) — scrim + carte centrée, même logique
-     d'apparition que le tampon de fin de chapitre. */
+     d'apparition que le tampon de fin de chapitre. Le CTA utilise
+     .btn-leather (au lieu du terracotta plat) : c'est le bouton qui
+     lance l'aventure, donc le traitement "action d'engagement" comme
+     Commencer l'aventure / Débloquer un chapitre. */
   .tuto-final-popup {
     position: absolute; inset: 0; z-index: 30;
     display: flex; align-items: center; justify-content: center;
@@ -950,7 +944,6 @@
     max-width: 300px; width: 100%;
     animation: popupAppear 0.4s cubic-bezier(0.68,-0.55,0.265,1.55) forwards;
   }
-  .tuto-final-card .tuto-cta { margin-top: 0; width: 100%; }
   /* Dots */
   .tuto-dots {
     display: flex; justify-content: center; gap: 8px;
@@ -1856,7 +1849,10 @@
     <div class="tuto-final-popup" id="tuto-final-popup">
       <div class="tuto-final-card">
         <div class="tuto-sub">Chaque année, une grande chasse au trésor est organisée : un véritable trésor et de nombreux lots à gagner !</div>
-        <button class="tuto-cta" onclick="skipTutorial()">C'est parti ! 🚀</button>
+        <button class="btn-leather" onclick="skipTutorial()">
+          <span class="btn-leather-icon"><img src="icon-compass.webp" alt="" style="width:15px;height:15px;object-fit:contain;display:block;"/></span>
+          C'est parti !
+        </button>
       </div>
     </div>
 
