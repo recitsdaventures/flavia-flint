@@ -7177,6 +7177,33 @@ function setRankTab(tab, btn) {
 }
 
 // ══════════════════════════════════════════
+// PRÉCHARGEMENT DES VISUELS CRITIQUES (premier écran)
+// ══════════════════════════════════════════
+// splash-bg, landing-bg et green-crackle-bg sont vus par TOUS les joueurs
+// dans les toutes premières secondes (splash → présentation → connexion),
+// avant même que le service worker n'ait fini de s'installer sur une toute
+// première visite. Ni un background-image CSS ni ce tout premier appel
+// réseau n'ont de mécanisme de retry intégré : un raté ponctuel (réseau
+// lent juste après l'installation de l'app, requête coupée...) laisse un
+// fond nu (vert/beige) sans image, pour toujours, sans jamais réessayer.
+// On les précharge donc ici avec plusieurs tentatives, en parallèle du
+// splash — une fois chargée avec succès, l'image se retrouve dans le
+// cache HTTP du navigateur, donc le background-image CSS qui la référence
+// juste après la retrouve instantanément, sans repartir en réseau.
+function preloadCriticalImageWithRetry(src, attemptsLeft) {
+  if (attemptsLeft === undefined) attemptsLeft = 3;
+  const img = new Image();
+  img.onerror = () => {
+    if (attemptsLeft > 1) {
+      setTimeout(() => preloadCriticalImageWithRetry(src, attemptsLeft - 1), 700);
+    }
+  };
+  img.src = src;
+}
+['splash-bg.webp', 'landing-bg.webp', 'green-crackle-bg.webp', 'hero-home.webp']
+  .forEach(src => preloadCriticalImageWithRetry(src));
+
+// ══════════════════════════════════════════
 // SPLASH SCREEN
 // ══════════════════════════════════════════
 (function initSplash() {
