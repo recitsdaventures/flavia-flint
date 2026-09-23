@@ -4763,29 +4763,47 @@ function expandBadgesGrid() {
 async function loadProfile() {
   if (!currentPlayer) return;
   try {
-    // Rafraîchir données joueur
-    const rows = await supaFetch(`players?id=eq.${currentPlayer.id}`);
+    const playerId = currentPlayer.id;
+
+    // Tout ce qui peut être lu en parallèle l'est — auparavant, chaque requête
+    // attendait la précédente (jusqu'à 8 allers-retours réseau à la suite), ce
+    // qui faisait apparaître le profil "par vagues" successives. checkAndAwardTitles()
+    // est indépendant (il fait ses propres requêtes) donc lancé en même temps plutôt
+    // qu'attendu avant de commencer : un titre tout juste débloqué n'apparaîtrait
+    // qu'au prochain passage sur le profil plutôt qu'immédiatement, mais la section
+    // "Mes Titres" est de toute façon masquée pour l'instant (voir plus bas), donc
+    // aucune différence visible aujourd'hui.
+    const [
+      rows,
+      allPlayers,
+      playerTitles,
+      progressData,
+      scenarioCompletions,
+      readChapters,
+      partnerBadges
+    ] = await Promise.all([
+      supaFetch(`players?id=eq.${playerId}`),
+      supaFetch('players?select=id,total_xp&order=total_xp.desc'),
+      supaFetch(`player_titles?player_id=eq.${playerId}&select=*,titles(name,category,level,icon,image_url,description)&order=unlocked_at.desc`)
+        .catch(e => { console.error('Erreur chargement titres:', e); return []; }),
+      supaFetch(`player_progress?player_id=eq.${playerId}&completed=eq.true&select=step_id,adventure_id`)
+        .catch(e => { console.error('Erreur chargement progression:', e); return []; }),
+      // select élargi (au lieu de deux requêtes séparées) : ce même résultat sert à la
+      // fois à la grille de badges ci-dessous et à l'historique des 5 dernières
+      // aventures plus bas — un seul aller-retour réseau pour les deux.
+      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`)
+        .catch(e => { console.error('Erreur chargement badges scénarios:', e); return []; }),
+      supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
+        .catch(e => { console.error('Erreur chargement chapitres Flavia lus:', e); return []; }),
+      supaFetch(`player_partner_badges?player_id=eq.${playerId}&select=*,partner_qr_codes(badge_name,partner_name,badge_image_url,xp_reward)&order=scanned_at.desc`)
+        .catch(e => { console.error('Erreur badges partenaires:', e); return []; }),
+      checkAndAwardTitles()
+    ]);
+
     if (rows.length) currentPlayer = rows[0];
-
-    // Rang mondial
-    const allPlayers = await supaFetch('players?select=id,total_xp&order=total_xp.desc');
     const rank = allPlayers.findIndex(p => p.id === currentPlayer.id) + 1;
+    console.log('Titres joueur:', playerTitles);
 
-    // Vérifier/attribuer les titres mérités AVANT de les afficher, pour que le joueur
-    // voie tout de suite un titre débloqué en arrivant sur son profil (et pas seulement
-    // après sa prochaine aventure terminée).
-    await checkAndAwardTitles();
-
-    // Titres débloqués (collection + titre équipé affiché sous le pseudo)
-    let playerTitles = [];
-    try {
-      playerTitles = await supaFetch(
-        `player_titles?player_id=eq.${currentPlayer.id}&select=*,titles(name,category,level,icon,image_url,description)&order=unlocked_at.desc`
-      );
-      console.log('Titres joueur:', playerTitles);
-    } catch (e) {
-      console.error('Erreur chargement titres:', e);
-    }
     // Ligne du titre équipé masquée pour l'instant sous le pseudo, en cohérence avec
     // la section "Mes Titres" elle-même masquée dans loadProfile() plus bas — le rang
     // (rankLine) affiché juste au-dessus suffit et se met à jour seul avec l'XP.
@@ -4794,15 +4812,6 @@ async function loadProfile() {
     // Progression complétée (sert à compter les scénarios distincts commencés/terminés).
     // Le badge et l'XP ne sont plus stockés par étape mais au niveau de l'aventure —
     // voir plus bas la requête sur adventure_completions.
-    let progressData = [];
-    try {
-      progressData = await supaFetch(
-        `player_progress?player_id=eq.${currentPlayer.id}&completed=eq.true&select=step_id,adventure_id`
-      );
-    } catch (e) {
-      console.error('Erreur chargement progression:', e);
-      progressData = [];
-    }
     const uniqueAdvIds = new Set(progressData.map(p => p.adventure_id));
 
     // Mise à jour UI
@@ -4843,30 +4852,14 @@ async function loadProfile() {
 
     // Grille badges — un badge par scénario terminé (image du badge si définie, sinon 🏅)
     // + un tampon par chapitre de l'histoire de Flavia Flint effectivement lu.
-    let scenarioBadges = [];
-    try {
-      scenarioBadges = await supaFetch(
-        `adventure_completions?player_id=eq.${currentPlayer.id}&select=adventure_id,completed_at,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`
-      );
-    } catch (e) {
-      console.error('Erreur chargement badges scénarios:', e);
-    }
-    // Un seul badge par aventure, même si rejouée plusieurs fois
+    // Un seul badge par aventure, même si rejouée plusieurs fois (scenarioCompletions
+    // vient du Promise.all ci-dessus — déjà chargé, aucune requête ici).
     const seenAdvIds = new Set();
-    const uniqueScenarioBadges = (scenarioBadges || []).filter(c => {
+    const uniqueScenarioBadges = (scenarioCompletions || []).filter(c => {
       if (!c.adventure_id || seenAdvIds.has(c.adventure_id)) return false;
       seenAdvIds.add(c.adventure_id);
       return true;
     });
-
-    let readChapters = [];
-    try {
-      readChapters = await supaFetch(
-        `player_unlocked_chapters?player_id=eq.${currentPlayer.id}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`
-      );
-    } catch (e) {
-      console.error('Erreur chargement chapitres Flavia lus:', e);
-    }
 
     const scenarioBadgeEntries = uniqueScenarioBadges.map(c => ({
       date: c.completed_at ? new Date(c.completed_at) : new Date(0),
@@ -4889,28 +4882,22 @@ async function loadProfile() {
     document.getElementById('profile-stat-badges').textContent = allBadgeEntries.length;
     renderScenarioBadges(allBadgeEntries);
 
-    // Badges partenaires (QR codes collector scannés chez nos partenaires)
-    try {
-      const partnerBadges = await supaFetch(
-        `player_partner_badges?player_id=eq.${currentPlayer.id}&select=*,partner_qr_codes(badge_name,partner_name,badge_image_url,xp_reward)&order=scanned_at.desc`
-      );
-      const partnerEl = document.getElementById('profile-partner-badges');
-      if (partnerEl) {
-        partnerEl.innerHTML = partnerBadges.length > 0 ? `
-          <div style="margin:16px 0;">
-            <div class="section-title" style="margin-bottom:12px;">🏅 Badges Partenaires</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-              ${partnerBadges.map(b => `
-                <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 3px 10px rgba(58,32,10,0.16);">
-                  <div style="font-size:32px;margin-bottom:4px;">🏅</div>
-                  <div style="font-size:11px;font-weight:700;color:#1A2A1A;line-height:1.2;">${b.partner_qr_codes?.badge_name || '?'}</div>
-                  <div style="font-size:10px;color:#9CA3AF;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
-                </div>`).join('')}
-            </div>
-          </div>` : '';
-      }
-    } catch (e) {
-      console.error('Erreur chargement badges partenaires:', e);
+    // Badges partenaires (QR codes collector scannés chez nos partenaires) —
+    // partnerBadges vient du Promise.all ci-dessus, aucune requête ici.
+    const partnerEl = document.getElementById('profile-partner-badges');
+    if (partnerEl) {
+      partnerEl.innerHTML = partnerBadges.length > 0 ? `
+        <div style="margin:16px 0;">
+          <div class="section-title" style="margin-bottom:12px;">🏅 Badges Partenaires</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            ${partnerBadges.map(b => `
+              <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 3px 10px rgba(58,32,10,0.16);">
+                <div style="font-size:32px;margin-bottom:4px;">🏅</div>
+                <div style="font-size:11px;font-weight:700;color:#1A2A1A;line-height:1.2;">${b.partner_qr_codes?.badge_name || '?'}</div>
+                <div style="font-size:10px;color:#9CA3AF;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
+              </div>`).join('')}
+          </div>
+        </div>` : '';
     }
 
     // Section "Mes Titres"
@@ -5007,10 +4994,11 @@ async function loadProfile() {
     // Mon profil public — équipe, équipage & bio (éditable)
     document.getElementById('profile-bio-section').innerHTML = renderBioSectionHtml(currentPlayer);
 
-    // Historique des aventures jouées
-    const completions = await supaFetch(
-      `adventure_completions?player_id=eq.${currentPlayer.id}&select=*,adventures(title)&order=completed_at.desc&limit=5`
-    );
+    // Historique des aventures jouées — 5 plus récentes, tirées de scenarioCompletions
+    // (déjà chargé et trié par completed_at.desc pour les badges ci-dessus, même s'il
+    // n'y a pas de doublon par aventure ici contrairement à uniqueScenarioBadges :
+    // une aventure rejouée doit apparaître à chaque completion dans l'historique).
+    const completions = (scenarioCompletions || []).slice(0, 5);
     const historyEl = document.getElementById('profile-history-list');
     historyEl.innerHTML = completions.length
       ? completions.map(c => {
