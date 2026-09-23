@@ -3666,6 +3666,11 @@ async function startAdventure() {
   // Trier les étapes par order_num (important pour les scénarios à embranchements)
   currentAdv.steps.sort((a, b) => a.order_num - b.order_num);
 
+  // Précharge toutes les images de l'aventure dès le lancement (pas
+  // seulement celle de l'étape en cours) : elles téléchargent en tâche de
+  // fond pendant que le joueur avance, plus d'attente/flash à chaque étape.
+  preloadImages(currentAdv.steps.map(s => s.image_url));
+
   // Reprise locale (sortie accidentelle) — prioritaire sur la reprise serveur
   const resumedLocally = checkResumeAdventure(currentAdv);
 
@@ -3770,6 +3775,22 @@ let advNbState = { typing: false, fullText: '', hasInteraction: false, onReveale
 function advNbImageHtml(url) {
   if (!url) return '';
   return `<div class="adv-nb-image-wrap"><img class="adv-nb-image" src="${url}" alt=""/></div>`;
+}
+
+// Précharge en arrière-plan une liste d'images (déduplique, ignore les URLs
+// vides). Utilisé pour charger d'avance toutes les images d'une aventure ou
+// d'un chapitre dès son lancement — pendant que le joueur lit la première
+// étape/scène, les suivantes se téléchargent déjà en tâche de fond (le
+// service worker les recache au passage), donc plus de flash/blanc à
+// chaque avancée dans le scénario.
+function preloadImages(urls) {
+  const seen = new Set();
+  (urls || []).forEach(url => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    const img = new Image();
+    img.src = url;
+  });
 }
 
 function typewriterAdvNb(text, { hasInteraction = false, onRevealed = null, onAdvance = null } = {}) {
@@ -7345,6 +7366,10 @@ function startSceneChapter(chapter, introMode = false) {
     stampImageUrl: chapter.stamp_image_url || '',
     introMode
   };
+  // Précharge toutes les images du chapitre dès le lancement (même logique
+  // que pour les aventures, cf. preloadImages) — plus d'attente/flash entre
+  // les scènes, y compris le tampon de fin s'il a une image dédiée.
+  preloadImages([...chapitre0State.scenes.map(s => s.img), chapitre0State.stampImageUrl]);
   document.getElementById('app').classList.add('chapter0-mode');
   goToScreen('chapitre0', null);
   renderChapitre0Scene();
