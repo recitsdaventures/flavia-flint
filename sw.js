@@ -1,14 +1,15 @@
-const CACHE_NAME = 'flavia-flint-v5';
+const CACHE_NAME = 'flavia-flint-v6';
 
 // App shell + arrière-plans/parchemins vus dès le splash, l'inscription et
 // l'accueil — précachés à l'installation du service worker pour qu'ils
 // soient prêts avant même que l'écran correspondant ne les demande, au lieu
 // d'attendre le premier accès de chacun pour les mettre en cache.
+// NB : /flavia.png (7,8 Mo) retiré de la liste — non référencé nulle part
+// dans l'app, il alourdissait le premier chargement de ~7,8 Mo pour rien.
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/logo.png',
-  '/flavia.png',
   '/splash-bg.webp',
   '/parchment-tile.webp',
   '/card-parchment.webp',

@@ -12,9 +12,15 @@
   gtag('js', new Date());
   gtag('config', 'G-2RKTDQXXNR');
 </script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- Leaflet (carte) + jsQR (scanner) : ni l'un ni l'autre n'est utilisé sur
+     les premiers écrans (splash/connexion/accueil) — chargés en `defer`
+     pour ne plus bloquer l'affichage initial le temps que ces librairies
+     externes répondent. leaflet.css chargé en asynchrone (astuce media
+     print → all) pour la même raison, sans bloquer le premier rendu. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/></noscript>
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json"/>
 <meta name="theme-color" content="#2D4A2D"/>
