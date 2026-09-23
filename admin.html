@@ -4103,6 +4103,28 @@ async function uploadImageToStorage(file, folder) {
 }
 
 // ── MINIATURES (perf) ──────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// fetch() avec ré-essais (délai croissant). Sous Supabase Storage, des
+// requêtes envoyées en rafale (plusieurs images à la suite, sans pause)
+// échouent parfois de façon purement transitoire — un ré-essai suffit
+// presque toujours. Sans ça, "Générer les miniatures manquantes" échouait
+// sur la plupart des aventures dès qu'il y avait plus de 2-3 images à traiter.
+async function fetchWithRetry(url, options, retries = 3, baseDelay = 500) {
+  let lastErr;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+    if (attempt < retries) await sleep(baseDelay * attempt);
+  }
+  throw lastErr;
+}
+
 // Génère côté navigateur une version réduite d'une image (canvas), pour les
 // cartes/listes de l'app joueur — l'image d'origine (uploadImageToStorage)
 // reste utilisée en pleine qualité pour les vues détail/plein écran.
@@ -4140,7 +4162,7 @@ function generateThumbnailBlob(file, maxWidth = 320, quality = 0.7) {
 async function uploadThumbnail(file, folder, maxWidth = 320, quality = 0.7) {
   const blob = await generateThumbnailBlob(file, maxWidth, quality);
   const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-  const res = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+  await fetchWithRetry(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
     method: 'POST',
     headers: {
       'apikey': SUPA_KEY,
@@ -4150,7 +4172,6 @@ async function uploadThumbnail(file, folder, maxWidth = 320, quality = 0.7) {
     },
     body: blob
   });
-  if (!res.ok) throw new Error('Erreur upload miniature');
   return `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
 }
 
@@ -4176,35 +4197,51 @@ async function regenerateMissingThumbnails() {
   );
   if (!todo.length) { showToast('Toutes les aventures ont déjà leurs miniatures.'); return; }
 
-  // Régénère une miniature pour une image existante et retourne son URL, ou null si rien à faire / échec.
+  // Régénère une miniature pour une image existante et retourne son URL.
   async function regenOne(sourceUrl, folder, maxWidth, quality) {
-    const resp = await fetch(sourceUrl);
-    if (!resp.ok) throw new Error('Téléchargement de l\'image d\'origine impossible');
+    const resp = await fetchWithRetry(sourceUrl);
     const blob = await resp.blob();
     const file = new File([blob], 'src.webp', { type: blob.type || 'image/webp' });
     return uploadThumbnail(file, folder, maxWidth, quality);
   }
 
-  let done = 0, failed = 0;
+  // Couverture et croquis sont traités indépendamment : si l'un des deux
+  // échoue (après ré-essais), l'autre est quand même enregistré — pas de
+  // tout-ou-rien par aventure. Une petite pause entre chaque aventure évite
+  // d'envoyer trop de requêtes d'un coup à Supabase Storage.
+  let done = 0, partial = 0, failed = 0;
   for (const row of todo) {
     const patch = {};
-    try {
-      if (row.cover_image_url && !row.cover_thumb_url) {
+    let hadError = false;
+    if (row.cover_image_url && !row.cover_thumb_url) {
+      try {
         patch.cover_thumb_url = await regenOne(row.cover_image_url, 'covers-thumb', 320, 0.7);
+      } catch (e) {
+        console.error(`Échec miniature (couverture) pour "${row.title}" :`, e);
+        hadError = true;
       }
-      if (row.sketch_image_url && !row.sketch_thumb_url) {
-        patch.sketch_thumb_url = await regenOne(row.sketch_image_url, 'sketches-thumb', 200, 0.75);
-      }
-      if (Object.keys(patch).length) {
-        await supa('PATCH', 'adventures', patch, `?id=eq.${row.id}`);
-      }
-      done++;
-    } catch (e) {
-      console.error(`Échec miniature pour "${row.title}" :`, e);
-      failed++;
     }
+    if (row.sketch_image_url && !row.sketch_thumb_url) {
+      try {
+        patch.sketch_thumb_url = await regenOne(row.sketch_image_url, 'sketches-thumb', 200, 0.75);
+      } catch (e) {
+        console.error(`Échec miniature (croquis) pour "${row.title}" :`, e);
+        hadError = true;
+      }
+    }
+    if (Object.keys(patch).length) {
+      try {
+        await supa('PATCH', 'adventures', patch, `?id=eq.${row.id}`);
+      } catch (e) {
+        console.error(`Échec enregistrement miniature pour "${row.title}" :`, e);
+        hadError = true;
+      }
+    }
+    if (hadError) { failed++; if (Object.keys(patch).length) partial++; } else { done++; }
+    await sleep(300);
   }
-  showToast(`Miniatures générées : ${done} ok${failed ? `, ${failed} échec(s) (voir console)` : ''}`, failed > 0);
+  const failMsg = failed ? `, ${failed} échec(s)${partial ? ` (dont ${partial} partiel(s))` : ''} (voir console) — relance le bouton pour réessayer` : '';
+  showToast(`Miniatures générées : ${done} ok${failMsg}`, failed > 0);
   if (typeof loadAdventures === 'function') loadAdventures();
 }
 
