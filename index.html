@@ -293,8 +293,10 @@
   .auth-link {
     background: none; border: none; color: rgba(255,255,255,0.55);
     font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; text-align: center;
+    display: block; width: 100%;
   }
   #auth-forgot-row { margin-top: -4px; }
+  #auth-resend-row { margin-top: -2px; font-size: 12px; }
 
   /* ══════════════════════════════
      ÉCRAN CARTE
@@ -1615,6 +1617,7 @@
         </button>
       </div>
       <button class="auth-link" id="auth-forgot-row" onclick="forgotPassword()">Mot de passe oublié ?</button>
+      <button class="auth-link" id="auth-resend-row" onclick="resendConfirmation()">Tu n'as pas reçu l'email de confirmation ?</button>
 
       <!-- Inscription -->
       <div class="auth-card" id="auth-signup" style="display:none;">
@@ -2701,10 +2704,14 @@ async function handleSignup() {
     btn.style.background = '#2D4A2D';
     btn.disabled         = false;
     errEl.className      = 'auth-error success';
-    errEl.textContent    = '✓ Compte créé ! Connecte-toi maintenant.';
+    errEl.textContent    = '✓ Compte créé ! Vérifie ta boîte mail (et tes spams) pour confirmer ton compte avant de te connecter.';
     errEl.style.display  = 'block';
     if (typeof gtag === 'function') gtag('event', 'sign_up', { method: 'email' });
-    setTimeout(() => showAuthTab('login'), 1800);
+    setTimeout(() => {
+      showAuthTab('login');
+      const loginEmailEl = document.getElementById('login-email');
+      if (loginEmailEl) loginEmailEl.value = email;
+    }, 2500);
   } catch (e) {
     btn.textContent      = 'Créer mon compte →';
     btn.style.background = '#C4622D';
@@ -2766,7 +2773,15 @@ async function handleLogin() {
     btn.textContent      = 'Se connecter →';
     btn.style.background = '#C4622D';
     btn.disabled         = false;
-    errEl.textContent    = translateAuthError(e);
+    // Cas "email non confirmé" : proposer directement de renvoyer l'email plutôt
+    // que de laisser le joueur deviner comment s'en sortir (cf. mot de passe oublié,
+    // qui ne peut rien faire pour un compte jamais confirmé).
+    if ((e.message || '').toLowerCase().includes('email not confirmed')) {
+      errEl.innerHTML = translateAuthError(e) +
+        ' <button class="auth-link" style="display:inline;width:auto;padding:0;text-decoration:underline;font-size:inherit;color:inherit;" onclick="resendConfirmation()">Renvoyer l\'email ?</button>';
+    } else {
+      errEl.textContent = translateAuthError(e);
+    }
     errEl.style.display  = 'block';
   }
 }
@@ -2913,21 +2928,76 @@ function checkAdventureNotif() {
   }
 }
 
+// Message d'erreur commun aux deux envois d'email (recover/resend) : Supabase
+// sans SMTP personnalisé limite très strictement le nombre d'emails envoyés
+// par heure et répond alors 429 — cas très différent d'une vraie erreur, donc
+// message dédié plutôt que le générique "Erreur lors de l'envoi".
+function translateAuthEmailError(status, data) {
+  if (status === 429) {
+    return "Trop de tentatives pour le moment — réessaie dans quelques minutes.";
+  }
+  const msg = ((data && (data.msg || data.error_description || data.error)) || '').toLowerCase();
+  if (msg.includes('rate limit')) {
+    return "Trop de tentatives pour le moment — réessaie dans quelques minutes.";
+  }
+  if (msg.includes('unable to validate email') || msg.includes('invalid email')) {
+    return 'Email invalide.';
+  }
+  return "Erreur lors de l'envoi. Réessaie dans un instant.";
+}
+
 async function forgotPassword() {
   const email = document.getElementById('login-email').value.trim();
   const errEl = document.getElementById('login-error');
   errEl.className = 'auth-error';
   if (!email) { errEl.textContent = "Entre ton email d'abord."; errEl.style.display='block'; return; }
-  const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-    body: JSON.stringify({ email })
-  });
-  if (res.ok || res.status === 200) {
-    errEl.className   = 'auth-error success';
-    errEl.textContent = '✓ Email envoyé ! Vérifie ta boîte.';
-  } else {
-    errEl.textContent = "Erreur lors de l'envoi.";
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ email })
+    });
+    if (res.ok) {
+      errEl.className   = 'auth-error success';
+      errEl.textContent = '✓ Email envoyé ! Vérifie ta boîte (et tes spams).';
+    } else {
+      const data = await res.json().catch(() => ({}));
+      errEl.className   = 'auth-error';
+      errEl.textContent = translateAuthEmailError(res.status, data);
+    }
+  } catch (e) {
+    errEl.className   = 'auth-error';
+    errEl.textContent = "Erreur réseau — vérifie ta connexion et réessaie.";
+  }
+  errEl.style.display = 'block';
+}
+
+// Renvoie l'email de confirmation d'inscription (utile quand le premier ne
+// s'est jamais affiché, ex. spam, boîte pleine, ou limite d'envoi Supabase
+// atteinte au moment de l'inscription) — endpoint GoTrue dédié à ça, distinct
+// de /recover (mot de passe) et de /signup (créerait un doublon de compte).
+async function resendConfirmation() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.className = 'auth-error';
+  if (!email) { errEl.textContent = "Entre ton email d'abord."; errEl.style.display='block'; return; }
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ type: 'signup', email })
+    });
+    if (res.ok) {
+      errEl.className   = 'auth-error success';
+      errEl.textContent = '✓ Email de confirmation renvoyé ! Vérifie ta boîte (et tes spams).';
+    } else {
+      const data = await res.json().catch(() => ({}));
+      errEl.className   = 'auth-error';
+      errEl.textContent = translateAuthEmailError(res.status, data);
+    }
+  } catch (e) {
+    errEl.className   = 'auth-error';
+    errEl.textContent = "Erreur réseau — vérifie ta connexion et réessaie.";
   }
   errEl.style.display = 'block';
 }
