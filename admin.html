@@ -665,7 +665,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
     <div id="page-adventures" class="page">
       <div class="section-header">
         <div class="section-title" id="adv-count">3 aventures</div>
-        <button class="btn btn-primary" onclick="openModal()">+ Nouvelle aventure</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="regenerateMissingThumbnails()" title="À utiliser une fois : génère les miniatures pour les aventures déjà publiées avant cette mise à jour.">🖼️ Générer les miniatures manquantes</button>
+          <button class="btn btn-primary" onclick="openModal()">+ Nouvelle aventure</button>
+        </div>
       </div>
       <div class="table-wrap" id="adventures-table"></div>
     </div>
@@ -4099,6 +4102,112 @@ async function uploadImageToStorage(file, folder) {
   return `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
 }
 
+// ── MINIATURES (perf) ──────────────────────────────────────────────────
+// Génère côté navigateur une version réduite d'une image (canvas), pour les
+// cartes/listes de l'app joueur — l'image d'origine (uploadImageToStorage)
+// reste utilisée en pleine qualité pour les vues détail/plein écran.
+// maxWidth 320px / qualité 0.7 en webp : largement suffisant pour une carte
+// de 80x80 à 300px de large affichée sur mobile, tout en divisant le poids
+// par 10-30x par rapport à une photo d'origine.
+function generateThumbnailBlob(file, maxWidth = 320, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image invalide'));
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('Échec de compression de la miniature')),
+          'image/webp',
+          quality
+        );
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Compresse `file` en miniature puis l'upload dans le dossier `folder` du bucket.
+async function uploadThumbnail(file, folder, maxWidth = 320, quality = 0.7) {
+  const blob = await generateThumbnailBlob(file, maxWidth, quality);
+  const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'image/webp',
+      'x-upsert': 'true'
+    },
+    body: blob
+  });
+  if (!res.ok) throw new Error('Erreur upload miniature');
+  return `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+}
+
+// Rattrapage en un clic pour les aventures déjà publiées avant l'ajout des
+// miniatures : va chercher chaque cover_image_url / sketch_image_url
+// existante (fetch depuis le navigateur, qui a accès au Storage —
+// contrairement à un script serveur), génère les miniatures et enregistre
+// cover_thumb_url / sketch_thumb_url. Idempotent : ignore ce qui a déjà sa
+// miniature, donc peut être relancé sans risque (ex. après un nouvel ajout
+// de type de miniature).
+async function regenerateMissingThumbnails() {
+  if (!confirm('Générer les miniatures manquantes (couvertures + croquis) pour toutes les aventures déjà publiées ? Ça peut prendre une minute ou deux.')) return;
+  let rows;
+  try {
+    rows = await supa('GET', 'adventures', null,
+      '?select=id,title,cover_image_url,cover_thumb_url,sketch_image_url,sketch_thumb_url');
+  } catch (e) {
+    showToast('Erreur chargement des aventures : ' + e.message, true);
+    return;
+  }
+  const todo = rows.filter(r =>
+    (r.cover_image_url && !r.cover_thumb_url) || (r.sketch_image_url && !r.sketch_thumb_url)
+  );
+  if (!todo.length) { showToast('Toutes les aventures ont déjà leurs miniatures.'); return; }
+
+  // Régénère une miniature pour une image existante et retourne son URL, ou null si rien à faire / échec.
+  async function regenOne(sourceUrl, folder, maxWidth, quality) {
+    const resp = await fetch(sourceUrl);
+    if (!resp.ok) throw new Error('Téléchargement de l\'image d\'origine impossible');
+    const blob = await resp.blob();
+    const file = new File([blob], 'src.webp', { type: blob.type || 'image/webp' });
+    return uploadThumbnail(file, folder, maxWidth, quality);
+  }
+
+  let done = 0, failed = 0;
+  for (const row of todo) {
+    const patch = {};
+    try {
+      if (row.cover_image_url && !row.cover_thumb_url) {
+        patch.cover_thumb_url = await regenOne(row.cover_image_url, 'covers-thumb', 320, 0.7);
+      }
+      if (row.sketch_image_url && !row.sketch_thumb_url) {
+        patch.sketch_thumb_url = await regenOne(row.sketch_image_url, 'sketches-thumb', 200, 0.75);
+      }
+      if (Object.keys(patch).length) {
+        await supa('PATCH', 'adventures', patch, `?id=eq.${row.id}`);
+      }
+      done++;
+    } catch (e) {
+      console.error(`Échec miniature pour "${row.title}" :`, e);
+      failed++;
+    }
+  }
+  showToast(`Miniatures générées : ${done} ok${failed ? `, ${failed} échec(s) (voir console)` : ''}`, failed > 0);
+  if (typeof loadAdventures === 'function') loadAdventures();
+}
+
 function previewImgLocal(file, imgTagId, previewId, zoneId) {
   const r = new FileReader();
   r.onload = e => {
@@ -4182,6 +4291,11 @@ async function saveAdventure(asDraft) {
     if (pending.cover) {
       btnSave.textContent = '⏳ Upload image couverture…';
       advData.cover_image_url = await uploadImageToStorage(pending.cover, 'covers');
+      try {
+        advData.cover_thumb_url = await uploadThumbnail(pending.cover, 'covers-thumb');
+      } catch (e) {
+        console.error('Erreur génération miniature couverture:', e);
+      }
     } else {
       const existing = document.getElementById('cover-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.cover_image_url = existing;
@@ -4196,6 +4310,11 @@ async function saveAdventure(asDraft) {
     if (pending.sketch) {
       btnSave.textContent = '⏳ Upload image croquis…';
       advData.sketch_image_url = await uploadImageToStorage(pending.sketch, 'sketches');
+      try {
+        advData.sketch_thumb_url = await uploadThumbnail(pending.sketch, 'sketches-thumb', 200, 0.75);
+      } catch (e) {
+        console.error('Erreur génération miniature croquis:', e);
+      }
     } else {
       const existing = document.getElementById('sketch-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.sketch_image_url = existing;

@@ -3050,8 +3050,11 @@ function skipTutorial() {
 // CARROUSEL — boucle CSS infinie (aucun JS de défilement, tout est fait par @keyframes)
 // ══════════════════════════════════════════
 function buildCarouselCard(adv) {
-  const imgHtml = adv.cover_image_url
-    ? `<img src="${adv.cover_image_url}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
+  // Miniature compressée en priorité (perf) ; repli sur l'image pleine
+  // qualité pour les aventures publiées avant l'ajout des miniatures.
+  const cardImgUrl = adv.cover_thumb_url || adv.cover_image_url;
+  const imgHtml = cardImgUrl
+    ? `<img src="${cardImgUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
     : '';
   const diffClass = adv.difficulty === 'Facile' ? 'diff-facile' : adv.difficulty === 'Intermédiaire' ? 'diff-inter' : 'diff-expert';
   return `
@@ -3123,8 +3126,8 @@ function renderAdventureCards() {
           flex-shrink:0;
           background:var(--green-dark);
         ">
-          ${adv.cover_image_url
-            ? `<img src="${adv.cover_image_url}" style="width:100%;height:100%;object-fit:cover;" alt="${adv.title}"/>`
+          ${(adv.cover_thumb_url || adv.cover_image_url)
+            ? `<img src="${adv.cover_thumb_url || adv.cover_image_url}" style="width:100%;height:100%;object-fit:cover;" alt="${adv.title}"/>`
             : `<div style="width:100%;height:100%;background:#2D4A2D;"></div>`
           }
         </div>
@@ -3177,9 +3180,9 @@ function renderAdventureCards() {
           </div>
         </div>
 
-        <!-- Illustration croquis -->
-        ${adv.sketch_image_url ? `
-          <img src="${adv.sketch_image_url}" alt="" style="
+        <!-- Illustration croquis (miniature en priorité, perf) -->
+        ${(adv.sketch_thumb_url || adv.sketch_image_url) ? `
+          <img src="${adv.sketch_thumb_url || adv.sketch_image_url}" alt="" style="
             height:80px;
             width:auto;
             max-width:90px;
@@ -3206,7 +3209,7 @@ function renderProfessorBooksSection() {
     </div>
     <div class="home-adv-list">
       ${books.map(b => {
-        const coverUrl = b.cover_image_url || '';
+        const coverUrl = b.cover_thumb_url || b.cover_image_url || '';
         const imgHtml  = coverUrl
           ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" alt=""/>`
           : '';
