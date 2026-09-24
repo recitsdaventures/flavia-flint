@@ -5004,7 +5004,7 @@ async function loadProfile() {
       partnerBadges
     ] = await Promise.all([
       supaFetch(`players?id=eq.${playerId}`),
-      supaFetch('players?select=id,total_xp&order=total_xp.desc'),
+      supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
       supaFetch(`player_titles?player_id=eq.${playerId}&select=*,titles(name,category,level,icon,image_url,description)&order=unlocked_at.desc`)
         .catch(e => { console.error('Erreur chargement titres:', e); return []; }),
       supaFetch(`player_progress?player_id=eq.${playerId}&completed=eq.true&select=step_id,adventure_id`)
@@ -5907,7 +5907,7 @@ async function saveProfileEdits() {
     // Vérifier que le nom d'équipe n'est pas déjà pris par un autre joueur
     if (teamName && teamName !== currentPlayer.team_name) {
       const existing = await supaFetch(
-        `players?team_name=ilike.${encodeURIComponent(teamName)}&id=neq.${currentPlayer.id}&select=id`
+        `players_public?team_name=ilike.${encodeURIComponent(teamName)}&id=neq.${currentPlayer.id}&select=id`
       );
       if (existing.length > 0) {
         alert('Ce nom d\'équipe est déjà pris ! Choisis-en un autre.');
@@ -6216,7 +6216,7 @@ async function searchAndAddFriend() {
 
   try {
     const players = await supaFetch(
-      `players?pseudo=ilike.*${encodeURIComponent(pseudo)}*&select=id,pseudo,avatar_emoji,total_xp,city&limit=5`
+      `players_public?pseudo=ilike.*${encodeURIComponent(pseudo)}*&select=id,pseudo,avatar_emoji,total_xp,city&limit=5`
     );
 
     if (!players.length) {
@@ -6274,7 +6274,7 @@ async function loadFriendsScores(friendIds, userId) {
     const allIds = [...new Set([...friendIds, userId])].filter(Boolean);
     console.log('[loadFriendsScores] IDs interrogés:', allIds);
     if (!allIds.length) { console.warn('[loadFriendsScores] Aucun ID à interroger, abandon.'); return; }
-    const query = `players?id=in.(${allIds.join(',')})&select=id,pseudo,avatar_emoji,total_xp,city&order=total_xp.desc`;
+    const query = `players_public?id=in.(${allIds.join(',')})&select=id,pseudo,avatar_emoji,total_xp,city&order=total_xp.desc`;
     console.log('[loadFriendsScores] requête Supabase:', query);
     const players = await supaFetch(query);
     console.log('[loadFriendsScores] réponse Supabase:', players?.length, players);
@@ -6399,10 +6399,22 @@ async function loadScenarioLeaderboard(adventureId) {
   listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">Chargement...</div>';
 
   try {
-    const query = `adventure_completions?adventure_id=eq.${adventureId}&select=*,players!player_id(pseudo,avatar_emoji,city)&order=total_duration_seconds.asc&limit=20`;
+    const query = `adventure_completions?adventure_id=eq.${adventureId}&select=*&order=total_duration_seconds.asc&limit=20`;
     console.log('[loadScenarioLeaderboard] requête Supabase:', query);
     const completions = await supaFetch(query);
     console.log('[loadScenarioLeaderboard] réponse Supabase:', completions?.length, completions);
+
+    // Pseudo/avatar/ville des autres joueurs : passent par la vue
+    // players_public (colonnes limitées, pas d'email) plutôt que par un join
+    // direct sur players, qui est désormais réservé au joueur lui-même et à
+    // l'admin — un join direct ne renverrait plus rien pour les autres.
+    const otherIds = [...new Set(completions.map(c => c.player_id).filter(Boolean))];
+    const playersById = {};
+    if (otherIds.length) {
+      const profiles = await supaFetch(`players_public?id=in.(${otherIds.join(',')})&select=id,pseudo,avatar_emoji,city`);
+      profiles.forEach(p => { playersById[p.id] = p; });
+    }
+    completions.forEach(c => { c.players = playersById[c.player_id] || null; });
 
     // Podium en haut = top 3 le plus rapide sur CE scénario (temps chrono, pas XP)
     const podiumTop3 = completions.slice(0, 3).map(c => ({
@@ -6478,7 +6490,7 @@ async function renderRankingRows(userId) {
 
   try {
     // Fetch tous les joueurs triés par XP
-    let query = 'players?select=id,pseudo,avatar_emoji,total_xp,team_name&order=total_xp.desc';
+    let query = 'players_public?select=id,pseudo,avatar_emoji,total_xp,team_name&order=total_xp.desc';
     if (rankingSearchQuery.trim()) {
       query += `&pseudo=ilike.*${encodeURIComponent(rankingSearchQuery.trim())}*`;
     }
@@ -7269,8 +7281,20 @@ async function showAdventureRanking(advId, advTitle) {
 
   try {
     const results = await supaFetch(
-      `adventure_completions?adventure_id=eq.${advId}&select=*,players!player_id(pseudo,avatar_emoji)&order=total_duration_seconds.asc&limit=50`
+      `adventure_completions?adventure_id=eq.${advId}&select=*&order=total_duration_seconds.asc&limit=50`
     );
+
+    // Pseudo/avatar via la vue publique plutôt qu'un join direct sur
+    // players (réservé au joueur lui-même et à l'admin — voir plus haut).
+    if (results && results.length) {
+      const otherIds = [...new Set(results.map(r => r.player_id).filter(Boolean))];
+      const playersById = {};
+      if (otherIds.length) {
+        const profiles = await supaFetch(`players_public?id=in.(${otherIds.join(',')})&select=id,pseudo,avatar_emoji`);
+        profiles.forEach(p => { playersById[p.id] = p; });
+      }
+      results.forEach(r => { r.players = playersById[r.player_id] || null; });
+    }
 
     if (!results || !results.length) {
       document.getElementById('adv-ranking-list').innerHTML =
