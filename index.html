@@ -1581,7 +1581,7 @@
         <div class="auth-subline" id="auth-subline">Connectez-vous pour continuer votre aventure.</div>
       </div>
 
-      <div class="auth-tabs">
+      <div class="auth-tabs" id="auth-tabs-row">
         <button class="auth-tab active" onclick="showAuthTab('login')">Connexion</button>
         <button class="auth-tab"        onclick="showAuthTab('signup')">Inscription</button>
       </div>
@@ -1618,6 +1618,35 @@
       </div>
       <button class="auth-link" id="auth-forgot-row" onclick="forgotPassword()">Mot de passe oublié ?</button>
       <button class="auth-link" id="auth-resend-row" onclick="resendConfirmation()">Tu n'as pas reçu l'email de confirmation ?</button>
+
+      <!-- Nouveau mot de passe (arrivée depuis le lien reçu par email) -->
+      <div class="auth-card" id="auth-reset" style="display:none;">
+        <div class="auth-field">
+          <label for="reset-password-1">Nouveau mot de passe</label>
+          <div class="pw-wrap field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="reset-password-1" placeholder="6 caractères minimum"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter') document.getElementById('reset-password-2').focus()"/>
+            <button class="pw-toggle" type="button" onclick="togglePw('reset-password-1',this)" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="auth-field">
+          <label for="reset-password-2">Confirme le mot de passe</label>
+          <div class="pw-wrap field-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="reset-password-2" placeholder="6 caractères minimum"
+                   autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter') submitNewPassword()"/>
+            <button class="pw-toggle" type="button" onclick="togglePw('reset-password-2',this)" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="auth-error" id="reset-error"></div>
+        <button class="btn-leather" id="btn-reset-password" onclick="submitNewPassword()">
+          <span class="btn-leather-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E8A020"><path d="M6 4l14 8-14 8V4z"/></svg></span>
+          Enregistrer le nouveau mot de passe
+        </button>
+      </div>
 
       <!-- Inscription -->
       <div class="auth-card" id="auth-signup" style="display:none;">
@@ -2555,7 +2584,7 @@ function getPlayerRank(xp) {
 // AUTH
 // ══════════════════════════════════════════
 // Routing initial — appelé après définition de toutes les fonctions
-window.addEventListener('DOMContentLoaded', () => checkExistingSession());
+window.addEventListener('DOMContentLoaded', () => { if (!checkRecoveryHash()) checkExistingSession(); });
 
 async function loadCurrentPlayer(user) {
   try {
@@ -2585,6 +2614,27 @@ async function loadCurrentPlayer(user) {
 }
 
 function showAuthTab(tab) {
+  // Mode "nouveau mot de passe" : écran dédié, on masque tout le reste
+  // (onglets connexion/inscription, liens mot de passe oublié / renvoi email).
+  const tabsRowEl  = document.getElementById('auth-tabs-row');
+  const resendEl   = document.getElementById('auth-resend-row');
+  const resetEl    = document.getElementById('auth-reset');
+  if (tab === 'reset') {
+    if (tabsRowEl) tabsRowEl.style.display = 'none';
+    document.getElementById('auth-login').style.display  = 'none';
+    document.getElementById('auth-signup').style.display = 'none';
+    document.getElementById('auth-forgot-row').style.display = 'none';
+    if (resendEl) resendEl.style.display = 'none';
+    if (resetEl)  resetEl.style.display  = 'flex';
+    const headlineEl = document.getElementById('auth-headline');
+    const sublineEl  = document.getElementById('auth-subline');
+    if (headlineEl) headlineEl.innerHTML  = 'Nouveau <span>mot de passe</span>';
+    if (sublineEl)  sublineEl.textContent = 'Choisis un nouveau mot de passe pour ton compte aventurier.';
+    return;
+  }
+  if (tabsRowEl) tabsRowEl.style.display = '';
+  if (resetEl)   resetEl.style.display   = 'none';
+
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.auth-tab')[tab === 'login' ? 0 : 1].classList.add('active');
   document.getElementById('auth-login').style.display  = tab === 'login'  ? 'flex' : 'none';
@@ -2600,11 +2650,13 @@ function showAuthTab(tab) {
     if (headlineEl) headlineEl.innerHTML = 'Rejoignez <span>l\'aventure</span> !';
     if (sublineEl)  sublineEl.textContent = 'Créez votre compte et partez à la découverte des trésors de votre région.';
     if (forgotEl)   forgotEl.style.display = 'none';
+    if (resendEl)   resendEl.style.display = '';
     if (switchEl)   switchEl.innerHTML = 'Vous avez déjà un compte ? <button onclick="showAuthTab(\'login\')">Se connecter</button>';
   } else {
     if (headlineEl) headlineEl.innerHTML = 'Ravi de <span>vous revoir</span> !';
     if (sublineEl)  sublineEl.textContent = 'Connectez-vous pour continuer votre aventure.';
     if (forgotEl)   forgotEl.style.display = '';
+    if (resendEl)   resendEl.style.display = '';
     if (switchEl)   switchEl.innerHTML = 'Pas encore de compte ? <button onclick="showAuthTab(\'signup\')">Créer un compte</button>';
   }
 }
@@ -2976,6 +3028,100 @@ async function forgotPassword() {
 // s'est jamais affiché, ex. spam, boîte pleine, ou limite d'envoi Supabase
 // atteinte au moment de l'inscription) — endpoint GoTrue dédié à ça, distinct
 // de /recover (mot de passe) et de /signup (créerait un doublon de compte).
+// Récupération de mot de passe : le lien reçu par email redirige vers l'app
+// avec #access_token=...&refresh_token=...&type=recovery dans le hash. Sans
+// cette interception, le joueur atterrissait silencieusement sur l'accueil
+// sans qu'aucun formulaire ne lui soit proposé pour choisir un nouveau mot
+// de passe. On l'intercepte avant le flux de connexion normal.
+let recoveryTokens = null;
+function checkRecoveryHash() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('type=recovery')) return false;
+  const params = new URLSearchParams(hash.slice(1));
+  const access_token  = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+  if (!access_token) return false;
+
+  recoveryTokens = { access_token, refresh_token };
+  // On retire le token de l'URL visible tout de suite (sécurité + évite de
+  // retomber sur cet écran si le joueur recharge la page).
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  document.getElementById('app').classList.add('auth-mode');
+  goToScreen('auth', null);
+  showAuthTab('reset');
+  return true;
+}
+
+async function submitNewPassword() {
+  const pw1   = document.getElementById('reset-password-1').value;
+  const pw2   = document.getElementById('reset-password-2').value;
+  const errEl = document.getElementById('reset-error');
+  errEl.className     = 'auth-error';
+  errEl.style.display = 'none';
+
+  if (!pw1 || pw1.length < 6) {
+    errEl.textContent   = 'Le mot de passe doit faire au moins 6 caractères.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (pw1 !== pw2) {
+    errEl.textContent   = 'Les deux mots de passe ne correspondent pas.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!recoveryTokens) {
+    errEl.textContent   = 'Lien expiré ou invalide — redemande un email de réinitialisation.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('btn-reset-password');
+  const btnLabel = btn.textContent;
+  btn.textContent = 'Enregistrement…';
+  btn.disabled    = true;
+
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + recoveryTokens.access_token
+      },
+      body: JSON.stringify({ password: pw1 })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.msg || data.error_description || 'Erreur lors de la mise à jour.');
+
+    // Mot de passe changé : on connecte directement le joueur avec la
+    // session de récupération plutôt que de le renvoyer se reconnecter.
+    localStorage.setItem('ff_access_token', recoveryTokens.access_token);
+    if (recoveryTokens.refresh_token) localStorage.setItem('ff_refresh_token', recoveryTokens.refresh_token);
+    localStorage.setItem('ff_user', JSON.stringify(data));
+    recoveryTokens = null;
+
+    btn.textContent = '✓ Mot de passe mis à jour !';
+    await loadCurrentPlayer(data);
+    document.getElementById('app').classList.remove('auth-mode');
+    if (deferredPrompt) showInstallButton();
+    await loadAdventures();
+    setTimeout(() => {
+      goToScreen('home', document.getElementById('nav-home'));
+    }, 500);
+    startGlobalGPS();
+
+  } catch (e) {
+    btn.textContent = btnLabel;
+    btn.disabled     = false;
+    const msg = (e.message || '').toLowerCase();
+    errEl.textContent = msg.includes('should be different')
+      ? "Choisis un mot de passe différent de l'ancien."
+      : "Erreur — le lien a peut-être expiré, redemande un email de réinitialisation.";
+    errEl.style.display = 'block';
+  }
+}
+
 async function resendConfirmation() {
   const email = document.getElementById('login-email').value.trim();
   const errEl = document.getElementById('login-error');
