@@ -4148,11 +4148,12 @@ function computeFinalSteps() {
 async function uploadImageToStorage(file, folder) {
   const ext = file.name.split('.').pop();
   const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const token = localStorage.getItem('ff_access_token');
   const res = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
     method: 'POST',
     headers: {
       'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Authorization': 'Bearer ' + (token || SUPA_KEY),
       'Content-Type': file.type,
       'x-upsert': 'true'
     },
@@ -4222,11 +4223,12 @@ function generateThumbnailBlob(file, maxWidth = 320, quality = 0.7) {
 async function uploadThumbnail(file, folder, maxWidth = 320, quality = 0.7) {
   const blob = await generateThumbnailBlob(file, maxWidth, quality);
   const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
+  const token = localStorage.getItem('ff_access_token');
   await fetchWithRetry(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
     method: 'POST',
     headers: {
       'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Authorization': 'Bearer ' + (token || SUPA_KEY),
       'Content-Type': 'image/webp',
       'x-upsert': 'true'
     },
