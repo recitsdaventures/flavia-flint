@@ -1122,6 +1122,20 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
 
+// Coordonnées GPS saisies/collées à la main (ex: depuis Google Maps en français,
+// qui affiche "43,538994" avec une virgule) : parseFloat() seul s'arrête à la
+// virgule et tronque silencieusement la valeur (43,538994 → 43), donnant un point
+// à des dizaines de km de la vraie position sans la moindre erreur affichée. On
+// normalise donc la virgule en point avant de parser, et on utilise Number.isFinite
+// plutôt que "|| null" pour ne pas non plus perdre une coordonnée valide égale à 0.
+function parseCoord(value) {
+  if (value === null || value === undefined) return null;
+  const str = String(value).trim().replace(',', '.');
+  if (str === '') return null;
+  const n = parseFloat(str);
+  return Number.isFinite(n) ? n : null;
+}
+
 // Les règles de la base (RLS) exigent maintenant le token du compte admin
 // connecté pour lire/écrire les tables admin (auth.uid() doit correspondre à
 // un compte role='admin') — la clé anonyme seule ne suffit plus. On construit
@@ -1736,8 +1750,8 @@ async function saveBook() {
     duration: document.getElementById('bf-duration').value.trim(),
     difficulty: document.getElementById('bf-diff').value,
     xp_reward: parseInt(document.getElementById('bf-xp').value, 10) || 0,
-    lat: document.getElementById('bf-lat').value ? parseFloat(document.getElementById('bf-lat').value) : null,
-    lng: document.getElementById('bf-lng').value ? parseFloat(document.getElementById('bf-lng').value) : null,
+    lat: parseCoord(document.getElementById('bf-lat').value),
+    lng: parseCoord(document.getElementById('bf-lng').value),
     validation_radius_km: document.getElementById('bf-radius-km').value ? parseFloat(document.getElementById('bf-radius-km').value) : 0.3,
     cover_image_url: document.getElementById('bf-cover').value.trim() || null
   };
@@ -3986,8 +4000,8 @@ function deleteStepPanel() {
 function syncPanelToStep() {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
   if (!step) return;
-  step.lat = parseFloat(document.getElementById('panel-lat').value) || null;
-  step.lng = parseFloat(document.getElementById('panel-lng').value) || null;
+  step.lat = parseCoord(document.getElementById('panel-lat').value);
+  step.lng = parseCoord(document.getElementById('panel-lng').value);
   step.radius_meters = parseInt(document.getElementById('panel-radius').value) || 20;
   step.title = document.getElementById('panel-title').value;
   step.continue_label = document.getElementById('panel-continue-label')?.value || '';
@@ -4359,8 +4373,8 @@ async function saveAdventure(asDraft) {
     badge_name: document.getElementById('f-badge-name')?.value || '',
     xp_reward: parseInt(document.getElementById('f-xp-reward')?.value) || 50,
     locations_count: parseInt(document.getElementById('f-locations-count')?.value) || 1,
-    main_lat: parseFloat(document.getElementById('f-main-lat')?.value) || null,
-    main_lng: parseFloat(document.getElementById('f-main-lng')?.value) || null,
+    main_lat: parseCoord(document.getElementById('f-main-lat')?.value),
+    main_lng: parseCoord(document.getElementById('f-main-lng')?.value),
     main_radius: parseInt(document.getElementById('f-main-radius')?.value) || 50,
   };
 
