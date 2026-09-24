@@ -1122,17 +1122,63 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 const SUPA_URL = 'https://qvxbkidbubvaqlonqmpu.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eGJraWRidWJ2YXFsb25xbXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTM4MTEsImV4cCI6MjA5Nzk2OTgxMX0.YE4p5LCoChFiYJUh63CbiXn0GjZT3y-QptXmUQCYKL0';
 
-const headers = {
-  'Content-Type': 'application/json',
-  'apikey': SUPA_KEY,
-  'Authorization': 'Bearer ' + SUPA_KEY,
-  'Prefer': 'return=representation'
-};
+// Les règles de la base (RLS) exigent maintenant le token du compte admin
+// connecté pour lire/écrire les tables admin (auth.uid() doit correspondre à
+// un compte role='admin') — la clé anonyme seule ne suffit plus. On construit
+// donc les headers à chaque appel avec le token le plus à jour possible,
+// plutôt qu'un objet figé au chargement de la page.
+function getHeaders(body) {
+  const token = localStorage.getItem('ff_access_token');
+  const h = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + (token || SUPA_KEY),
+    'Prefer': 'return=representation'
+  };
+  if (body !== undefined) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+async function refreshAdminToken() {
+  const refreshTk = localStorage.getItem('ff_refresh_token');
+  if (!refreshTk) return false;
+  try {
+    const res = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ refresh_token: refreshTk })
+    });
+    if (!res.ok) throw new Error('Refresh failed');
+    const data = await res.json();
+    localStorage.setItem('ff_access_token', data.access_token);
+    localStorage.setItem('ff_refresh_token', data.refresh_token);
+    return true;
+  } catch (e) {
+    localStorage.removeItem('ff_access_token');
+    localStorage.removeItem('ff_refresh_token');
+    localStorage.removeItem('ff_user');
+    return false;
+  }
+}
 
 async function supa(method, table, body, params = '') {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, {
-    method, headers, body: body ? JSON.stringify(body) : undefined
+  let res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, {
+    method, headers: getHeaders(body), body: body ? JSON.stringify(body) : undefined
   });
+
+  // Session expirée en cours d'utilisation : on tente un rafraîchissement
+  // silencieux avant de renvoyer vers la connexion.
+  if (res.status === 401) {
+    const ok = await refreshAdminToken();
+    if (ok) {
+      res = await fetch(`${SUPA_URL}/rest/v1/${table}${params}`, {
+        method, headers: getHeaders(body), body: body ? JSON.stringify(body) : undefined
+      });
+    } else {
+      window.location.href = 'index.html';
+      throw new Error('Session expirée');
+    }
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || res.statusText);
