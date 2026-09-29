@@ -3540,6 +3540,9 @@ function loadStepsFromAdventure(dbSteps) {
     obj.answer = s.answer || '';
     obj.hint = s.hint || '';
     obj.image_url = s.image_url || '';
+    obj.hotspot_x = s.hotspot_x ?? null;
+    obj.hotspot_y = s.hotspot_y ?? null;
+    obj.hotspot_radius = s.hotspot_radius ?? 6;
     obj.has_step_timer = !!s.has_step_timer;
     obj.step_timer_seconds = s.step_timer_seconds ?? null;
     obj.step_timer_visible = s.step_timer_visible !== false;
@@ -3557,7 +3560,7 @@ function loadStepsFromAdventure(dbSteps) {
   // Déduit aussi interaction_type pour les anciennes étapes (pas encore de valeur explicite en base) :
   // 'continue'/'free_text'/'quiz'/'decision' sont utilisés directement s'ils sont déjà présents (nouveau
   // format), sinon on retombe sur une heuristique à partir de step_type/answer/choices (ancien format).
-  const EXPLICIT_TYPES = ['continue', 'free_text', 'quiz', 'decision'];
+  const EXPLICIT_TYPES = ['continue', 'free_text', 'quiz', 'decision', 'hotspot'];
   scenarioSteps.forEach(obj => {
     if (EXPLICIT_TYPES.includes(obj._legacyStepType)) {
       obj.interaction_type = obj._legacyStepType;
@@ -3781,6 +3784,7 @@ function openStepPanel(uid) {
   }
 
   applyInteractionTypeVisibility(step.interaction_type || 'free_text');
+  if (step.interaction_type === 'hotspot') renderHotspotEditor(step);
   renderTransitionsInPanel(step);
   populateSingleNextSelect(step);
   onLocationsCountChange();
@@ -3802,6 +3806,7 @@ function renderPanelBody() {
         <option value="free_text">✏️ Texte libre (le joueur tape une réponse)</option>
         <option value="quiz">🔘 Réponses multiples (quiz, une bonne réponse)</option>
         <option value="decision">🔀 Réponses décisionnelles (le choix change la suite)</option>
+        <option value="hotspot">🎯 Toucher une zone de l'image</option>
       </select>
     </div>
     <div class="step-gps-section" id="panel-gps-section">
@@ -3854,7 +3859,7 @@ function renderPanelBody() {
       </div>
     </div>
     <div id="panel-type-freetext">
-      <div class="form-group" style="margin:0 0 10px;">
+      <div class="form-group" style="margin:0 0 10px;" id="panel-answer-wrap">
         <label style="font-size:12px;">Réponse attendue</label>
         <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
       </div>
@@ -3862,6 +3867,15 @@ function renderPanelBody() {
         <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
         <textarea id="panel-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village" oninput="syncPanelToStep()"></textarea>
         <div style="font-size:11px;color:#999;margin-top:3px;">💡 Indice 1 (−10 XP) · Indice 2 (−20 XP) · Indice 3 (−30 XP)</div>
+      </div>
+    </div>
+
+    <div id="panel-type-hotspot">
+      <div class="step-section-label">🎯 Zone à toucher sur l'image</div>
+      <div id="panel-hotspot-editor" style="margin-bottom:10px;"></div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Tolérance de la zone <span style="font-weight:400;color:#888;">(% de l'image — plus petit = plus précis)</span></label>
+        <input type="number" id="panel-hotspot-radius" min="2" max="25" value="6" oninput="syncPanelToStep()"/>
       </div>
     </div>
 
@@ -3917,14 +3931,17 @@ function togglePanelTimer() {
 const ENIGME_LABELS = {
   free_text: 'Texte de l\'énigme',
   quiz: 'Question posée au joueur',
-  decision: 'Texte affiché avant le choix'
+  decision: 'Texte affiché avant le choix',
+  hotspot: 'Consigne affichée au joueur (ex : "Un détail a été ajouté à cette image, trouve-le !")'
 };
 
 function applyInteractionTypeVisibility(type) {
   document.getElementById('panel-type-continue').style.display = type === 'continue' ? 'block' : 'none';
   document.getElementById('panel-enigme-wrap').style.display = type === 'continue' ? 'none' : 'block';
-  document.getElementById('panel-type-freetext').style.display = type === 'free_text' ? 'block' : 'none';
-  document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text') ? 'block' : 'none';
+  document.getElementById('panel-type-freetext').style.display = (type === 'free_text' || type === 'hotspot') ? 'block' : 'none';
+  document.getElementById('panel-answer-wrap').style.display = type === 'free_text' ? 'block' : 'none';
+  document.getElementById('panel-type-hotspot').style.display = type === 'hotspot' ? 'block' : 'none';
+  document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text' || type === 'hotspot') ? 'block' : 'none';
   document.getElementById('panel-choices-wrap').style.display = (type === 'quiz' || type === 'decision') ? 'block' : 'none';
   const enigmeLabel = document.getElementById('panel-enigme-sublabel');
   if (enigmeLabel) enigmeLabel.textContent = ENIGME_LABELS[type] || 'Texte de l\'énigme';
@@ -3936,7 +3953,8 @@ function onInteractionTypeChange() {
   const type = document.getElementById('panel-interaction-type').value;
   step.interaction_type = type;
   applyInteractionTypeVisibility(type);
-  if (type === 'continue' || type === 'free_text') {
+  if (type === 'hotspot') renderHotspotEditor(step);
+  if (type === 'continue' || type === 'free_text' || type === 'hotspot') {
     // Ces types ne branchent jamais : au plus une transition.
     if (step.transitions.length > 1) step.transitions = step.transitions.slice(0, 1);
     populateSingleNextSelect(step);
@@ -3944,6 +3962,40 @@ function onInteractionTypeChange() {
     renderTransitionsInPanel(step);
   }
   renderOutline();
+}
+
+// ── ÉDITEUR DE ZONE (type "hotspot") : clic direct sur l'image de l'étape pour
+// placer le point que le joueur devra toucher, en % de l'image (indépendant de
+// la résolution) — bien plus fiable que de faire deviner des coordonnées.
+function renderHotspotEditor(step) {
+  const el = document.getElementById('panel-hotspot-editor');
+  if (!el) return;
+  document.getElementById('panel-hotspot-radius').value = step.hotspot_radius ?? 6;
+  // Utilise l'aperçu local de l'image tout juste choisie (pas encore uploadée sur
+  // Supabase, ça n'arrive qu'à la sauvegarde) si elle existe, sinon l'image déjà en ligne.
+  const imgSrc = step._pendingImgPreviewUrl || step.image_url;
+  if (!imgSrc) {
+    el.innerHTML = `<div style="font-size:12px;color:#DC2626;background:#FEF2F2;border-radius:8px;padding:10px 12px;">⚠️ Ajoute d'abord une image à cette étape (ci-dessus) pour pouvoir y placer la zone à toucher.</div>`;
+    return;
+  }
+  const marker = (step.hotspot_x != null && step.hotspot_y != null)
+    ? `<div class="hotspot-marker" style="position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #E8A020;background:rgba(232,160,32,0.25);box-shadow:0 0 0 2px rgba(0,0,0,0.4);pointer-events:none;left:${step.hotspot_x}%;top:${step.hotspot_y}%;"></div>`
+    : '';
+  el.innerHTML = `
+    <div style="position:relative;border-radius:10px;overflow:hidden;background:#111;line-height:0;">
+      <img src="${imgSrc}" style="width:100%;display:block;cursor:crosshair;" onclick="placeHotspotFromClick(event)"/>
+      ${marker}
+    </div>
+    <div style="font-size:12px;color:#666;margin-top:4px;">${step.hotspot_x != null ? '📍 Zone placée — clique ailleurs sur l\'image pour la déplacer.' : '👆 Clique sur l\'image ci-dessus pour placer la zone que le joueur devra trouver.'}</div>`;
+}
+
+function placeHotspotFromClick(event) {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  const rect = event.target.getBoundingClientRect();
+  step.hotspot_x = Math.round(((event.clientX - rect.left) / rect.width) * 1000) / 10;
+  step.hotspot_y = Math.round(((event.clientY - rect.top) / rect.height) * 1000) / 10;
+  renderHotspotEditor(step);
 }
 
 // ── ÉTAPE SUIVANTE (types sans embranchement : continue / texte libre) ──
@@ -3968,14 +4020,22 @@ function handleStepImgPanel(event) {
   if (!step) return;
   step._pendingImgFile = file;
   previewImgLocal(file, 'panel-img-tag', 'panel-img-preview', 'panel-upload-zone');
+  // Si l'étape est en mode "toucher une zone", permet de placer la zone tout de
+  // suite sur l'aperçu local, sans attendre l'upload réel (fait à la sauvegarde).
+  if (step.interaction_type === 'hotspot') {
+    const r = new FileReader();
+    r.onload = e => { step._pendingImgPreviewUrl = e.target.result; renderHotspotEditor(step); };
+    r.readAsDataURL(file);
+  }
 }
 function removeStepImgPanel() {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
-  if (step) { step.image_url = ''; step._pendingImgFile = null; }
+  if (step) { step.image_url = ''; step._pendingImgFile = null; step._pendingImgPreviewUrl = null; step.hotspot_x = null; step.hotspot_y = null; }
   const tag = document.getElementById('panel-img-tag');
   if (tag) tag.src = '';
   document.getElementById('panel-img-preview').style.display = 'none';
   document.getElementById('panel-upload-zone').style.display = 'block';
+  if (step && step.interaction_type === 'hotspot') renderHotspotEditor(step);
 }
 
 function deleteStepPanel() {
@@ -4008,6 +4068,8 @@ function syncPanelToStep() {
   step.enigme = document.getElementById('panel-enigme').value;
   step.answer = document.getElementById('panel-answer').value;
   step.hint = document.getElementById('panel-hint').value;
+  const hotspotRadiusEl = document.getElementById('panel-hotspot-radius');
+  if (hotspotRadiusEl) step.hotspot_radius = parseInt(hotspotRadiusEl.value) || 6;
   step.has_step_timer = document.getElementById('panel-has-timer').checked;
   step.step_timer_seconds = step.has_step_timer ? (parseInt(document.getElementById('panel-timer-minutes').value) || 0) * 60 : null;
   step.step_timer_visible = document.getElementById('panel-timer-visible').value === 'true';
@@ -4100,6 +4162,9 @@ function computeFinalSteps() {
     if (isChoiceType && targets.length > 0 && targets.some(t => !(t.label || '').trim())) {
       throw new Error(`L'étape ${label} a une réponse dont le texte est vide.`);
     }
+    if (step.interaction_type === 'hotspot' && (step.hotspot_x == null || step.hotspot_y == null)) {
+      throw new Error(`L'étape ${label} est en mode "toucher une zone" mais aucune zone n'a été placée sur l'image.`);
+    }
   }
 
   let finalList = [...ordered];
@@ -4127,8 +4192,11 @@ function computeFinalSteps() {
       continue_label: stepType === 'continue' ? (step.continue_label || '') : '',
       enigme: step.enigme || '',
       answer: stepType === 'free_text' ? (step.answer || '') : '',
-      hint: stepType === 'free_text' ? (step.hint || '') : '',
+      hint: (stepType === 'free_text' || stepType === 'hotspot') ? (step.hint || '') : '',
       step_type: stepType,
+      hotspot_x: stepType === 'hotspot' ? step.hotspot_x : null,
+      hotspot_y: stepType === 'hotspot' ? step.hotspot_y : null,
+      hotspot_radius: stepType === 'hotspot' ? (step.hotspot_radius ?? 6) : null,
       is_endpoint: transitions.length === 0,
       choices: isChoiceType
         ? transitions.map(t => ({ label: t.label, next_step_order: uidToOrder[t.target_uid] || null, is_correct: !!t.is_correct, error_message: t.error_message || null }))

@@ -1290,6 +1290,42 @@
   }
   .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
   .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
+  .adv-nb-image.hotspot-img { object-fit: contain; background: #0A140D; cursor: pointer; }
+
+  /* Petit bouton "agrandir" superposé sur les images d'étape (aventures) — ouvre
+     la visionneuse plein écran avec zoom (openImageLightbox). Sur une étape
+     "toucher une zone" (hotspot), c'est le SEUL moyen d'ouvrir le zoom : l'image
+     elle-même est réservée au tap de réponse (cf. handleHotspotImageTap). */
+  .adv-nb-zoom-btn {
+    position: absolute; bottom: 10px; right: 10px; z-index: 3;
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; backdrop-filter: blur(2px);
+  }
+
+  /* Visionneuse plein écran (zoom/pan tactile en JS pur, indépendante du zoom
+     navigateur — désactivé globalement via user-scalable=no sur cette PWA). */
+  #image-lightbox {
+    position: fixed; inset: 0; z-index: 20000;
+    background: rgba(10,10,10,0.94);
+    display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+  }
+  .lightbox-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #lightbox-img { max-width: 92%; max-height: 86%; display: block; touch-action: none; user-select: none; -webkit-user-drag: none; transition: transform 0.05s linear; }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 16px; z-index: 2;
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.15); color: #fff; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .lightbox-hint {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: #F5EDD8; font-size: 12.5px;
+    padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+  }
+  #lightbox-img.lightbox-wrong-flash { filter: brightness(0.6) saturate(2) sepia(1) hue-rotate(-50deg); }
 
   /* Barre overlay du mode immersif — remplace la barre-titre/quitter habituelle
      pendant qu'un scénario est en cours (cf. enableImmersiveMode()) */
@@ -3993,9 +4029,16 @@ let advNbState = { typing: false, fullText: '', hasInteraction: false, onReveale
 // Bloc image en haut du carnet (quasi plein écran en mode immersif, cf. .adv-nb-image
 // en CSS) — factorisé car utilisé à l'identique par renderStoryMode() et les deux
 // variantes de renderEnigmeMode().
-function advNbImageHtml(url) {
+function advNbImageHtml(url, opts) {
   if (!url) return '';
-  return `<div class="adv-nb-image-wrap"><img class="adv-nb-image" src="${url}" alt=""/></div>`;
+  const hotspot = !!(opts && opts.hotspot);
+  const safeUrl = url.replace(/'/g, "\\'");
+  // Étape "toucher une zone" : le tap direct sur l'image sert à répondre (pas à zoomer) —
+  // le bouton 🔍 est alors le seul moyen d'ouvrir la visionneuse. Sur les autres types
+  // d'étape, l'image elle-même ouvre déjà la visionneuse (comportement plus découvrable).
+  const imgTap = hotspot ? `onclick="handleHotspotImageTap(event)"` : `onclick="openImageLightbox('${safeUrl}')"`;
+  const zoomBtn = `<button type="button" class="adv-nb-zoom-btn" onclick="event.stopPropagation();openImageLightbox('${safeUrl}'${hotspot ? ',{hotspot:true}' : ''});" aria-label="Agrandir l'image">🔍</button>`;
+  return `<div class="adv-nb-image-wrap"><img class="adv-nb-image${hotspot ? ' hotspot-img' : ''}" src="${url}" alt="" ${imgTap}/>${zoomBtn}</div>`;
 }
 
 // Précharge en arrière-plan une liste d'images (déduplique, ignore les URLs
@@ -4245,6 +4288,31 @@ function renderEnigmeMode() {
     return;
   }
 
+  // Étape TOUCHER UNE ZONE — le joueur doit repérer un détail sur l'image et le
+  // toucher directement (dessus, ou en plein écran via le zoom 🔍) plutôt que de
+  // taper une réponse. Validation dans handleHotspotImageTap()/handleLightboxTap().
+  if (step.step_type === 'hotspot') {
+    document.getElementById('mode-enigme').innerHTML = `
+      <div class="adv-nb-wrap">
+        ${advNbImageHtml(step.image_url, { hotspot: true })}
+        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+          <div class="adv-nb-text" id="adv-nb-text"></div>
+          <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
+            <div class="error-msg" id="error-msg">Pas encore… regarde bien l'image (ou touche 🔍 pour zoomer) !</div>
+            <div id="hint-section"></div>
+          </div>
+        </div>
+      </div>`;
+    showMode('enigme');
+    typewriterAdvNb(step.enigme || 'Un détail a été ajouté à cette image. Touche-le !', {
+      hasInteraction: true,
+      onRevealed: () => { const w = document.getElementById('hotspot-feedback-wrap'); if (w) w.style.display = 'block'; }
+    });
+    renderHintSection();
+    saveCurrentProgress();
+    return;
+  }
+
   // Étape TEXTE LIBRE (et repli legacy) — champ texte libre (une réponse, comme une date
   // ou un mot, validée par checkAnswer() — logique de validation inchangée)
   document.getElementById('mode-enigme').innerHTML = `
@@ -4322,6 +4390,161 @@ function checkAnswer() {
     input.value = '';
     setTimeout(() => input.classList.remove('error'), 1500);
   }
+}
+
+// ── TOUCHER UNE ZONE DE L'IMAGE (type "hotspot") ──────────────────────────
+// Convertit un clic/tap écran en position (%) dans l'image ORIGINALE, en tenant
+// compte des bandes vides laissées par object-fit:contain (l'image ne remplit pas
+// forcément toute sa boîte) — sans ça, la zone touchée par le joueur ne
+// correspondrait pas à celle placée dans l'admin. Fonctionne aussi bien sur
+// l'image inline (boîte de taille fixe, bandes possibles) que sur l'image de la
+// visionneuse plein écran (boîte qui épouse déjà l'image, bandes nulles) : dans
+// les deux cas getBoundingClientRect() donne la boîte réellement affichée, zoom
+// éventuel inclus.
+function clickToImagePercent(clientX, clientY, boxRect, naturalW, naturalH) {
+  if (!naturalW || !naturalH || !boxRect.width || !boxRect.height) return null;
+  const boxRatio = boxRect.width / boxRect.height;
+  const imgRatio = naturalW / naturalH;
+  let renderW, renderH, offsetX, offsetY;
+  if (imgRatio > boxRatio) {
+    renderW = boxRect.width; renderH = boxRect.width / imgRatio;
+    offsetX = 0; offsetY = (boxRect.height - renderH) / 2;
+  } else {
+    renderH = boxRect.height; renderW = boxRect.height * imgRatio;
+    offsetY = 0; offsetX = (boxRect.width - renderW) / 2;
+  }
+  const localX = clientX - boxRect.left - offsetX;
+  const localY = clientY - boxRect.top - offsetY;
+  if (localX < 0 || localY < 0 || localX > renderW || localY > renderH) return null; // tap hors image (bande vide)
+  return { xPct: (localX / renderW) * 100, yPct: (localY / renderH) * 100 };
+}
+
+function evaluateHotspotTap(xPct, yPct, step) {
+  if (step.hotspot_x == null || step.hotspot_y == null) return false;
+  const dx = xPct - step.hotspot_x, dy = yPct - step.hotspot_y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const tolerance = step.hotspot_radius ?? 6;
+  if (dist <= tolerance) {
+    vibrateFeedback(200);
+    soundSuccess();
+    return true;
+  }
+  vibrateFeedback([100, 50, 100]);
+  soundError();
+  window._adventureAttempts = (window._adventureAttempts || 0) + 1;
+  return false;
+}
+
+function handleHotspotImageTap(event) {
+  const step = currentStep();
+  if (!step) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  const pos = clickToImagePercent(event.clientX, event.clientY, rect, event.currentTarget.naturalWidth, event.currentTarget.naturalHeight);
+  if (!pos) return;
+  if (evaluateHotspotTap(pos.xPct, pos.yPct, step)) {
+    renderRewardMode();
+  } else {
+    const err = document.getElementById('error-msg');
+    if (err) err.style.display = 'block';
+  }
+}
+
+// ── VISIONNEUSE PLEIN ÉCRAN (zoom/pan tactile) ──────────────────────────────
+// JS pur, sans librairie : le zoom navigateur est désactivé sur toute la PWA
+// (user-scalable=no dans le <head>), donc le pinch-to-zoom doit être recréé ici
+// à la main via l'API Pointer Events (pointerdown/move/up), qui unifie souris et
+// tactile. Sur une étape "hotspot", le joueur peut aussi valider sa réponse en
+// touchant directement l'image zoomée (cf. handleLightboxTap).
+let _lbState = null;
+
+function openImageLightbox(url, opts) {
+  opts = opts || {};
+  closeImageLightbox();
+  const overlay = document.createElement('div');
+  overlay.id = 'image-lightbox';
+  overlay.innerHTML = `
+    <button type="button" class="lightbox-close" onclick="closeImageLightbox()">✕</button>
+    <div class="lightbox-stage"><img id="lightbox-img" src="${url}" alt=""/></div>
+    ${opts.hotspot ? '<div class="lightbox-hint">👆 Touche le détail que tu as trouvé</div>' : ''}`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+
+  const img = document.getElementById('lightbox-img');
+  _lbState = { scale: 1, tx: 0, ty: 0, pointers: new Map(), startDist: 0, startScale: 1, dragging: false, moved: false, hotspot: !!opts.hotspot };
+
+  const applyTransform = () => { img.style.transform = `translate(${_lbState.tx}px, ${_lbState.ty}px) scale(${_lbState.scale})`; };
+  const clampScale = s => Math.max(1, Math.min(5, s));
+
+  img.addEventListener('pointerdown', e => {
+    img.setPointerCapture(e.pointerId);
+    _lbState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    _lbState.moved = false;
+    if (_lbState.pointers.size === 1) {
+      _lbState.dragging = true;
+      _lbState.lastX = e.clientX; _lbState.lastY = e.clientY;
+    } else if (_lbState.pointers.size === 2) {
+      _lbState.dragging = false;
+      const pts = [..._lbState.pointers.values()];
+      _lbState.startDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      _lbState.startScale = _lbState.scale;
+    }
+  });
+  img.addEventListener('pointermove', e => {
+    if (!_lbState || !_lbState.pointers.has(e.pointerId)) return;
+    _lbState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (_lbState.pointers.size === 2) {
+      const pts = [..._lbState.pointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      _lbState.scale = clampScale(_lbState.startScale * (dist / _lbState.startDist));
+      _lbState.moved = true;
+      applyTransform();
+    } else if (_lbState.dragging && _lbState.scale > 1) {
+      const dx = e.clientX - _lbState.lastX, dy = e.clientY - _lbState.lastY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _lbState.moved = true;
+      _lbState.tx += dx; _lbState.ty += dy;
+      _lbState.lastX = e.clientX; _lbState.lastY = e.clientY;
+      applyTransform();
+    }
+  });
+  const endPointer = e => {
+    if (!_lbState) return;
+    _lbState.pointers.delete(e.pointerId);
+    if (_lbState.pointers.size === 0) {
+      _lbState.dragging = false;
+      if (!_lbState.moved) handleLightboxTap(e, img); // pas un geste de zoom/pan → c'est un tap
+    }
+  };
+  img.addEventListener('pointerup', endPointer);
+  img.addEventListener('pointercancel', endPointer);
+  img.addEventListener('dblclick', () => {
+    _lbState.scale = _lbState.scale > 1 ? 1 : 2.5;
+    _lbState.tx = 0; _lbState.ty = 0;
+    applyTransform();
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeImageLightbox(); });
+}
+
+function handleLightboxTap(e, img) {
+  if (!_lbState || !_lbState.hotspot) return;
+  const step = currentStep();
+  if (!step) return;
+  const rect = img.getBoundingClientRect();
+  const pos = clickToImagePercent(e.clientX, e.clientY, rect, img.naturalWidth, img.naturalHeight);
+  if (!pos) return;
+  if (evaluateHotspotTap(pos.xPct, pos.yPct, step)) {
+    closeImageLightbox();
+    renderRewardMode();
+  } else {
+    img.classList.add('lightbox-wrong-flash');
+    setTimeout(() => img.classList.remove('lightbox-wrong-flash'), 350);
+  }
+}
+
+function closeImageLightbox() {
+  const overlay = document.getElementById('image-lightbox');
+  if (overlay) overlay.remove();
+  document.body.style.overflow = '';
+  _lbState = null;
 }
 
 // ── RÉCOMPENSE + SAUVEGARDE ──
