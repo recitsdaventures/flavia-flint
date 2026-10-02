@@ -29,12 +29,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Flavia Flint"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
-<!-- Police carnet manuscrit (chapitres Flavia à scènes) -->
+<!-- Polices carnet manuscrit (chapitres Flavia à scènes) + carnet d'explorateur
+     (titres de section) — une seule requête CSS pour les deux familles au lieu de
+     deux, un aller-retour réseau de moins au premier chargement. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
-<!-- Police carnet d'explorateur (titres de section) -->
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -2484,25 +2484,40 @@ async function supaFetch(endpoint, { method = 'GET', body, prefer } = {}) {
   return res.json();
 }
 
+// Un seul rafraîchissement en vol à la fois. Depuis que checkExistingSession()
+// charge le profil et les aventures en parallèle (cf. plus bas), un token expiré
+// peut déclencher deux 401 quasi simultanés — sans ce verrou, ça enverrait deux
+// requêtes de rafraîchissement en même temps avec le même refresh_token. Or
+// Supabase fait tourner les refresh tokens (chaque utilisation invalide l'ancien) :
+// la deuxième requête échouerait alors pour rien, avec une session pourtant valide.
+let _refreshInFlight = null;
 async function refreshToken() {
+  if (_refreshInFlight) return _refreshInFlight;
   const refreshTk = localStorage.getItem('ff_refresh_token');
   if (!refreshTk) return false;
+  _refreshInFlight = (async () => {
+    try {
+      const res = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+        body: JSON.stringify({ refresh_token: refreshTk })
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const data = await res.json();
+      localStorage.setItem('ff_access_token', data.access_token);
+      localStorage.setItem('ff_refresh_token', data.refresh_token);
+      return true;
+    } catch(e) {
+      localStorage.removeItem('ff_access_token');
+      localStorage.removeItem('ff_refresh_token');
+      localStorage.removeItem('ff_user');
+      return false;
+    }
+  })();
   try {
-    const res = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-      body: JSON.stringify({ refresh_token: refreshTk })
-    });
-    if (!res.ok) throw new Error('Refresh failed');
-    const data = await res.json();
-    localStorage.setItem('ff_access_token', data.access_token);
-    localStorage.setItem('ff_refresh_token', data.refresh_token);
-    return true;
-  } catch(e) {
-    localStorage.removeItem('ff_access_token');
-    localStorage.removeItem('ff_refresh_token');
-    localStorage.removeItem('ff_user');
-    return false;
+    return await _refreshInFlight;
+  } finally {
+    _refreshInFlight = null;
   }
 }
 
@@ -2516,21 +2531,29 @@ async function checkExistingSession() {
   const token = localStorage.getItem('ff_access_token');
   const user  = localStorage.getItem('ff_user');
 
-  // Session complète
+  // Session complète — on part du principe que le token d'accès stocké est
+  // encore valide et on charge directement les données : si jamais il a expiré
+  // entre-temps, supaFetch() détecte le 401 et rafraîchit tout seul avant de
+  // réessayer (cf. refreshToken()). Avant, un rafraîchissement était fait ici de
+  // façon systématique, AVANT même de charger quoi que ce soit — un aller-retour
+  // réseau de plus à chaque lancement de l'app, pour rien dans l'immense
+  // majorité des cas où le token était encore valide (il dure 1h). Ça comptait
+  // sur une connexion lente/instable, comme au musée.
   if (token && user) {
-    const ok = await refreshToken();
-    if (ok) {
-      try {
-        loadCurrentPlayer(JSON.parse(user));
-        document.getElementById('app').classList.remove('auth-mode');
-        if (deferredPrompt) showInstallButton();
-        await loadAdventures();
-        goToScreen('home', document.getElementById('nav-home'));
-        startGlobalGPS();
-        return true;
-      } catch(e) {
-        console.error('Erreur session:', e);
-      }
+    try {
+      const parsedUser = JSON.parse(user);
+      document.getElementById('app').classList.remove('auth-mode');
+      if (deferredPrompt) showInstallButton();
+      // loadCurrentPlayer() n'est pas attendu (comme avant) : il remplit juste le
+      // nom/avatar en haut de l'accueil dès qu'il revient, sans retarder
+      // l'affichage de l'accueil lui-même, qui n'attend que les aventures.
+      loadCurrentPlayer(parsedUser);
+      await loadAdventures();
+      goToScreen('home', document.getElementById('nav-home'));
+      startGlobalGPS();
+      return true;
+    } catch(e) {
+      console.error('Erreur session:', e);
     }
     localStorage.removeItem('ff_access_token');
     localStorage.removeItem('ff_refresh_token');
