@@ -666,7 +666,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <div class="section-header">
         <div class="section-title" id="adv-count">3 aventures</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn" onclick="regenerateMissingThumbnails()" title="À utiliser une fois : génère les miniatures pour les aventures déjà publiées avant cette mise à jour.">🖼️ Générer les miniatures manquantes</button>
+          <button class="btn" onclick="regenerateMissingThumbnails()" title="À utiliser une fois : génère les miniatures manquantes (couvertures, croquis, images d'étapes et de scènes Flavia Flint) pour tout ce qui est déjà publié.">🖼️ Générer les miniatures manquantes</button>
           <button class="btn btn-primary" onclick="openModal()">+ Nouvelle aventure</button>
         </div>
       </div>
@@ -2247,6 +2247,7 @@ function renderSceneEditor(scene, uid, orderNum) {
           <button onclick="uploadSceneImage(${uid})" class="btn btn-secondary btn-sm">📸</button>
         </div>
         <img id="scene-${uid}-preview" src="${scene.image_url || ''}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;${scene.image_url ? '' : 'display:none;'}"/>
+        <input type="hidden" id="scene-${uid}-thumb" value="${scene.image_thumb_url || ''}"/>
       </div>
 
       <div class="form-group">
@@ -2310,6 +2311,16 @@ async function uploadSceneImage(uid) {
       const preview = document.getElementById(`scene-${uid}-preview`);
       if (preview) { preview.src = url; preview.style.display = 'block'; }
 
+      // Miniature (même logique que pour les images d'étapes) : affichage normal
+      // rapide, l'original pleine résolution reste la valeur de scene.image_url.
+      try {
+        const thumbUrl = await uploadThumbnail(file, 'chapters-thumb', 1200, 0.78);
+        const thumbInput = document.getElementById(`scene-${uid}-thumb`);
+        if (thumbInput) thumbInput.value = thumbUrl;
+      } catch (thumbErr) {
+        console.error('Erreur génération miniature scène:', thumbErr);
+      }
+
       showToast('Image uploadée ✓');
     } catch (err) {
       console.error('Erreur upload image scène:', err);
@@ -2326,6 +2337,7 @@ function collectScenes() {
   const blocks = document.querySelectorAll('#scenes-container .scene-editor-block');
   return Array.from(blocks).map(block => ({
     image_url: block.querySelector('input[id$="-img"]')?.value || '',
+    image_thumb_url: block.querySelector('input[id$="-thumb"]')?.value || '',
     text: block.querySelector('textarea[id$="-text"]')?.value || '',
     question: block.querySelector('input[id$="-question"]')?.value || '',
     button_label: block.querySelector('input[id$="-btn"]')?.value || 'Continuer'
@@ -3515,7 +3527,7 @@ function newStepObj() {
     title: '', lat: null, lng: null, radius_meters: 20,
     interaction_type: 'free_text', continue_label: '',
     enigme: '', answer: '', hint: '',
-    image_url: '', _pendingImgFile: null,
+    image_url: '', image_thumb_url: '', _pendingImgFile: null,
     has_step_timer: false, step_timer_seconds: null, step_timer_visible: true, timer_fail_target_uid: null,
     transitions: []
   };
@@ -3540,6 +3552,7 @@ function loadStepsFromAdventure(dbSteps) {
     obj.answer = s.answer || '';
     obj.hint = s.hint || '';
     obj.image_url = s.image_url || '';
+    obj.image_thumb_url = s.image_thumb_url || '';
     obj.hotspot_x = s.hotspot_x ?? null;
     obj.hotspot_y = s.hotspot_y ?? null;
     obj.hotspot_radius = s.hotspot_radius ?? 6;
@@ -4030,7 +4043,7 @@ function handleStepImgPanel(event) {
 }
 function removeStepImgPanel() {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
-  if (step) { step.image_url = ''; step._pendingImgFile = null; step._pendingImgPreviewUrl = null; step.hotspot_x = null; step.hotspot_y = null; }
+  if (step) { step.image_url = ''; step.image_thumb_url = ''; step._pendingImgFile = null; step._pendingImgPreviewUrl = null; step.hotspot_x = null; step.hotspot_y = null; }
   const tag = document.getElementById('panel-img-tag');
   if (tag) tag.src = '';
   document.getElementById('panel-img-preview').style.display = 'none';
@@ -4206,6 +4219,7 @@ function computeFinalSteps() {
       step_timer_visible: step.step_timer_visible !== false,
       timer_fail_step_order: step.timer_fail_target_uid ? (uidToOrder[step.timer_fail_target_uid] || null) : null,
       image_url: step.image_url || '',
+      image_thumb_url: step.image_thumb_url || '',
       _uid: step.uid,
       _pendingImgFile: step._pendingImgFile || null
     };
@@ -4305,42 +4319,44 @@ async function uploadThumbnail(file, folder, maxWidth = 320, quality = 0.7) {
   return `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
 }
 
-// Rattrapage en un clic pour les aventures déjà publiées avant l'ajout des
-// miniatures : va chercher chaque cover_image_url / sketch_image_url
-// existante (fetch depuis le navigateur, qui a accès au Storage —
-// contrairement à un script serveur), génère les miniatures et enregistre
-// cover_thumb_url / sketch_thumb_url. Idempotent : ignore ce qui a déjà sa
-// miniature, donc peut être relancé sans risque (ex. après un nouvel ajout
-// de type de miniature).
+// Régénère une miniature pour une image existante (fetch depuis le navigateur,
+// qui a accès au Storage — contrairement à un script serveur) et retourne son URL.
+async function regenOne(sourceUrl, folder, maxWidth, quality) {
+  const resp = await fetchWithRetry(sourceUrl);
+  const blob = await resp.blob();
+  const file = new File([blob], 'src.webp', { type: blob.type || 'image/webp' });
+  return uploadThumbnail(file, folder, maxWidth, quality);
+}
+
+// Rattrapage en un clic pour tout ce qui a été publié avant l'ajout des
+// miniatures : couvertures/croquis d'aventures, images d'étapes de scénario et
+// images de scènes des chapitres Flavia Flint. Idempotent : ignore ce qui a déjà
+// sa miniature, donc peut être relancé sans risque (ex. après un nouvel ajout de
+// type de miniature) — c'est pour ça qu'on ne régénère jamais une miniature déjà
+// présente, même si l'original a changé entre-temps (dans ce cas, ré-uploader
+// l'image depuis l'éditeur régénère sa miniature automatiquement).
 async function regenerateMissingThumbnails() {
-  if (!confirm('Générer les miniatures manquantes (couvertures + croquis) pour toutes les aventures déjà publiées ? Ça peut prendre une minute ou deux.')) return;
-  let rows;
+  if (!confirm('Générer les miniatures manquantes (couvertures, croquis, images d\'étapes et de scènes Flavia Flint) pour tout ce qui est déjà publié ? Ça peut prendre quelques minutes.')) return;
+
+  let done = 0, partial = 0, failed = 0;
+
+  // ── Aventures : couverture + croquis ──
+  let advRows;
   try {
-    rows = await supa('GET', 'adventures', null,
+    advRows = await supa('GET', 'adventures', null,
       '?select=id,title,cover_image_url,cover_thumb_url,sketch_image_url,sketch_thumb_url');
   } catch (e) {
     showToast('Erreur chargement des aventures : ' + e.message, true);
     return;
   }
-  const todo = rows.filter(r =>
+  const advTodo = advRows.filter(r =>
     (r.cover_image_url && !r.cover_thumb_url) || (r.sketch_image_url && !r.sketch_thumb_url)
   );
-  if (!todo.length) { showToast('Toutes les aventures ont déjà leurs miniatures.'); return; }
-
-  // Régénère une miniature pour une image existante et retourne son URL.
-  async function regenOne(sourceUrl, folder, maxWidth, quality) {
-    const resp = await fetchWithRetry(sourceUrl);
-    const blob = await resp.blob();
-    const file = new File([blob], 'src.webp', { type: blob.type || 'image/webp' });
-    return uploadThumbnail(file, folder, maxWidth, quality);
-  }
-
   // Couverture et croquis sont traités indépendamment : si l'un des deux
   // échoue (après ré-essais), l'autre est quand même enregistré — pas de
   // tout-ou-rien par aventure. Une petite pause entre chaque aventure évite
   // d'envoyer trop de requêtes d'un coup à Supabase Storage.
-  let done = 0, partial = 0, failed = 0;
-  for (const row of todo) {
+  for (const row of advTodo) {
     const patch = {};
     let hadError = false;
     if (row.cover_image_url && !row.cover_thumb_url) {
@@ -4370,7 +4386,69 @@ async function regenerateMissingThumbnails() {
     if (hadError) { failed++; if (Object.keys(patch).length) partial++; } else { done++; }
     await sleep(300);
   }
+
+  // ── Étapes de scénario ──
+  let stepRows;
+  try {
+    stepRows = await supa('GET', 'steps', null, '?select=id,adventure_id,image_url,image_thumb_url&image_url=not.is.null');
+  } catch (e) {
+    console.error('Erreur chargement des étapes :', e);
+    stepRows = [];
+  }
+  const stepTodo = stepRows.filter(s => s.image_url && !s.image_thumb_url);
+  for (const s of stepTodo) {
+    try {
+      const thumbUrl = await regenOne(s.image_url, 'steps-thumb', 1200, 0.78);
+      await supa('PATCH', 'steps', { image_thumb_url: thumbUrl }, `?id=eq.${s.id}`);
+      done++;
+    } catch (e) {
+      console.error(`Échec miniature étape (aventure ${s.adventure_id}) :`, e);
+      failed++;
+    }
+    await sleep(300);
+  }
+
+  // ── Scènes des chapitres Flavia Flint (scenes est un JSONB : on réécrit le
+  // tableau complet, les autres scènes ne sont pas affectées) ──
+  let chapterRows;
+  try {
+    chapterRows = await supa('GET', 'flavia_chapters', null, '?select=id,title,scenes');
+  } catch (e) {
+    console.error('Erreur chargement des chapitres :', e);
+    chapterRows = [];
+  }
+  for (const ch of chapterRows) {
+    const scenes = Array.isArray(ch.scenes) ? ch.scenes : [];
+    const needsWork = scenes.some(sc => sc.image_url && !sc.image_thumb_url);
+    if (!needsWork) continue;
+    let hadError = false;
+    const newScenes = [];
+    for (const sc of scenes) {
+      if (sc.image_url && !sc.image_thumb_url) {
+        try {
+          const thumbUrl = await regenOne(sc.image_url, 'chapters-thumb', 1200, 0.78);
+          newScenes.push({ ...sc, image_thumb_url: thumbUrl });
+        } catch (e) {
+          console.error(`Échec miniature scène du chapitre "${ch.title}" :`, e);
+          hadError = true;
+          newScenes.push(sc);
+        }
+      } else {
+        newScenes.push(sc);
+      }
+    }
+    try {
+      await supa('PATCH', 'flavia_chapters', { scenes: newScenes }, `?id=eq.${ch.id}`);
+    } catch (e) {
+      console.error(`Échec enregistrement miniatures du chapitre "${ch.title}" :`, e);
+      hadError = true;
+    }
+    if (hadError) { failed++; partial++; } else { done++; }
+    await sleep(300);
+  }
+
   const failMsg = failed ? `, ${failed} échec(s)${partial ? ` (dont ${partial} partiel(s))` : ''} (voir console) — relance le bouton pour réessayer` : '';
+  if (!done && !failed) { showToast('Tout a déjà ses miniatures.'); return; }
   showToast(`Miniatures générées : ${done} ok${failMsg}`, failed > 0);
   if (typeof loadAdventures === 'function') loadAdventures();
 }
@@ -4503,10 +4581,19 @@ async function saveAdventure(asDraft) {
     await supa('PATCH', 'adventures', { satisfaction_url: satisfactionUrl }, `?id=eq.${adventureId}`);
 
     // ── Upload des images des étapes (déjà calculées et validées en haut de la fonction) ──
+    // L'original pleine résolution reste utilisé par la visionneuse plein écran (zoom) ;
+    // la miniature (1200px/0.78 — nette à l'écran, 5-10x plus légère) sert à l'affichage
+    // normal dans le carnet, pour éviter le temps de chargement constaté en musée.
     for (const s of steps) {
       if (s._pendingImgFile) {
         btnSave.textContent = `⏳ Upload image étape ${s.order_num}…`;
         s.image_url = await uploadImageToStorage(s._pendingImgFile, 'steps');
+        try {
+          s.image_thumb_url = await uploadThumbnail(s._pendingImgFile, 'steps-thumb', 1200, 0.78);
+        } catch (e) {
+          console.error('Erreur génération miniature étape:', e);
+          s.image_thumb_url = '';
+        }
       }
       delete s._uid; delete s._pendingImgFile;
     }

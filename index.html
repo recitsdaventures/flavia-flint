@@ -3926,7 +3926,10 @@ async function startAdventure() {
   // Précharge toutes les images de l'aventure dès le lancement (pas
   // seulement celle de l'étape en cours) : elles téléchargent en tâche de
   // fond pendant que le joueur avance, plus d'attente/flash à chaque étape.
-  preloadImages(currentAdv.steps.map(s => s.image_url));
+  // On précharge la miniature (légère) plutôt que l'original : c'est elle
+  // qui est réellement affichée en premier lieu (voir advNbImageHtml) — l'image
+  // pleine résolution ne sera chargée qu'à la demande, si le joueur zoome.
+  preloadImages(currentAdv.steps.map(s => s.image_thumb_url || s.image_url));
 
   // Reprise locale (sortie accidentelle) — prioritaire sur la reprise serveur
   const resumedLocally = checkResumeAdventure(currentAdv);
@@ -4029,16 +4032,21 @@ let advNbState = { typing: false, fullText: '', hasInteraction: false, onReveale
 // Bloc image en haut du carnet (quasi plein écran en mode immersif, cf. .adv-nb-image
 // en CSS) — factorisé car utilisé à l'identique par renderStoryMode() et les deux
 // variantes de renderEnigmeMode().
+// `url` = image pleine résolution (toujours utilisée par la visionneuse plein écran,
+// pour que le zoom ne soit jamais pixelisé). `opts.thumb`, si fourni, est une version
+// compressée utilisée pour l'affichage normal (beaucoup plus rapide à charger) — à
+// défaut de miniature (anciennes étapes), on retombe simplement sur l'original.
 function advNbImageHtml(url, opts) {
   if (!url) return '';
   const hotspot = !!(opts && opts.hotspot);
+  const displaySrc = (opts && opts.thumb) || url;
   const safeUrl = url.replace(/'/g, "\\'");
   // Étape "toucher une zone" : le tap direct sur l'image sert à répondre (pas à zoomer) —
   // le bouton 🔍 est alors le seul moyen d'ouvrir la visionneuse. Sur les autres types
   // d'étape, l'image elle-même ouvre déjà la visionneuse (comportement plus découvrable).
   const imgTap = hotspot ? `onclick="handleHotspotImageTap(event)"` : `onclick="openImageLightbox('${safeUrl}')"`;
   const zoomBtn = `<button type="button" class="adv-nb-zoom-btn" onclick="event.stopPropagation();openImageLightbox('${safeUrl}'${hotspot ? ',{hotspot:true}' : ''});" aria-label="Agrandir l'image">🔍</button>`;
-  return `<div class="adv-nb-image-wrap"><img class="adv-nb-image${hotspot ? ' hotspot-img' : ''}" src="${url}" alt="" ${imgTap}/>${zoomBtn}</div>`;
+  return `<div class="adv-nb-image-wrap"><img class="adv-nb-image${hotspot ? ' hotspot-img' : ''}" src="${displaySrc}" alt="" ${imgTap}/>${zoomBtn}</div>`;
 }
 
 // Précharge en arrière-plan une liste d'images (déduplique, ignore les URLs
@@ -4096,14 +4104,16 @@ function renderStoryMode() {
   const step    = currentStep();
   const isFirst = currentStepIndex === 0;
 
-  const image = (isFirst && currentAdv.intro_image_url) ? currentAdv.intro_image_url : (step?.image_url || '');
+  const usesIntroImage = isFirst && currentAdv.intro_image_url;
+  const image = usesIntroImage ? currentAdv.intro_image_url : (step?.image_url || '');
+  const imageThumb = usesIntroImage ? '' : (step?.image_thumb_url || '');
   const introPart = (isFirst && currentAdv.intro_text) ? currentAdv.intro_text : '';
   const stepPart  = step?.story_text || (introPart ? '' : `Direction : ${step?.title || 'le prochain lieu'} !`);
   const text = [introPart, stepPart].filter(Boolean).join('\n\n');
 
   document.getElementById('mode-story').innerHTML = `
     <div class="adv-nb-wrap">
-      ${advNbImageHtml(image)}
+      ${advNbImageHtml(image, { thumb: imageThumb })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <button class="adv-nb-next-btn" id="adv-nb-next-btn" onclick="event.stopPropagation(); renderCompassMode();">Aller au prochain lieu →</button>
@@ -4245,7 +4255,7 @@ function renderEnigmeMode() {
   if (step.step_type === 'continue') {
     document.getElementById('mode-enigme').innerHTML = `
       <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url)}
+        ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
         <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
           <div class="adv-nb-text" id="adv-nb-text"></div>
           <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>
@@ -4272,7 +4282,7 @@ function renderEnigmeMode() {
 
     document.getElementById('mode-enigme').innerHTML = `
       <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url)}
+        ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
         <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
           <div class="adv-nb-text" id="adv-nb-text"></div>
           <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
@@ -4294,7 +4304,7 @@ function renderEnigmeMode() {
   if (step.step_type === 'hotspot') {
     document.getElementById('mode-enigme').innerHTML = `
       <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url, { hotspot: true })}
+        ${advNbImageHtml(step.image_url, { hotspot: true, thumb: step.image_thumb_url })}
         <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
           <div class="adv-nb-text" id="adv-nb-text"></div>
           <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
@@ -4317,7 +4327,7 @@ function renderEnigmeMode() {
   // ou un mot, validée par checkAnswer() — logique de validation inchangée)
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
-      ${advNbImageHtml(step.image_url)}
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <div class="adv-nb-freetext" id="adv-nb-freetext">
@@ -7808,7 +7818,8 @@ function startSceneChapter(chapter, introMode = false) {
   chapitre0State = {
     index: 0, typing: false, fullText: '',
     scenes: chapter.scenes.map(s => ({
-      img: s.image_url || '',
+      img: s.image_thumb_url || s.image_url || '',
+      imgFull: s.image_url || '',
       text: s.text || '',
       button_label: s.button_label || 'Continuer',
       question: s.question || '',
