@@ -905,30 +905,47 @@
     background: var(--beige-light) url('parchment-tile.webp') repeat;
     color: var(--text-dark);
     font-family:'Figtree',system-ui,sans-serif;
-    flex-direction:column;
-    padding:calc(env(safe-area-inset-top) + 20px) 28px calc(env(safe-area-inset-bottom) + 28px);
-    box-sizing:border-box;
+    /* Plein écran total : plus de padding ni de flux vertical ici — l'image
+       de chaque slide occupe TOUT l'écran (y compris sous le header et sous
+       les dots/bouton), qui flottent par-dessus en position absolue. */
+    padding:0;
+    position:relative;
+    overflow:hidden;
   }
-  .tuto-top { display:flex; justify-content:space-between; align-items:center; height:32px; }
-  .tuto-brand { font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--green-dark); }
-  .tuto-skip { background:none; border:0; font:inherit; font-size:15px; color:var(--text-mid); padding:8px 0 8px 16px; cursor:pointer; }
+  .tuto-top {
+    position:absolute; z-index:3; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center; height:32px;
+    padding:calc(env(safe-area-inset-top) + 20px) 28px 0;
+  }
+  .tuto-brand { font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--green-dark); text-shadow:0 1px 3px rgba(255,255,255,.6); }
+  .tuto-skip { background:none; border:0; font:inherit; font-size:15px; color:var(--text-mid); padding:8px 0 8px 16px; cursor:pointer; text-shadow:0 1px 3px rgba(255,255,255,.6); }
   .tuto-skip.hidden { visibility:hidden; }
-  .tuto-slides-wrap { flex:1; position:relative; touch-action:pan-y; }
+  .tuto-slides-wrap { position:absolute; inset:0; touch-action:pan-y; }
   .tuto-slide {
-    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    position:absolute; inset:0;
     opacity:0; pointer-events:none; transition:opacity .35s ease;
   }
   .tuto-slide.active { opacity:1; pointer-events:auto; }
-  .tuto-medal { flex:1; display:flex; align-items:center; justify-content:center; }
-  .tuto-medal img {
-    width:min(68vw,260px); aspect-ratio:1; border-radius:50%; object-fit:cover; display:block;
-    filter:saturate(.85) contrast(.95) brightness(1.03);
-    box-shadow: 0 4px 14px rgba(58,32,10,0.25);
+  /* Illustration plein écran, bord à bord, y compris sous le header et le
+     pied de page (voulu par Firmin) : chaque visuel embarque désormais
+     lui-même le titre et le texte — seuls Passer/Suivant et les pastilles
+     restent du vrai HTML/CSS dynamique, jamais incrustés dans l'image.
+     object-fit:cover pour remplir tout le cadre sans aucune marge ;
+     object-position ajusté par slide (inline) pour que le recadrage mange
+     dans le décor plutôt que dans le titre/texte. */
+  .tuto-medal { position:absolute; inset:0; }
+  .tuto-medal img { width:100%; height:100%; object-fit:cover; display:block; }
+  /* Titre/texte toujours présents dans le DOM pour les lecteurs d'écran et
+     le SEO, mais masqués visuellement puisque l'image les affiche déjà. */
+  .tuto-text {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
-  .tuto-text { display:flex; flex-direction:column; gap:14px; text-align:center; min-height:210px; }
-  .tuto-text h2 { font-family:'Caprasimo',serif; font-weight:400; font-size:30px; line-height:1.1; margin:0; text-wrap:balance; color:var(--text-dark); }
-  .tuto-text p { margin:0; font-size:17px; line-height:1.5; text-wrap:pretty; color:var(--text-mid); }
-  .tuto-bottom { display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .tuto-bottom {
+    position:absolute; z-index:3; bottom:0; left:0; right:0;
+    display:flex; flex-direction:column; align-items:center; gap:22px;
+    padding:28px 28px calc(env(safe-area-inset-bottom) + 28px);
+  }
   .tuto-dots { display:flex; gap:8px; }
   .tuto-dot { width:8px; height:8px; border-radius:999px; background:var(--beige-dark); border:0; padding:0; transition:width .25s, background .25s; cursor:pointer; }
   .tuto-dot.active { width:24px; background:var(--terra); }
@@ -1856,27 +1873,27 @@
 
     <div class="tuto-slides-wrap" id="tuto-slides">
       <div class="tuto-slide active">
-        <div class="tuto-medal"><img src="flavia-1.webp" alt="" style="object-position:50% 72%"></div>
+        <div class="tuto-medal"><img src="tuto-1-bienvenue.webp" alt="" style="object-position:50% 75%"></div>
         <div class="tuto-text"><h2>Bienvenue dans les aventures de Flavia Flint</h2><p>Choisis un parcours et lance l'aventure. Flavia t'accompagne du début à la fin.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="flavia-2.webp" alt="" style="object-position:45% 62%"></div>
+        <div class="tuto-medal"><img src="tuto-2-boussole.webp" alt="" style="object-position:50% 78%"></div>
         <div class="tuto-text"><h2>Suis la boussole</h2><p>Flavia te présente ta mission, puis te guide d'étape en étape à travers le village.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="flavia-3.webp" alt="" style="object-position:40% 62%"></div>
+        <div class="tuto-medal"><img src="tuto-3-enigmes.webp" alt="" style="object-position:50% 85%"></div>
         <div class="tuto-text"><h2>Résous les énigmes</h2><p>Observe bien autour de toi : la réponse se cache sur place. Bloqué ? Des indices peuvent t'aider.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="flavia-4.webp" alt="" style="object-position:55% 62%"></div>
+        <div class="tuto-medal"><img src="tuto-4-badges.webp" alt="" style="object-position:50% 92%"></div>
         <div class="tuto-text"><h2>Gagne des badges et des points</h2><p>Chaque aventure terminée te rapporte un badge à collectionner et des points.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="flavia-5.webp" alt="" style="object-position:40% 62%"></div>
+        <div class="tuto-medal"><img src="tuto-5-classement.webp" alt="" style="object-position:50% 70%"></div>
         <div class="tuto-text"><h2>Grimpe au classement</h2><p>Tes points te font monter dans le classement des explorateurs.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="flavia-6.webp" alt="" style="object-position:30% 78%"></div>
+        <div class="tuto-medal"><img src="tuto-6-tresor.webp" alt="" style="object-position:50% 85%"></div>
         <div class="tuto-text"><h2>La chasse au trésor ultime</h2><p>Les mieux classés accèdent à la grande chasse au trésor annuelle, avec de nombreux lots à gagner.</p></div>
       </div>
     </div>
