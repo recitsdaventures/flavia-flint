@@ -34,7 +34,7 @@
      deux, un aller-retour réseau de moins au premier chargement. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@500;700&family=Figtree:wght@400;600;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -897,77 +897,48 @@
      ÉCRAN TUTORIEL
   ══════════════════════════════ */
   #screen-tutorial {
-    background: linear-gradient(180deg, #1A3A1A 0%, #2D5A2D 60%, #1A3A1A 100%);
-    position: relative; overflow: hidden; flex-direction: column;
+    /* Même fond parchemin que le reste de l'app (accueil, profil, classement…)
+       au lieu d'un beige uni — et les couleurs de texte/accent réutilisent les
+       tokens globaux (--text-dark, --terra, --beige-dark…) au lieu de teintes
+       proches mais différentes, pour que ces nouveaux écrans soient vraiment
+       dans la même DA, pas juste une DA similaire. */
+    background: var(--beige-light) url('parchment-tile.webp') repeat;
+    color: var(--text-dark);
+    font-family:'Figtree',system-ui,sans-serif;
+    flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 20px) 28px calc(env(safe-area-inset-bottom) + 28px);
+    box-sizing:border-box;
   }
-  .tuto-top-bar {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 20;
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 8px; padding: 52px 16px 12px;
-  }
-  .tuto-btn-pill {
-    background: rgba(0,0,0,0.35); backdrop-filter: blur(3px); border: none; border-radius: 20px;
-    padding: 7px 14px; color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: background 0.15s; white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  }
-  .tuto-btn-pill:active { background: rgba(0,0,0,0.5); }
-  .tuto-slides-wrap { flex: 1; position: relative; }
+  .tuto-top { display:flex; justify-content:space-between; align-items:center; height:32px; }
+  .tuto-brand { font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--green-dark); }
+  .tuto-skip { background:none; border:0; font:inherit; font-size:15px; color:var(--text-mid); padding:8px 0 8px 16px; cursor:pointer; }
+  .tuto-skip.hidden { visibility:hidden; }
+  .tuto-slides-wrap { flex:1; position:relative; touch-action:pan-y; }
   .tuto-slide {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: flex-end;
-    padding: 100px 28px 64px; text-align: center;
-    opacity: 0; transition: opacity 0.50s ease; pointer-events: none;
-    background-size: cover; background-position: top center; background-repeat: no-repeat;
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    opacity:0; pointer-events:none; transition:opacity .35s ease;
   }
-  .tuto-slide.active { opacity: 1; pointer-events: auto; }
-  /* Visuels illustrés (titre déjà incrusté dans chaque image) — un par slide. */
-  #tuto-0 { background-image: url('flavia-1.webp'); }
-  #tuto-1 { background-image: url('flavia-2.webp'); }
-  #tuto-2 { background-image: url('flavia-3.webp'); }
-  #tuto-3 { background-image: url('flavia-4.webp'); }
-  #tuto-4 { background-image: url('flavia-5.webp'); }
-  #tuto-5 { background-image: url('flavia-6.webp'); }
-  .tuto-sub {
-    font-size: 14px; color: white; line-height: 1.55; max-width: 300px;
-    background: rgba(0,0,0,0.38); backdrop-filter: blur(3px);
-    border-radius: 14px; padding: 12px 16px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  .tuto-slide.active { opacity:1; pointer-events:auto; }
+  .tuto-medal { flex:1; display:flex; align-items:center; justify-content:center; }
+  .tuto-medal img {
+    width:min(68vw,260px); aspect-ratio:1; border-radius:50%; object-fit:cover; display:block;
+    filter:saturate(.85) contrast(.95) brightness(1.03);
+    box-shadow: 0 4px 14px rgba(58,32,10,0.25);
   }
-  /* Popup final (dernier slide) — scrim + carte centrée, même logique
-     d'apparition que le tampon de fin de chapitre. Le CTA utilise
-     .btn-leather (au lieu du terracotta plat) : c'est le bouton qui
-     lance l'aventure, donc le traitement "action d'engagement" comme
-     Commencer l'aventure / Débloquer un chapitre. */
-  .tuto-final-popup {
-    position: absolute; inset: 0; z-index: 30;
-    display: flex; align-items: center; justify-content: center;
-    padding: 28px; background: rgba(0,0,0,0.45);
-    opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+  .tuto-text { display:flex; flex-direction:column; gap:14px; text-align:center; min-height:210px; }
+  .tuto-text h2 { font-family:'Caprasimo',serif; font-weight:400; font-size:30px; line-height:1.1; margin:0; text-wrap:balance; color:var(--text-dark); }
+  .tuto-text p { margin:0; font-size:17px; line-height:1.5; text-wrap:pretty; color:var(--text-mid); }
+  .tuto-bottom { display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .tuto-dots { display:flex; gap:8px; }
+  .tuto-dot { width:8px; height:8px; border-radius:999px; background:var(--beige-dark); border:0; padding:0; transition:width .25s, background .25s; cursor:pointer; }
+  .tuto-dot.active { width:24px; background:var(--terra); }
+  .tuto-next {
+    width:100%; height:56px; border:0; border-radius:999px; background:var(--terra); color:#fff;
+    font:inherit; font-size:17px; font-weight:700; cursor:pointer;
+    box-shadow: 0 4px 14px rgba(58,32,10,0.25);
   }
-  .tuto-final-popup.visible { opacity: 1; pointer-events: auto; }
-  .tuto-final-card {
-    display: flex; flex-direction: column; align-items: center; gap: 18px;
-    max-width: 300px; width: 100%;
-    animation: popupAppear 0.4s cubic-bezier(0.68,-0.55,0.265,1.55) forwards;
-  }
-  /* Dots */
-  .tuto-dots {
-    display: flex; justify-content: center; gap: 8px;
-    position: absolute; bottom: 34px; left: 0; right: 0; z-index: 10;
-  }
-  .tuto-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: rgba(255,255,255,0.45); cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
-    transition: background 0.25s, transform 0.25s;
-  }
-  .tuto-dot.active { background: var(--amber); transform: scale(1.35); }
-  /* Progress bar — superposée en bas du visuel (n'occupe plus sa propre ligne) */
-  .tuto-progress-wrap { position: absolute; left: 0; right: 0; bottom: 14px; padding: 0 28px; z-index: 6; }
-  .tuto-progress-track { height: 4px; background: rgba(255,255,255,0.28); border-radius: 2px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
-  .tuto-progress-fill  { height: 100%; background: var(--amber); border-radius: 2px; width: 0%; transition: width 4s linear; }
+  .tuto-next:active { background:var(--terra-dark); }
+  .tuto-next:focus-visible, .tuto-skip:focus-visible, .tuto-dot:focus-visible { outline:2px solid var(--terra); outline-offset:2px; }
 
   /* GPS ALERT */
   @keyframes pulse-gps { 0%,100%{opacity:1} 50%{opacity:0.7} }
@@ -1878,73 +1849,48 @@
        ÉCRAN TUTORIEL
   ═══════════════════════════════════ -->
   <div id="screen-tutorial" class="screen">
-
-    <!-- Barre contrôles haut -->
-    <div class="tuto-top-bar">
-      <button class="tuto-btn-pill" id="tuto-pause-btn" onclick="toggleTutoPause()">⏸ Pause</button>
-      <button class="tuto-btn-pill" onclick="skipTutorial()">Passer →</button>
+    <div class="tuto-top">
+      <span class="tuto-brand">RÉCITS D'AVENTURES</span>
+      <button class="tuto-skip" id="tuto-skip" onclick="skipTutorial()">Passer</button>
     </div>
 
-    <!-- Slides -->
-    <div class="tuto-slides-wrap">
-
-      <!-- Slide 0 — Bienvenue -->
-      <div class="tuto-slide active" id="tuto-0">
-        <div class="tuto-sub">Une chasse au trésor géolocalisée dans ta ville t'attend !</div>
+    <div class="tuto-slides-wrap" id="tuto-slides">
+      <div class="tuto-slide active">
+        <div class="tuto-medal"><img src="flavia-1.webp" alt="" style="object-position:50% 72%"></div>
+        <div class="tuto-text"><h2>Bienvenue dans les aventures de Flavia Flint</h2><p>Choisis un parcours et lance l'aventure. Flavia t'accompagne du début à la fin.</p></div>
       </div>
-
-      <!-- Slide 1 — Suis la boussole -->
-      <div class="tuto-slide" id="tuto-1">
-        <div class="tuto-sub">Rends-toi aux lieux indiqués par Flavia. La carte te guide pas à pas !</div>
+      <div class="tuto-slide">
+        <div class="tuto-medal"><img src="flavia-2.webp" alt="" style="object-position:45% 62%"></div>
+        <div class="tuto-text"><h2>Suis la boussole</h2><p>Flavia te présente ta mission, puis te guide d'étape en étape à travers le village.</p></div>
       </div>
-
-      <!-- Slide 2 — Résous les énigmes -->
-      <div class="tuto-slide" id="tuto-2">
-        <div class="tuto-sub">Chaque étape cache un mystère. Observe, réfléchis et trouve la bonne réponse !</div>
+      <div class="tuto-slide">
+        <div class="tuto-medal"><img src="flavia-3.webp" alt="" style="object-position:40% 62%"></div>
+        <div class="tuto-text"><h2>Résous les énigmes</h2><p>Observe bien autour de toi : la réponse se cache sur place. Bloqué ? Des indices peuvent t'aider.</p></div>
       </div>
-
-      <!-- Slide 3 — Gagne des points -->
-      <div class="tuto-slide" id="tuto-3">
-        <div class="tuto-sub">Résous les énigmes, économise tes indices : chaque étape réussie te rapporte de l'XP !</div>
+      <div class="tuto-slide">
+        <div class="tuto-medal"><img src="flavia-4.webp" alt="" style="object-position:55% 62%"></div>
+        <div class="tuto-text"><h2>Gagne des badges et des points</h2><p>Chaque aventure terminée te rapporte un badge à collectionner et des points.</p></div>
       </div>
-
-      <!-- Slide 4 — Le classement -->
-      <div class="tuto-slide" id="tuto-4">
-        <div class="tuto-sub">Classement général, entre amis, ou par aventure : défie les autres explorateurs !</div>
+      <div class="tuto-slide">
+        <div class="tuto-medal"><img src="flavia-5.webp" alt="" style="object-position:40% 62%"></div>
+        <div class="tuto-text"><h2>Grimpe au classement</h2><p>Tes points te font monter dans le classement des explorateurs.</p></div>
       </div>
-
-      <!-- Slide 5 — Chasse au trésor ultime -->
-      <div class="tuto-slide" id="tuto-5"></div>
-    </div>
-
-    <!-- Popup final : apparaît une fois la barre de progression du dernier
-         slide terminée, pour laisser le visuel bien visible pendant le
-         chargement au lieu de le masquer avec le texte/bouton en permanence. -->
-    <div class="tuto-final-popup" id="tuto-final-popup">
-      <div class="tuto-final-card">
-        <div class="tuto-sub">Chaque année, une grande chasse au trésor est organisée : un véritable trésor et de nombreux lots à gagner !</div>
-        <button class="btn-leather" onclick="skipTutorial()">
-          <span class="btn-leather-icon"><img src="icon-compass.webp" alt="" style="width:15px;height:15px;object-fit:contain;display:block;"/></span>
-          C'est parti !
-        </button>
+      <div class="tuto-slide">
+        <div class="tuto-medal"><img src="flavia-6.webp" alt="" style="object-position:30% 78%"></div>
+        <div class="tuto-text"><h2>La chasse au trésor ultime</h2><p>Les mieux classés accèdent à la grande chasse au trésor annuelle, avec de nombreux lots à gagner.</p></div>
       </div>
     </div>
 
-    <!-- Points indicateurs -->
-    <div class="tuto-dots" id="tuto-dots">
-      <div class="tuto-dot active" onclick="showTutoSlide(0)"></div>
-      <div class="tuto-dot" onclick="showTutoSlide(1)"></div>
-      <div class="tuto-dot" onclick="showTutoSlide(2)"></div>
-      <div class="tuto-dot" onclick="showTutoSlide(3)"></div>
-      <div class="tuto-dot" onclick="showTutoSlide(4)"></div>
-      <div class="tuto-dot" onclick="showTutoSlide(5)"></div>
-    </div>
-
-    <!-- Barre de progression -->
-    <div class="tuto-progress-wrap">
-      <div class="tuto-progress-track">
-        <div class="tuto-progress-fill" id="tuto-progress-fill"></div>
+    <div class="tuto-bottom">
+      <div class="tuto-dots" id="tuto-dots">
+        <button class="tuto-dot active" onclick="showTutoSlide(0)" aria-label="Écran 1"></button>
+        <button class="tuto-dot" onclick="showTutoSlide(1)" aria-label="Écran 2"></button>
+        <button class="tuto-dot" onclick="showTutoSlide(2)" aria-label="Écran 3"></button>
+        <button class="tuto-dot" onclick="showTutoSlide(3)" aria-label="Écran 4"></button>
+        <button class="tuto-dot" onclick="showTutoSlide(4)" aria-label="Écran 5"></button>
+        <button class="tuto-dot" onclick="showTutoSlide(5)" aria-label="Écran 6"></button>
       </div>
+      <button class="tuto-next" id="tuto-next" onclick="nextTutoSlide()">Suivant</button>
     </div>
   </div>
 
@@ -3245,89 +3191,46 @@ async function loadAdventures() {
 // ══════════════════════════════════════════
 // TUTORIEL
 // ══════════════════════════════════════════
-let tutoTimer     = null;
-let tutoSlide     = 0;
-let tutoIsPaused  = false;
-const TUTO_N      = 6;
-const TUTO_DELAY  = 4100; // ms avant slide suivant
+let tutoSlide = 0;
+const TUTO_N = 6;
 
 function startTutorial() {
-  tutoSlide    = 0;
-  tutoIsPaused = false;
+  tutoSlide = 0;
   goToScreen('tutorial', null);
   document.getElementById('app')?.classList.add('tutorial-mode');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   showTutoSlide(0);
 }
 
 function showTutoSlide(idx) {
-  tutoSlide = ((idx % TUTO_N) + TUTO_N) % TUTO_N;
-  // Slides
+  tutoSlide = Math.max(0, Math.min(TUTO_N - 1, idx));
   document.querySelectorAll('.tuto-slide').forEach((s, i) => s.classList.toggle('active', i === tutoSlide));
-  // Dots
   document.querySelectorAll('.tuto-dot').forEach((d, i) => d.classList.toggle('active', i === tutoSlide));
-  // Le popup final ne concerne que le dernier slide — on le masque dès
-  // qu'on navigue ailleurs (dots, pause/reprise, etc.)
-  hideTutoFinalPopup();
-  // Barre de progression
-  const fill = document.getElementById('tuto-progress-fill');
-  if (fill) {
-    fill.style.transition = 'none';
-    fill.style.width = '0%';
-    requestAnimationFrame(() => {
-      fill.style.transition = `width ${TUTO_DELAY / 1000}s linear`;
-      fill.style.width = '100%';
-    });
-  }
-  // Auto-avance si pas en pause : slide suivant, ou popup final sur le dernier slide
-  clearTimeout(tutoTimer);
-  if (!tutoIsPaused) {
-    if (tutoSlide < TUTO_N - 1) {
-      tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
-    } else {
-      tutoTimer = setTimeout(showTutoFinalPopup, TUTO_DELAY);
-    }
-  }
+  const last = tutoSlide === TUTO_N - 1;
+  document.getElementById('tuto-next').textContent = last ? 'Choisir mon parcours' : 'Suivant';
+  document.getElementById('tuto-skip').classList.toggle('hidden', last);
 }
 
-function showTutoFinalPopup() {
-  document.getElementById('tuto-final-popup')?.classList.add('visible');
+function nextTutoSlide() {
+  if (tutoSlide < TUTO_N - 1) showTutoSlide(tutoSlide + 1);
+  else skipTutorial();
 }
 
-function hideTutoFinalPopup() {
-  document.getElementById('tuto-final-popup')?.classList.remove('visible');
-}
-
-function toggleTutoPause() {
-  tutoIsPaused = !tutoIsPaused;
-  const btn = document.getElementById('tuto-pause-btn');
-  if (btn) btn.textContent = tutoIsPaused ? '▶ Reprendre' : '⏸ Pause';
-  if (!tutoIsPaused) {
-    // Reprendre l'auto-avance depuis le slide courant (ou le popup final)
-    clearTimeout(tutoTimer);
-    if (tutoSlide < TUTO_N - 1) {
-      tutoTimer = setTimeout(() => showTutoSlide(tutoSlide + 1), TUTO_DELAY);
-    } else {
-      tutoTimer = setTimeout(showTutoFinalPopup, TUTO_DELAY);
-    }
-    // Relancer la barre
-    const fill = document.getElementById('tuto-progress-fill');
-    if (fill) {
-      fill.style.transition = 'none'; fill.style.width = '0%';
-      requestAnimationFrame(() => { fill.style.transition = `width ${TUTO_DELAY / 1000}s linear`; fill.style.width = '100%'; });
-    }
-  } else {
-    clearTimeout(tutoTimer);
-    const fill = document.getElementById('tuto-progress-fill');
-    if (fill) { fill.style.transition = 'none'; fill.style.width = fill.offsetWidth + 'px'; }
-  }
-}
+// Balayage gauche / droite
+(function () {
+  const wrap = document.getElementById('tuto-slides');
+  if (!wrap) return;
+  let x0 = null;
+  wrap.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  wrap.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) showTutoSlide(tutoSlide + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+})();
 
 function skipTutorial() {
-  clearTimeout(tutoTimer);
-  tutoIsPaused = false;
   document.getElementById('app')?.classList.remove('tutorial-mode');
-  hideTutoFinalPopup();
   goToScreen('home', document.getElementById('nav-home'));
   document.getElementById('nav-home')?.classList.add('active');
 }
