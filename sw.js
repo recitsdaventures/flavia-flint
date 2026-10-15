@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flavia-flint-v6';
+const CACHE_NAME = 'flavia-flint-v7';
 
 // App shell + arrière-plans/parchemins vus dès le splash, l'inscription et
 // l'accueil — précachés à l'installation du service worker pour qu'ils
@@ -11,6 +11,7 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/logo.png',
   '/splash-bg.webp',
+  '/splash-video.mp4',
   '/parchment-tile.webp',
   '/card-parchment.webp',
   '/green-crackle-bg.webp',
@@ -29,8 +30,9 @@ const ASSETS_TO_CACHE = [
 // Images/icônes/polices — ne changent quasiment jamais une fois livrées :
 // on les sert instantanément depuis le cache au lieu de refaire un
 // aller-retour réseau à chaque fois (c'était la cause du chargement lent
-// des images, même en webp).
-const STATIC_ASSET_RE = /\.(webp|png|jpe?g|svg|gif|woff2?|ttf)$/i;
+// des images, même en webp). Vidéo d'intro du splash incluse (mp4) — même
+// logique : un fichier qui ne change presque jamais une fois publié.
+const STATIC_ASSET_RE = /\.(webp|png|jpe?g|svg|gif|woff2?|ttf|mp4)$/i;
 
 // Images de scénarios hébergées sur Supabase Storage (bucket public
 // aventures-images) — couvertures, étapes, badges, tampons. Comme les

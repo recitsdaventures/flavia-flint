@@ -34,7 +34,7 @@
      deux, un aller-retour réseau de moins au premier chargement. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@500;700&family=Figtree:wght@400;600;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@500;700&family=Figtree:wght@400;600;700&family=Playfair+Display:wght@600;700;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -984,6 +984,61 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; object-position: center; z-index: 1; display: block;
   }
+  /* Vidéo d'intro (5s, sans son) par-dessus l'image statique — invisible par
+     défaut : elle ne s'affiche (fondu) que si elle démarre vraiment la
+     lecture. Si elle échoue ou met trop de temps (connexion lente), l'image
+     fixe reste affichée dessous et l'utilisateur ne voit jamais de flash
+     noir ni d'image figée — voir armSplashVideo() plus bas. */
+  .splash-bg-video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; z-index: 1; display: block;
+    opacity: 0; transition: opacity .3s ease;
+  }
+  .splash-bg-video.is-playing { opacity: 1; }
+  /* Titre dynamique affiché PAR-DESSUS la vidéo uniquement (jamais par-dessus
+     l'image de secours, qui a déjà son titre incrusté dans les pixels — sinon
+     le texte apparaîtrait en double). Basculé en même temps que la vidéo via
+     #splash.video-active, posé juste au-dessus de la barre de progression. */
+  .splash-title-overlay {
+    /* La boîte elle-même est agrandie (padding généreux) pour que l'ombre
+       puisse être posée en inset:0 strictement DANS ses limites, sans avoir
+       besoin de déborder. Avant, l'ombre débordait de la boîte via des
+       marges négatives (inset négatif) et se faisait recadrer net à la
+       bordure réelle de la boîte — c'était la cause du trait nous avons vu
+       chez Firmin, pas la technique (flou ou dégradé, même résultat). */
+    position: absolute; left: 50%; top: 30%; z-index: 2;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: max-content; max-width: calc(100% - 64px);
+    padding: 34px 44px; text-align: center;
+    opacity: 0; transition: opacity .3s ease; pointer-events: none;
+  }
+  #splash.video-active .splash-title-overlay { opacity: 1; }
+  /* Ombre en dégradé radial, entièrement CONTENUE dans la boîte (inset:0,
+     jamais de débordement) — le dégradé s'éteint (alpha 0) bien avant
+     d'atteindre les bords grâce au padding généreux ci-dessus. */
+  .splash-title-overlay::before {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: radial-gradient(
+      ellipse 50% 50% at 50% 50%,
+      rgba(9, 22, 13, 0.60) 0%,
+      rgba(9, 22, 13, 0.40) 35%,
+      rgba(9, 22, 13, 0.18) 60%,
+      rgba(9, 22, 13, 0) 85%
+    );
+  }
+  .splash-title-overlay .brand-line1 {
+    font-family:'Playfair Display',Georgia,serif; font-weight: 600; font-size: 15px;
+    color: var(--beige-light);
+  }
+  .splash-title-overlay .brand-line2 {
+    font-family:'Playfair Display',Georgia,serif; font-weight: 800; font-size: 32px; line-height: 1.15;
+    color: var(--amber);
+  }
+  .splash-title-overlay .brand-tagline {
+    font-family:'Figtree',system-ui,sans-serif; font-size: 13px; color: var(--beige-light);
+    opacity: 0.9; margin-top: 4px;
+  }
   .splash-content {
     /* Positionné juste sous le tagline déjà intégré à l'image (logo + titre +
        accroche font partie du visuel), pas centré sur tout l'écran. */
@@ -1491,8 +1546,21 @@
   ═══════════════════════════════════ -->
   <div id="splash">
 
-    <!-- Visuel plein écran : logo + titre + accroche déjà intégrés à l'image -->
+    <!-- Visuel plein écran : logo + titre + accroche déjà intégrés à l'image.
+         Reste toujours dans le DOM, sous la vidéo : c'est le filet de
+         sécurité si la vidéo ne démarre pas à temps (voir armSplashVideo). -->
     <img src="splash-bg.webp" class="splash-bg-img" alt=""/>
+    <video id="splash-video" class="splash-bg-video" muted playsinline preload="auto" aria-hidden="true">
+      <source src="splash-video.mp4" type="video/mp4">
+    </video>
+
+    <!-- N'apparaît que si la vidéo joue réellement (voir #splash.video-active
+         plus haut) — même texte que le titre déjà incrusté dans l'image. -->
+    <div class="splash-title-overlay" aria-hidden="true">
+      <span class="brand-line1">Les Aventures de</span>
+      <span class="brand-line2">Flavia Flint</span>
+      <span class="brand-tagline">Chasse au trésor géolocalisée</span>
+    </div>
 
     <div class="splash-content">
       <div class="splash-progress-wrap">
@@ -7648,11 +7716,48 @@ function preloadCriticalImageWithRetry(src, attemptsLeft) {
 (function initSplash() {
   const splash = document.getElementById('splash');
   if (!splash) return;
+  armSplashVideo();
   setTimeout(() => {
     splash.classList.add('fade-out');
     setTimeout(() => splash.classList.add('hidden'), 420);
   }, 5000);
 })();
+
+// Tentative de lecture de la vidéo d'intro par-dessus l'image fixe.
+// L'image (splash-bg.webp) reste affichée en dessous dans tous les cas —
+// on ne la cache jamais. Si la vidéo démarre réellement (événement
+// 'playing'), on la fait apparaître en fondu par-dessus. Si elle n'a pas
+// démarré au bout de 1,2s (connexion lente, décodage trop long, format
+// non supporté…) ou si elle déclenche une erreur, on abandonne
+// silencieusement : l'utilisateur ne voit que l'image, comme avant.
+function armSplashVideo() {
+  const video = document.getElementById('splash-video');
+  if (!video) return;
+  let settled = false;
+  const giveUp = () => {
+    if (settled) return;
+    settled = true;
+    try { video.pause(); } catch (e) {}
+    video.style.display = 'none';
+  };
+  const safetyTimer = setTimeout(giveUp, 1200);
+  video.addEventListener('playing', () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(safetyTimer);
+    video.classList.add('is-playing');
+    // Fait apparaître le titre dynamique (voir .splash-title-overlay) en
+    // même temps que la vidéo — jamais sur l'image de secours, qui a déjà
+    // son titre incrusté dans les pixels.
+    const splash = document.getElementById('splash');
+    if (splash) splash.classList.add('video-active');
+  }, { once: true });
+  video.addEventListener('error', giveUp, { once: true });
+  const playPromise = video.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(giveUp);
+  }
+}
 // Arme un écouteur one-shot sur le tout premier tap du joueur (écrire son
 // pseudo, appuyer sur "Continuer sans compte", etc.) pour déclencher la
 // notification "message reçu de Flavia" avec vibration + son EN MÊME TEMPS
