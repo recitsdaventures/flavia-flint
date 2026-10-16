@@ -583,14 +583,41 @@
     display: flex; align-items: center; justify-content: center; font-size: 24px;
   }
   .badge-circle-sm.locked { background: var(--beige-dark); filter: grayscale(1); }
-  .badge-more-btn {
+  .badge-item-btn {
     background: none; border: none; padding: 0; font: inherit; cursor: pointer;
   }
   .badge-more-tile {
     background: var(--beige-mid); border: 2px dashed rgba(120,74,28,0.35);
-    color: var(--text-mid); font-size: 15px; font-weight: 700;
+    color: var(--text-mid); font-size: 20px; font-weight: 700;
   }
   .badge-label { font-size: 10px; color: var(--text-light); text-align: center; line-height: 1.2; }
+
+  /* Fenêtre "Tous mes badges" — ouverte depuis la tuile "+" de la collection.
+     Chaque badge y reste cliquable pour l'agrandir (openImageLightbox). */
+  .badges-modal-overlay {
+    position: fixed; inset: 0; z-index: 19000;
+    background: rgba(10,10,10,0.55);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .badges-modal-card {
+    width: 100%; max-width: 480px; max-height: 80vh;
+    background: var(--beige-light) url('parchment-tile.webp') repeat;
+    border-radius: 20px 20px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.3);
+  }
+  .badges-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-shrink: 0;
+  }
+  .badges-modal-title { font-size: 15px; font-weight: 700; color: var(--green-dark); }
+  .badges-modal-close {
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.1); color: var(--text-mid); font-size: 16px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .badges-modal-card .badges-grid { overflow-y: auto; margin-bottom: 0; padding-bottom: 4px; }
 
   /* ══════════════════════════════
      ÉCRAN CLASSEMENT
@@ -1391,6 +1418,12 @@
     position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
     background: rgba(0,0,0,0.55); color: #F5EDD8; font-size: 12.5px;
     padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+  }
+  .lightbox-caption {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: #F5EDD8; font-size: 14px; font-weight: 700;
+    padding: 8px 18px; border-radius: 20px; max-width: 86%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #lightbox-img.lightbox-wrong-flash { filter: brightness(0.6) saturate(2) sepia(1) hue-rotate(-50deg); }
 
@@ -4557,6 +4590,7 @@ function openImageLightbox(url, opts) {
   overlay.innerHTML = `
     <button type="button" class="lightbox-close" onclick="closeImageLightbox()">✕</button>
     <div class="lightbox-stage"><img id="lightbox-img" src="${url}" alt=""/></div>
+    ${opts.caption ? `<div class="lightbox-caption">${opts.caption}</div>` : ''}
     ${opts.hotspot ? '<div class="lightbox-hint">👆 Touche le détail que tu as trouvé</div>' : ''}`;
   document.body.appendChild(overlay);
   document.body.style.overflow = 'hidden';
@@ -4635,7 +4669,9 @@ function handleLightboxTap(e, img) {
 function closeImageLightbox() {
   const overlay = document.getElementById('image-lightbox');
   if (overlay) overlay.remove();
-  document.body.style.overflow = '';
+  // Ne relâche le scroll que si aucune autre fenêtre plein écran (ex. "Tous mes
+  // badges") n'est encore ouverte derrière — sinon elle se retrouverait scrollable.
+  if (!document.getElementById('badges-modal-overlay')) document.body.style.overflow = '';
   _lbState = null;
 }
 
@@ -5231,26 +5267,39 @@ function leaveGuestMode() {
 
 // Nombre d'écussons affichés sur une seule ligne avant de proposer "Voir plus".
 const BADGE_ROW_LIMIT = 5;
-let _allScenarioBadgesHtml = '';
+let _allScenarioBadges = [];
 
 // b : { imageUrl, icon, label } — forme commune aux badges de scénario
 // (adventure_completions) et aux tampons de chapitre Flavia Flint (player_unlocked_chapters).
-function badgeTileHtml(b) {
+// idx : position de ce badge dans _allScenarioBadges — sert à le retrouver au clic
+// (openBadgeZoom) ; un badge sans image n'a rien à agrandir, donc reste inerte.
+function badgeTileHtml(b, idx) {
+  const inner = `
+    <div class="badge-circle-sm" style="background:var(--green-dark);">${
+      b.imageUrl
+        ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+        : (b.icon || '🏅')
+    }</div>
+    <div class="badge-label">${b.label}</div>`;
+  return b.imageUrl
+    ? `<button type="button" class="badge-item badge-item-btn" onclick="openBadgeZoom(${idx})">${inner}</button>`
+    : `<div class="badge-item">${inner}</div>`;
+}
+
+function allBadgesButtonHtml() {
   return `
-    <div class="badge-item">
-      <div class="badge-circle-sm" style="background:var(--green-dark);">${
-        b.imageUrl
-          ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
-          : (b.icon || '🏅')
-      }</div>
-      <div class="badge-label">${b.label}</div>
-    </div>`;
+    <button type="button" class="badge-item badge-item-btn" onclick="openBadgesModal()">
+      <div class="badge-circle-sm badge-more-tile">+</div>
+      <div class="badge-label">Tout voir</div>
+    </button>`;
 }
 
 // Affiche les écussons (badges de scénario + tampons de chapitre Flavia Flint)
-// du plus récent au plus ancien, sur une seule ligne — au-delà de BADGE_ROW_LIMIT,
-// une tuile "+N" ouvre la collection complète (qui peut alors passer à la ligne).
+// du plus récent au plus ancien, sur une seule ligne — une tuile "+" permanente
+// ouvre la collection complète (openBadgesModal), et chaque badge avec image
+// s'agrandit au clic (openBadgeZoom).
 function renderScenarioBadges(badges) {
+  _allScenarioBadges = badges;
   const grid = document.getElementById('profile-badges-grid');
   if (!grid) return;
   if (!badges.length) {
@@ -5258,27 +5307,42 @@ function renderScenarioBadges(badges) {
     grid.innerHTML = '<div style="color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
     return;
   }
-  _allScenarioBadgesHtml = badges.map(badgeTileHtml).join('');
-  if (badges.length <= BADGE_ROW_LIMIT) {
-    grid.className = 'badges-row';
-    grid.innerHTML = _allScenarioBadgesHtml;
-    return;
-  }
-  const visible     = badges.slice(0, BADGE_ROW_LIMIT - 1);
-  const hiddenCount = badges.length - visible.length;
+  const visible = badges.length > BADGE_ROW_LIMIT ? badges.slice(0, BADGE_ROW_LIMIT - 1) : badges;
   grid.className = 'badges-row';
-  grid.innerHTML = visible.map(badgeTileHtml).join('') + `
-    <button class="badge-item badge-more-btn" onclick="expandBadgesGrid()" type="button">
-      <div class="badge-circle-sm badge-more-tile">+${hiddenCount}</div>
-      <div class="badge-label">Voir plus</div>
-    </button>`;
+  grid.innerHTML = visible.map((b, i) => badgeTileHtml(b, i)).join('') + allBadgesButtonHtml();
 }
 
-function expandBadgesGrid() {
-  const grid = document.getElementById('profile-badges-grid');
-  if (!grid || !_allScenarioBadgesHtml) return;
-  grid.className = 'badges-grid';
-  grid.innerHTML = _allScenarioBadgesHtml;
+// Fenêtre "Tous mes badges" — grille complète, chaque tuile cliquable pour zoomer.
+function openBadgesModal() {
+  if (!_allScenarioBadges.length) return;
+  closeBadgesModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'badges-modal-overlay';
+  overlay.className = 'badges-modal-overlay';
+  overlay.innerHTML = `
+    <div class="badges-modal-card">
+      <div class="badges-modal-header">
+        <div class="badges-modal-title">🏅 Mes badges (${_allScenarioBadges.length})</div>
+        <button type="button" class="badges-modal-close" onclick="closeBadgesModal()">✕</button>
+      </div>
+      <div class="badges-grid">${_allScenarioBadges.map((b, i) => badgeTileHtml(b, i)).join('')}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeBadgesModal(); });
+}
+
+function closeBadgesModal() {
+  const overlay = document.getElementById('badges-modal-overlay');
+  if (overlay) overlay.remove();
+  if (!document.getElementById('image-lightbox')) document.body.style.overflow = '';
+}
+
+// Agrandit un badge (depuis la rangée ou depuis la fenêtre "Tous mes badges").
+function openBadgeZoom(idx) {
+  const b = _allScenarioBadges[idx];
+  if (!b || !b.imageUrl) return;
+  openImageLightbox(b.imageUrl, { caption: b.label });
 }
 
 async function loadProfile() {
