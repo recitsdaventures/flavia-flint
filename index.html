@@ -349,6 +349,10 @@
   .tag-type   { background: #D1FAE5; color: #065F46; }
   .tag-family { background: #EDE9FE; color: #4C1D95; }
   .popup-meta { display: flex; gap: 14px; font-size: 12px; color: var(--text-mid); margin-bottom: 14px; }
+  .popup-desc {
+    font-size: 12.5px; line-height: 1.5; color: var(--text-mid); margin-bottom: 14px;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .popup-btn {
     width: 100%; background: var(--terra); color: white; border: none;
     border-radius: var(--radius-md); padding: 12px;
@@ -618,6 +622,49 @@
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   }
   .badges-modal-card .badges-grid { overflow-y: auto; margin-bottom: 0; padding-bottom: 4px; }
+
+  /* Fiche "profil public" d'un autre joueur — ouverte depuis le classement
+     (podium + lignes). Lecture seule : aucune action de modification. */
+  .player-profile-overlay {
+    position: fixed; inset: 0; z-index: 19500;
+    background: rgba(10,10,10,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+  .player-profile-card {
+    position: relative;
+    width: 100%; max-width: 420px; max-height: 88vh;
+    background: var(--beige-light) url('parchment-tile.webp') repeat;
+    border-radius: 20px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .player-profile-close {
+    position: absolute; top: 12px; right: 12px; z-index: 2;
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.35); color: #fff; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .player-profile-header {
+    position: relative; flex-shrink: 0; text-align: center;
+    background: var(--green-dark) url('leather-tile.webp') repeat; background-size: 180px 180px;
+    padding: 28px 16px 18px;
+  }
+  .player-profile-avatar {
+    width: 72px; height: 72px; border-radius: 50%; overflow: hidden;
+    border: 3px solid var(--amber); margin: 0 auto 10px; background: var(--green-mid);
+  }
+  .player-profile-name { color: #fff; font-size: 17px; font-weight: 800; }
+  .player-profile-sub  { color: rgba(255,255,255,0.75); font-size: 12.5px; margin-top: 2px; }
+  .player-profile-body { overflow-y: auto; padding: 16px; }
+  .player-profile-stats {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px;
+  }
+  .player-profile-stat {
+    background: #fff; border-radius: 12px; padding: 10px 6px; text-align: center;
+    border: 1px solid rgba(120,74,28,0.18);
+  }
 
   /* ══════════════════════════════
      ÉCRAN CLASSEMENT
@@ -2086,6 +2133,7 @@
         <span>📍 <span id="popup-loc">Draguignan</span></span>
         <span>⭐ 4.8</span>
       </div>
+      <div class="popup-desc" id="popup-desc" style="display:none;"></div>
       <button class="popup-btn" onclick="startAdventure()">Commencer l'aventure →</button>
     </div>
 
@@ -2831,6 +2879,15 @@ function handleGoogleAuth() {
   const loginVisible = document.getElementById('auth-login').style.display !== 'none';
   const errEl = document.getElementById(loginVisible ? 'login-error' : 'signup-error');
   if (errEl) errEl.textContent = 'La connexion Google arrive bientôt !';
+}
+
+// Échappe un texte avant de l'injecter dans du HTML — utilisé pour le contenu
+// librement saisi par un joueur (ex. sa bio) quand il peut être lu par d'autres
+// joueurs, pour éviter qu'une balise tapée dans le texte ne s'exécute.
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 // Retourne le fichier image correspondant à un avatar_emoji stocké
@@ -3665,6 +3722,9 @@ function showPopup(adv) {
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
   document.getElementById('popup-dur').textContent   = adv.duration   || '';
   document.getElementById('popup-loc').textContent   = adv.location   || '';
+  const descEl = document.getElementById('popup-desc');
+  if (adv.description) { descEl.textContent = adv.description; descEl.style.display = 'block'; }
+  else { descEl.textContent = ''; descEl.style.display = 'none'; }
   const coverUrl = adv.cover_image_url || '';
   const coverWrap = document.getElementById('popup-cover-wrap');
   const coverImg  = document.getElementById('popup-cover-img');
@@ -4670,8 +4730,11 @@ function closeImageLightbox() {
   const overlay = document.getElementById('image-lightbox');
   if (overlay) overlay.remove();
   // Ne relâche le scroll que si aucune autre fenêtre plein écran (ex. "Tous mes
-  // badges") n'est encore ouverte derrière — sinon elle se retrouverait scrollable.
-  if (!document.getElementById('badges-modal-overlay')) document.body.style.overflow = '';
+  // badges" ou le profil public d'un joueur) n'est encore ouverte derrière —
+  // sinon elle se retrouverait scrollable.
+  if (!document.getElementById('badges-modal-overlay') && !document.getElementById('player-profile-overlay')) {
+    document.body.style.overflow = '';
+  }
   _lbState = null;
 }
 
@@ -5838,7 +5901,7 @@ function renderBioSectionHtml(player) {
           </div>
           <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
             <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">Bio</div>
-            <div style="font-size:13px;color:#4A5A4A;line-height:1.5;font-style:${bio ? 'normal' : 'italic'};" id="profile-bio">${bio || 'Ajoute une présentation pour les autres aventuriers...'}</div>
+            <div style="font-size:13px;color:#4A5A4A;line-height:1.5;font-style:${bio ? 'normal' : 'italic'};" id="profile-bio">${bio ? escapeHtml(bio) : 'Ajoute une présentation pour les autres aventuriers...'}</div>
           </div>
           <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
             <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">🏴‍☠️ Équipage</div>
@@ -7002,7 +7065,7 @@ function renderRankRow(player, isMe) {
   const medals = [iconImg('medal-1'), iconImg('medal-2'), iconImg('medal-3')];
   const rankDisplay = player.rank <= 3 ? medals[player.rank - 1] : `#${player.rank}`;
   return `
-    <div style="display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : "#E9D4A3 url('card-parchment.webp') repeat"};background-size:${isMe ? 'auto' : '200px 200px'};border:${isMe ? '2px solid var(--terra)' : '1px solid rgba(120,74,28,0.18)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
+    <div onclick="openPlayerProfile('${player.id}')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:${isMe ? '#FFF7F4' : "#E9D4A3 url('card-parchment.webp') repeat"};background-size:${isMe ? 'auto' : '200px 200px'};border:${isMe ? '2px solid var(--terra)' : '1px solid rgba(120,74,28,0.18)'};border-radius:12px;padding:10px 14px;margin-bottom:8px;">
       <div style="font-size:18px;font-weight:800;min-width:32px;text-align:center;color:${player.rank === 1 ? '#F59E0B' : player.rank === 2 ? '#9CA3AF' : player.rank === 3 ? '#B45309' : 'var(--text-mid)'};">
         ${rankDisplay}
       </div>
@@ -7025,12 +7088,12 @@ function renderPodiumSlot(player, { left, top, width, height, textTop, textColor
   const avatarBox = `position:absolute;left:${left}%;top:${top}%;width:${width}%;height:${height}%;border-radius:50%;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.35);`;
   const textLeft = left + width / 2;
   const avatar = player
-    ? `<div style="${avatarBox}background:var(--green-mid);">${avatarImgTag(player.avatar_emoji)}</div>`
+    ? `<div onclick="openPlayerProfile('${player.id}')" style="${avatarBox}cursor:pointer;background:var(--green-mid);">${avatarImgTag(player.avatar_emoji)}</div>`
     : `<div style="${avatarBox}background:rgba(255,255,255,0.18);border:2px dashed rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;">
          <span style="font-size:1.6em;opacity:0.4;">👤</span>
        </div>`;
   const text = player
-    ? `<div style="position:absolute;left:${textLeft}%;top:${textTop}%;transform:translateX(-50%);width:30%;text-align:center;line-height:1.3;">
+    ? `<div onclick="openPlayerProfile('${player.id}')" style="position:absolute;left:${textLeft}%;top:${textTop}%;transform:translateX(-50%);width:30%;text-align:center;line-height:1.3;cursor:pointer;">
          <div style="font-size:11px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${player.pseudo || '?'}</div>
          <div style="font-size:11px;font-weight:800;color:${textColor};">${player.podiumValue || ''}</div>
        </div>`
@@ -7057,6 +7120,162 @@ function renderPodium(players, getValue) {
 
   const podiumEl = document.getElementById('ranking-podium');
   if (podiumEl) podiumEl.innerHTML = podiumHtml;
+}
+
+// ══════════════════════════════════════════
+// PROFIL PUBLIC D'UN AUTRE JOUEUR
+// Ouvert depuis le podium ou une ligne du classement — fiche en lecture seule
+// (aucune action de modification) : identité, bio, stats, badges, historique.
+// ══════════════════════════════════════════
+async function openPlayerProfile(playerId) {
+  if (!playerId) return;
+  closePlayerProfile();
+  const overlay = document.createElement('div');
+  overlay.id = 'player-profile-overlay';
+  overlay.className = 'player-profile-overlay';
+  overlay.innerHTML = `
+    <div class="player-profile-card">
+      <button type="button" class="player-profile-close" onclick="closePlayerProfile()">✕</button>
+      <div style="padding:60px 20px;text-align:center;color:#9CA3AF;">⏳ Chargement du profil…</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closePlayerProfile(); });
+
+  try {
+    const [players, allPlayers, completions, readChapters] = await Promise.all([
+      supaFetch(`players_public?id=eq.${playerId}&select=id,pseudo,avatar_emoji,total_xp,team_name,city,bio`),
+      supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
+      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url)&order=completed_at.desc`)
+        .catch(e => { console.error('Erreur chargement aventures du joueur:', e); return []; }),
+      supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
+        .catch(e => { console.error('Erreur chargement chapitres du joueur:', e); return []; })
+    ]);
+    const player = players[0];
+    if (!player) {
+      renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Ce profil est introuvable.</div>');
+      return;
+    }
+    renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters));
+  } catch (e) {
+    console.error('Erreur chargement profil joueur:', e);
+    renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Impossible de charger ce profil pour le moment.</div>');
+  }
+}
+
+function renderPlayerProfileOverlay(bodyHtml) {
+  const card = document.querySelector('#player-profile-overlay .player-profile-card');
+  if (!card) return;
+  card.innerHTML = `
+    <button type="button" class="player-profile-close" onclick="closePlayerProfile()">✕</button>
+    ${bodyHtml}`;
+}
+
+function closePlayerProfile() {
+  const overlay = document.getElementById('player-profile-overlay');
+  if (overlay) overlay.remove();
+  if (!document.getElementById('image-lightbox') && !document.getElementById('badges-modal-overlay')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function buildPlayerProfileHtml(player, allPlayers, completions, readChapters) {
+  const xp      = player.total_xp || 0;
+  const rank    = allPlayers.findIndex(p => p.id === player.id) + 1;
+  const cityLine = player.city ? `<div class="player-profile-sub">📍 ${escapeHtml(player.city)}</div>` : '';
+
+  const seenAdvIds = new Set();
+  const uniqueCompletions = (completions || []).filter(c => {
+    if (!c.adventure_id || seenAdvIds.has(c.adventure_id)) return false;
+    seenAdvIds.add(c.adventure_id);
+    return true;
+  });
+  const scenarioBadgeEntries = uniqueCompletions.map(c => ({
+    date: c.completed_at ? new Date(c.completed_at) : new Date(0),
+    imageUrl: c.adventures?.badge_thumb_url || c.adventures?.badge_image_url || '',
+    icon: '🏅',
+    label: c.adventures?.badge_name || c.adventures?.title || 'Badge'
+  }));
+  const chapterBadgeEntries = (readChapters || [])
+    .filter(u => u.flavia_chapters)
+    .map(u => ({
+      date: u.unlocked_at ? new Date(u.unlocked_at) : new Date(0),
+      imageUrl: u.flavia_chapters?.stamp_image_url || '',
+      icon: u.flavia_chapters?.stamp_icon || '🧭',
+      label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre'
+    }));
+  const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries].sort((a, b) => b.date - a.date);
+
+  const badgesHtml = allBadgeEntries.length
+    ? `<div class="badges-grid" style="margin-bottom:0;">${allBadgeEntries.map(publicBadgeTileHtml).join('')}</div>`
+    : '<div style="color:#9CA3AF;font-size:13px;padding:6px 0;">Aucun badge encore.</div>';
+
+  const history = (completions || []).slice(0, 5);
+  const historyHtml = history.length
+    ? history.map(c => {
+        const dur  = c.total_duration_seconds || 0;
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--beige-mid);">
+            <span style="font-size:13px;font-weight:600;color:var(--text-dark);">${escapeHtml(c.adventures?.title || 'Aventure')}</span>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:700;color:var(--green-dark);">⏱ ${mins}:${String(secs).padStart(2,'0')}</div>
+              <div style="font-size:11px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+            </div>
+          </div>`;
+      }).join('')
+    : '<div style="color:#9CA3AF;font-size:13px;padding:6px 0;">Aucune aventure terminée encore.</div>';
+
+  const bioHtml = player.bio
+    ? `<div style="font-size:13px;color:#4A5A4A;line-height:1.5;">${escapeHtml(player.bio)}</div>`
+    : '';
+
+  return `
+    <div class="player-profile-header">
+      <div class="player-profile-avatar">${avatarImgTag(player.avatar_emoji)}</div>
+      <div class="player-profile-name">${player.team_name ? `🏴‍☠️ ${escapeHtml(player.team_name)}` : escapeHtml(player.pseudo || 'Aventurier')}</div>
+      <div class="player-profile-sub">${player.team_name ? escapeHtml(player.pseudo || 'Aventurier') + ' · ' : ''}${getRankIcon(xp)} ${getRankName(xp)}</div>
+      ${cityLine}
+    </div>
+    <div class="player-profile-body">
+      <div class="player-profile-stats">
+        <div class="player-profile-stat">
+          <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${uniqueCompletions.length}</div>
+          <div style="font-size:10px;color:#9CA3AF;">Scénarios</div>
+        </div>
+        <div class="player-profile-stat">
+          <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${xp.toLocaleString('fr')}</div>
+          <div style="font-size:10px;color:#9CA3AF;">Points XP</div>
+        </div>
+        <div class="player-profile-stat">
+          <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${rank ? '#' + rank : '–'}</div>
+          <div style="font-size:10px;color:#9CA3AF;">Rang mondial</div>
+        </div>
+      </div>
+      ${bioHtml ? `<div class="section-title" style="margin-bottom:8px;">Bio</div>${bioHtml}<div style="height:16px;"></div>` : ''}
+      <div class="section-title" style="margin-bottom:10px;">🏅 Badges (${allBadgeEntries.length})</div>
+      ${badgesHtml}
+      <div class="section-title" style="margin:18px 0 10px;">🗺️ Mes aventures</div>
+      ${historyHtml}
+    </div>`;
+}
+
+// Tuile badge pour le profil public d'un AUTRE joueur — volontairement indépendante
+// de badgeTileHtml/_allScenarioBadges (qui servent au propre profil du joueur connecté)
+// pour ne jamais mélanger les deux états ; ouvre directement le zoom sur son URL.
+function publicBadgeTileHtml(b) {
+  const inner = `
+    <div class="badge-circle-sm" style="background:var(--green-dark);">${
+      b.imageUrl
+        ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
+        : (b.icon || '🏅')
+    }</div>
+    <div class="badge-label">${escapeHtml(b.label)}</div>`;
+  if (!b.imageUrl) return `<div class="badge-item">${inner}</div>`;
+  const safeUrl   = b.imageUrl.replace(/'/g, "\\'");
+  const safeLabel = (b.label || '').replace(/'/g, "\\'");
+  return `<button type="button" class="badge-item badge-item-btn" onclick="openImageLightbox('${safeUrl}', {caption:'${safeLabel}'})">${inner}</button>`;
 }
 
 // ══════════════════════════════════════════
