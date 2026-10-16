@@ -1342,8 +1342,17 @@
      padding pour que le texte reste lisiblement inséré, sur le fond beige. */
   .adv-nb-wrap {
     display: flex; flex-direction: column;
+    flex: 1; min-height: 0;
     margin: -16px -16px 0 -16px;
   }
+  /* mode-story / mode-enigme doivent pouvoir s'étirer sur toute la hauteur
+     disponible de .adv-scroll (sinon display:block => hauteur en contenu
+     seul), pour que .adv-nb-paper ci-dessous (flex:1) remplisse vraiment tout
+     l'écran sous l'image — au lieu de s'arrêter après le texte et laisser
+     apparaître le fond "parchemin" uni de l'écran en dessous (voulu par
+     Firmin : la page du carnet doit déjà couvrir tout l'écran dès le début,
+     seul le texte s'anime par-dessus). */
+  #mode-story, #mode-enigme { flex: 1; flex-direction: column; min-height: 0; }
   .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
   .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
   .adv-nb-image.hotspot-img { object-fit: contain; background: #0A140D; cursor: pointer; }
@@ -1408,6 +1417,7 @@
     border-top: 3px solid var(--beige-dark);
     padding: 20px 20px 16px;
     cursor: pointer;
+    flex: 1; min-height: 0;
   }
   .adv-nb-text {
     font-family: 'Caveat', 'Segoe UI', cursive;
@@ -4657,26 +4667,11 @@ async function renderRewardMode() {
   // Sauvegarde en arrière-plan (XP réel après déduction indices)
   saveProgress(step, earnedXp);
 
-  // Étape intermédiaire — toast discret + auto-avance
+  // Étape intermédiaire — avance directement à la suite, sans popup ni délai
+  // (l'enchaînement doit rester immersif : nouvelle page du carnet qui
+  // s'anime, pas d'interruption au-dessus de l'image — demandé par Firmin).
   if (!isLast) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position:fixed;top:70px;left:50%;transform:translateX(-50%);
-      background:#2D4A2D;color:white;
-      padding:10px 20px;border-radius:30px;
-      font-size:13px;font-weight:600;
-      z-index:9999;
-      display:flex;align-items:center;gap:8px;
-      box-shadow:0 4px 15px rgba(0,0,0,0.2);
-      animation:slideDown 0.3s ease;
-    `;
-    toast.innerHTML = `⭐ Étape débloquée !`;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s';
-      setTimeout(() => { toast.remove(); goToNextStep(); }, 300);
-    }, 2500);
+    goToNextStep();
     return;
   }
 
@@ -7646,7 +7641,7 @@ function showMode(mode) {
   });
   const target = document.getElementById('mode-' + mode);
   if (target) {
-    target.style.display = mode === 'reward' ? 'flex' : 'block';
+    target.style.display = (mode === 'reward' || mode === 'story' || mode === 'enigme') ? 'flex' : 'block';
     document.getElementById('adv-scroll').scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
