@@ -3294,7 +3294,7 @@ async function loadAdventures() {
     console.log('Token présent:', !!localStorage.getItem('ff_access_token'));
     console.log('Chargement aventures...');
     const [data, books] = await Promise.all([
-      supaFetch('adventures?select=*,steps(*)&status=eq.published&order=created_at.asc'),
+      supaFetch('adventures?select=*,steps(*)&status=eq.published&order=created_at.desc'),
       supaFetch('professor_flint_books?select=*&status=eq.published&order=created_at.asc').catch(e => {
         console.error('Erreur chargement livres Professeur Flint:', e);
         return [];
