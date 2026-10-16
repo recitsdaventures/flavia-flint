@@ -1076,15 +1076,33 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <div class="empty-state" id="steps-empty" style="padding:32px 24px;">
             <div class="empty-icon" style="font-size:32px;">📍</div>
             <div class="empty-title" style="font-size:14px;">Commence ton scénario</div>
-            <div class="empty-sub" style="font-size:13px;margin-bottom:16px;">Choisis un point de départ, ou ajoute une étape directement.</div>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStarterTemplate('simple')">📍 Scénario simple</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="applyStarterTemplate('branching')">🔀 Scénario à embranchement</button>
+            <div class="empty-sub" style="font-size:13px;margin-bottom:16px;">Ajoute ta première slide : une image, un texte, et éventuellement un lieu à atteindre.</div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSlideTypeChooser()">+ Ajouter ma première slide</button>
+            <div style="margin-top:10px;">
+              <button type="button" onclick="applyStarterTemplate('branching')" style="background:none;border:none;color:#6B7280;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px;">Mode avancé : scénario à embranchement</button>
             </div>
           </div>
         </div>
+        <div id="slide-type-chooser" style="display:none;background:#F9F7F4;border:1px solid #E5D9C0;border-radius:12px;padding:14px;margin-top:10px;">
+          <div style="font-size:13px;font-weight:700;color:#1A2A1A;margin-bottom:10px;">Quel type de slide veux-tu ajouter ?</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button type="button" onclick="createSlideOfType('intro')" style="display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:1.5px solid #D4C5A9;border-radius:10px;padding:10px 12px;cursor:pointer;">
+              <span style="font-size:20px;">📖</span>
+              <span><strong style="font-size:13px;color:#1A2A1A;">Introduction / Message</strong><br><span style="font-size:12px;color:#6B7280;">Juste une image, un texte et un bouton — pas de trajet</span></span>
+            </button>
+            <button type="button" onclick="createSlideOfType('gps')" style="display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:1.5px solid #D4C5A9;border-radius:10px;padding:10px 12px;cursor:pointer;">
+              <span style="font-size:20px;">📍</span>
+              <span><strong style="font-size:13px;color:#1A2A1A;">Étape avec un lieu (GPS)</strong><br><span style="font-size:12px;color:#6B7280;">Le joueur doit se rendre à un endroit précis</span></span>
+            </button>
+            <button type="button" onclick="createSlideOfType('jeu')" style="display:flex;align-items:center;gap:10px;text-align:left;background:#fff;border:1.5px solid #D4C5A9;border-radius:10px;padding:10px 12px;cursor:pointer;">
+              <span style="font-size:20px;">🧩</span>
+              <span><strong style="font-size:13px;color:#1A2A1A;">Énigme / Jeu</strong><br><span style="font-size:12px;color:#6B7280;">Le joueur répond à une question ou fait un choix</span></span>
+            </button>
+          </div>
+          <button type="button" onclick="closeSlideTypeChooser()" style="margin-top:10px;background:none;border:none;color:#9CA3AF;font-size:12px;cursor:pointer;">Annuler</button>
+        </div>
         <div style="margin-top:12px;">
-          <button class="btn btn-secondary btn-sm" onclick="addStepGlobal()" style="width:100%;">+ Ajouter une étape</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSlideTypeChooser()" style="width:100%;">+ Ajouter une slide</button>
         </div>
       </div>
 
@@ -3524,7 +3542,7 @@ function newUid() { uidCounter++; return 'u' + uidCounter; }
 function newStepObj() {
   return {
     uid: newUid(),
-    title: '', lat: null, lng: null, radius_meters: 20,
+    title: '', lat: null, lng: null, radius_meters: 20, has_gps: false,
     interaction_type: 'free_text', continue_label: '',
     enigme: '', answer: '', hint: '',
     image_url: '', image_thumb_url: '', _pendingImgFile: null,
@@ -3547,6 +3565,7 @@ function loadStepsFromAdventure(dbSteps) {
     obj.lat = s.lat ?? null;
     obj.lng = s.lng ?? null;
     obj.radius_meters = s.radius_meters ?? 20;
+    obj.has_gps = (obj.lat != null && obj.lng != null);
     obj.continue_label = s.continue_label || '';
     obj.enigme = s.enigme || '';
     obj.answer = s.answer || '';
@@ -3666,10 +3685,11 @@ function renderOutline() {
     const tag = nTrans >= 2 ? `<span class="outline-tag branch">🔀 embranchement</span>`
               : nTrans === 0 ? `<span class="outline-tag endpoint">🏁 fin</span>` : '';
     const typeIcon = TYPE_ICONS[step.interaction_type] || '';
+    const gpsTag = step.has_gps ? '📍 ' : '';
     return `
       <div class="outline-row ${rowClass}" style="padding-left:${10 + depth * 22}px;" onclick="openStepPanel('${step.uid}')">
         <span class="outline-id">${label}</span>
-        <span class="outline-summary ${(step.title || step.enigme) ? '' : 'empty'}">${typeIcon} ${escapeHtml(stepSummary(step))}</span>
+        <span class="outline-summary ${(step.title || step.enigme) ? '' : 'empty'}">${gpsTag}${typeIcon} ${escapeHtml(stepSummary(step))}</span>
         ${tag}
         <button type="button" class="outline-branch-btn" onclick="event.stopPropagation();addBranchQuick('${step.uid}')">+ embranchement</button>
       </div>`;
@@ -3686,9 +3706,32 @@ function renderOutline() {
   updateGlobalTimerFailSelect();
 }
 
-// ── AJOUT D'ÉTAPE : bouton unique, prolonge le dernier maillon ouvert du scénario ──
-function addStepGlobal() {
+// ── SÉLECTEUR DE TYPE DE SLIDE : popover léger ouvert par "+ Ajouter une slide" ──
+function openSlideTypeChooser() {
+  const el = document.getElementById('slide-type-chooser');
+  if (el) el.style.display = 'block';
+}
+function closeSlideTypeChooser() {
+  const el = document.getElementById('slide-type-chooser');
+  if (el) el.style.display = 'none';
+}
+
+// ── AJOUT D'ÉTAPE : prolonge le dernier maillon ouvert du scénario, préconfigurée
+// selon le type choisi dans le popover (intro sans GPS / étape avec lieu / énigme).
+function createSlideOfType(kind) {
   const step = newStepObj();
+  if (kind === 'intro') {
+    step.interaction_type = 'continue';
+    step.has_gps = false;
+  } else if (kind === 'gps') {
+    step.interaction_type = 'continue';
+    step.has_gps = true;
+    step.radius_meters = 20;
+  } else if (kind === 'jeu') {
+    step.interaction_type = 'free_text';
+    step.has_gps = false;
+  }
+
   if (scenarioSteps.length === 0) {
     rootUid = step.uid;
     scenarioSteps.push(step);
@@ -3698,6 +3741,7 @@ function addStepGlobal() {
     scenarioSteps.push(step);
     if (leaf) leaf.step.transitions.push({ label: '', target_uid: step.uid, is_correct: false, error_message: null });
   }
+  closeSlideTypeChooser();
   renderOutline();
   openStepPanel(step.uid);
 }
@@ -3775,6 +3819,9 @@ function openStepPanel(uid) {
   document.getElementById('panel-lat').value = step.lat ?? '';
   document.getElementById('panel-lng').value = step.lng ?? '';
   document.getElementById('panel-radius').value = step.radius_meters ?? 20;
+  document.getElementById('panel-has-gps').checked = !!step.has_gps;
+  document.getElementById('panel-gps-section').style.display = step.has_gps ? 'block' : 'none';
+  document.getElementById('panel-title-label').textContent = step.has_gps ? 'Nom du lieu' : 'Titre de l\'étape (optionnel)';
   document.getElementById('panel-title').value = step.title || '';
   document.getElementById('panel-interaction-type').value = step.interaction_type || 'free_text';
   document.getElementById('panel-continue-label').value = step.continue_label || '';
@@ -3822,7 +3869,13 @@ function renderPanelBody() {
         <option value="hotspot">🎯 Toucher une zone de l'image</option>
       </select>
     </div>
-    <div class="step-gps-section" id="panel-gps-section">
+    <div style="margin:0 0 10px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;background:#F9F7F4;border:1px solid #E5D9C0;border-radius:10px;padding:10px 12px;">
+        <input type="checkbox" id="panel-has-gps" onchange="toggleStepGps()"/>
+        📍 Cette étape a lieu à un endroit précis (le joueur doit s'y rendre)
+      </label>
+    </div>
+    <div class="step-gps-section" id="panel-gps-section" style="display:none;">
       <div class="step-section-label">📍 Localisation GPS</div>
       <div class="gps-grid">
         <div class="form-group" style="margin:0;">
@@ -3838,12 +3891,9 @@ function renderPanelBody() {
           <input type="number" id="panel-radius" placeholder="20" oninput="syncPanelToStep()"/>
         </div>
       </div>
-      <div style="font-size:12px;color:#4A5A4A;background:#F0F7F0;border-radius:8px;padding:8px 10px;margin-top:8px;">
-        💡 Laisse Latitude/Longitude vides pour une étape purement narrative, sans trajet à pied (ex : les slides d'une introduction de scénario) — le joueur passe directement à l'image et au bouton suivant.
-      </div>
     </div>
     <div class="form-group" style="margin-top:10px;">
-      <label style="font-size:12px;">Nom du lieu</label>
+      <label style="font-size:12px;" id="panel-title-label">Nom du lieu</label>
       <input type="text" id="panel-title" placeholder="Ex : La fontaine du village" oninput="syncPanelToStep()"/>
     </div>
     <div style="margin:10px 0;">
@@ -3940,6 +3990,17 @@ function renderPanelBody() {
 function togglePanelTimer() {
   const checked = document.getElementById('panel-has-timer').checked;
   document.getElementById('panel-timer-options').style.display = checked ? 'block' : 'none';
+  syncPanelToStep();
+}
+
+// ── GPS PAR ÉTAPE : affiche/masque le bloc Latitude/Longitude/Rayon selon que
+// cette étape demande ou non un déplacement — plus de champs GPS visibles par
+// défaut pour une slide purement narrative (intro, énigme sans lieu, etc.).
+function toggleStepGps() {
+  const checked = document.getElementById('panel-has-gps').checked;
+  document.getElementById('panel-gps-section').style.display = checked ? 'block' : 'none';
+  const titleLabel = document.getElementById('panel-title-label');
+  if (titleLabel) titleLabel.textContent = checked ? 'Nom du lieu' : 'Titre de l\'étape (optionnel)';
   syncPanelToStep();
 }
 
@@ -4076,9 +4137,18 @@ function deleteStepPanel() {
 function syncPanelToStep() {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
   if (!step) return;
-  step.lat = parseCoord(document.getElementById('panel-lat').value);
-  step.lng = parseCoord(document.getElementById('panel-lng').value);
-  step.radius_meters = parseInt(document.getElementById('panel-radius').value) || 20;
+  step.has_gps = document.getElementById('panel-has-gps').checked;
+  if (step.has_gps) {
+    step.lat = parseCoord(document.getElementById('panel-lat').value);
+    step.lng = parseCoord(document.getElementById('panel-lng').value);
+    step.radius_meters = parseInt(document.getElementById('panel-radius').value) || 20;
+  } else {
+    // Décoché : on efface les coordonnées même si des valeurs traînaient encore
+    // dans les champs (ex. après avoir décoché puis recoché par erreur) — une
+    // étape sans GPS ne doit jamais sauvegarder de lat/lng résiduelles.
+    step.lat = null;
+    step.lng = null;
+  }
   step.title = document.getElementById('panel-title').value;
   step.continue_label = document.getElementById('panel-continue-label')?.value || '';
   step.enigme = document.getElementById('panel-enigme').value;
@@ -4635,10 +4705,10 @@ function showToast(msg, isError = false) {
 function onLocationsCountChange() {
   // Les coordonnées GPS par étape restent toujours accessibles, quel que soit le
   // nombre de lieux déclaré — sans elles, l'aventure n'a pas de point sur la carte
-  // publique (carte.html se base sur les coordonnées de la 1ère étape).
-  document.querySelectorAll('.step-gps-section').forEach(el => {
-    el.style.display = 'block';
-  });
+  // publique (carte.html se base sur les coordonnées de la 1ère étape). L'affichage
+  // du bloc GPS d'une étape est désormais géré par son propre interrupteur
+  // "Cette étape a lieu à un endroit précis" (cf. toggleStepGps()) — on n'y touche
+  // plus ici, sinon ça écraserait ce choix à chaque ouverture du panneau.
   const infoEl = document.getElementById('single-location-info');
   if (infoEl) infoEl.style.display = 'none';
   const gpsEl = document.getElementById('single-location-gps');
