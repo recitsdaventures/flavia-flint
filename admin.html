@@ -3909,19 +3909,18 @@ function renderPanelBody() {
       </div>
     </div>
 
+    <div id="panel-enigme-wrap">
+      <div class="step-section-label" id="panel-enigme-label">📝 Texte</div>
+      <div class="form-group" style="margin:0 0 10px;">
+        <label style="font-size:12px;" id="panel-enigme-sublabel">Texte de l'énigme</label>
+        <textarea id="panel-enigme" rows="3" placeholder="Le texte affiché au joueur (anime en écriture manuscrite)…" oninput="syncPanelToStep()"></textarea>
+      </div>
+    </div>
     <div id="panel-type-continue">
       <div class="step-section-label">➡️ Bouton</div>
       <div class="form-group" style="margin:0 0 10px;">
         <label style="font-size:12px;">Texte du bouton</label>
         <input type="text" id="panel-continue-label" placeholder="Continuer →" oninput="syncPanelToStep()"/>
-      </div>
-    </div>
-
-    <div id="panel-enigme-wrap">
-      <div class="step-section-label" id="panel-enigme-label">🔍 Énigme</div>
-      <div class="form-group" style="margin:0 0 10px;">
-        <label style="font-size:12px;" id="panel-enigme-sublabel">Texte de l'énigme</label>
-        <textarea id="panel-enigme" rows="2" placeholder="L'énigme posée au joueur…" oninput="syncPanelToStep()"></textarea>
       </div>
     </div>
     <div id="panel-type-freetext">
@@ -4006,6 +4005,7 @@ function toggleStepGps() {
 
 // ── TYPE D'ÉTAPE : bascule l'affichage des blocs pertinents selon le type choisi ──
 const ENIGME_LABELS = {
+  continue: 'Texte affiché au joueur',
   free_text: 'Texte de l\'énigme',
   quiz: 'Question posée au joueur',
   decision: 'Texte affiché avant le choix',
@@ -4014,7 +4014,7 @@ const ENIGME_LABELS = {
 
 function applyInteractionTypeVisibility(type) {
   document.getElementById('panel-type-continue').style.display = type === 'continue' ? 'block' : 'none';
-  document.getElementById('panel-enigme-wrap').style.display = type === 'continue' ? 'none' : 'block';
+  document.getElementById('panel-enigme-wrap').style.display = 'block';
   document.getElementById('panel-type-freetext').style.display = (type === 'free_text' || type === 'hotspot') ? 'block' : 'none';
   document.getElementById('panel-answer-wrap').style.display = type === 'free_text' ? 'block' : 'none';
   document.getElementById('panel-type-hotspot').style.display = type === 'hotspot' ? 'block' : 'none';
