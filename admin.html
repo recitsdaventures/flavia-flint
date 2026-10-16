@@ -4570,11 +4570,131 @@ function previewImgLocal(file, imgTagId, previewId, zoneId) {
   r.readAsDataURL(file);
 }
 
+// ── DÉTOURAGE AUTOMATIQUE (fond uni) ──────────────────────────────────────
+// Pour les dessins (croquis, badge) : rend transparent le fond uni (blanc/crème)
+// autour de l'illustration, directement au moment de l'import, sans action
+// manuelle. Principe : on part des 4 bords de l'image et on "inonde" (flood fill)
+// les pixels dont la couleur est proche du fond — ça évacue le fond même s'il y a
+// des zones claires à l'intérieur du dessin (elles ne sont pas connectées aux
+// bords donc restent intactes). Un léger adoucissement est appliqué sur le
+// contour pour éviter un bord trop dur. Fonctionne bien quand le fond de départ
+// est uni et homogène (ex. image générée par IA) — c'est le cas visé ici.
+function removeUniformBackground(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image invalide'));
+      img.onload = () => {
+        try {
+          const MAX_DIM = 2200; // garde-fou perf sur une très grande image
+          const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, w, h);
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const data = imgData.data;
+
+          // Couleur de fond = moyenne des 4 coins (légèrement en retrait pour
+          // éviter l'anti-aliasing du tout bord de l'image)
+          const margin = Math.min(2, Math.floor(Math.min(w, h) / 4));
+          const sampleAt = (x, y) => { const i = (y * w + x) * 4; return [data[i], data[i+1], data[i+2]]; };
+          const corners = [
+            sampleAt(margin, margin),
+            sampleAt(w - 1 - margin, margin),
+            sampleAt(margin, h - 1 - margin),
+            sampleAt(w - 1 - margin, h - 1 - margin)
+          ];
+          const bg = [0, 1, 2].map(c => Math.round(corners.reduce((s, p) => s + p[c], 0) / 4));
+
+          const TOLERANCE = 32;        // distance de couleur max = considéré comme fond
+          const SOFT_TOLERANCE = 58;   // au-delà, contour adouci (dégradé d'opacité)
+          const visited = new Uint8Array(w * h);
+          const stack = [];
+          for (let x = 0; x < w; x++) { stack.push(x, (h - 1) * w + x); }
+          for (let y = 0; y < h; y++) { stack.push(y * w, y * w + w - 1); }
+
+          while (stack.length) {
+            const idx = stack.pop();
+            if (visited[idx]) continue;
+            visited[idx] = 1;
+            const i = idx * 4;
+            const dr = data[i] - bg[0], dg = data[i + 1] - bg[1], db = data[i + 2] - bg[2];
+            if (dr * dr + dg * dg + db * db > TOLERANCE * TOLERANCE) continue;
+            data[i + 3] = 0;
+            const x = idx % w, y = (idx / w) | 0;
+            if (x > 0) stack.push(idx - 1);
+            if (x < w - 1) stack.push(idx + 1);
+            if (y > 0) stack.push(idx - w);
+            if (y < h - 1) stack.push(idx + w);
+          }
+
+          // Adoucit le contour : les pixels encore opaques mais voisins d'un pixel
+          // transparent, et dont la couleur reste proche du fond, passent en semi-transparent.
+          for (let idx = 0; idx < w * h; idx++) {
+            const i = idx * 4;
+            if (data[i + 3] === 0) continue;
+            const x = idx % w, y = (idx / w) | 0;
+            const nearBg =
+              (x > 0 && data[(idx - 1) * 4 + 3] === 0) ||
+              (x < w - 1 && data[(idx + 1) * 4 + 3] === 0) ||
+              (y > 0 && data[(idx - w) * 4 + 3] === 0) ||
+              (y < h - 1 && data[(idx + w) * 4 + 3] === 0);
+            if (!nearBg) continue;
+            const dr = data[i] - bg[0], dg = data[i + 1] - bg[1], db = data[i + 2] - bg[2];
+            const d = Math.sqrt(dr * dr + dg * dg + db * db);
+            if (d < SOFT_TOLERANCE) {
+              data[i + 3] = Math.round(255 * Math.min(1, Math.max(0, (d - TOLERANCE) / (SOFT_TOLERANCE - TOLERANCE))));
+            }
+          }
+
+          ctx.putImageData(imgData, 0, 0);
+          canvas.toBlob((blob) => {
+            if (!blob) { reject(new Error('Échec du détourage')); return; }
+            const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+            resolve(new File([blob], `${baseName}-detoure.webp`, { type: 'image/webp' }));
+          }, 'image/webp', 0.92);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── IMAGES ──
-function handleImg(event, type) {
+async function handleImg(event, type) {
   const file = event.target.files[0]; if (!file) return;
   if (file.size > 5*1024*1024) { alert('Image trop lourde (max 5 Mo)'); return; }
   window._pendingImgs = window._pendingImgs || {};
+
+  // Détourage automatique du fond pour les dessins (croquis, badge) — pas pour
+  // la couverture, qui est une photo où un détourage n'aurait pas de sens.
+  if (type === 'sketch' || type === 'badge') {
+    const zoneEl = document.getElementById(type + '-upload-zone');
+    const previewEl = document.getElementById(type + '-img-preview');
+    const imgTag = document.getElementById(type + '-img-tag');
+    if (zoneEl) zoneEl.style.display = 'none';
+    if (previewEl) previewEl.style.display = 'block';
+    if (imgTag) { imgTag.removeAttribute('src'); imgTag.alt = '⏳ Détourage du fond en cours…'; }
+    try {
+      const processed = await removeUniformBackground(file);
+      window._pendingImgs[type] = processed;
+      previewImgLocal(processed, type + '-img-tag', type + '-img-preview', type + '-upload-zone');
+    } catch (err) {
+      console.error('Détourage impossible, image conservée telle quelle :', err);
+      window._pendingImgs[type] = file;
+      previewImgLocal(file, type + '-img-tag', type + '-img-preview', type + '-upload-zone');
+    }
+    return;
+  }
+
   window._pendingImgs[type] = file;
   previewImgLocal(file, type+'-img-tag', type+'-img-preview', type+'-upload-zone');
 }
