@@ -3850,7 +3850,7 @@ function handleTimerExpired(type) {
         window._currentStepId = failStep.id;
         currentStepIndex = currentAdv.steps.findIndex(s => s.id === failStep.id);
         buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
-        renderStoryMode();
+        renderStepEntry();
         stopAllTimers();
         if (timerEl) timerEl.style.background = '#1A2A1A';
       }, 2000);
@@ -3982,7 +3982,7 @@ async function startAdventure() {
   document.getElementById('adv-title').textContent = currentAdv.title;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   saveCurrentProgress();
-  renderStoryMode();
+  renderStepEntry();
   goToScreen('adventure', null);
   window._adventureInProgress = true;
   enableImmersiveMode();
@@ -4032,6 +4032,29 @@ function currentStep() {
 
   // Repli sur l'index (scénario purement linéaire ou window._currentStepId absent)
   return currentAdv.steps[currentStepIndex] || currentAdv.steps[0] || null;
+}
+
+// Une étape sans coordonnées GPS (Latitude/Longitude laissées vides côté admin)
+// est une étape purement narrative — pas de trajet à pied à proposer. Sert à
+// construire une introduction de scénario (plusieurs étapes "Continuer" d'affilée,
+// juste une image + texte manuscrit animé + bouton) avant la première étape qui,
+// elle, demande vraiment au joueur de se rendre sur un lieu.
+function stepHasGps(step) {
+  return !!(step && step.lat != null && step.lat !== '' && step.lng != null && step.lng !== '');
+}
+
+// Point d'entrée unique à chaque transition vers une nouvelle étape (lancement de
+// l'aventure, étape suivante, redirection après expiration d'un timer) : une étape
+// sans GPS saute l'écran "story" et la boussole pour aller droit à l'écran
+// d'interaction (renderEnigmeMode) — sinon le flux normal (story → boussole →
+// énigme) s'applique.
+function renderStepEntry() {
+  const step = currentStep();
+  if (step && !stepHasGps(step)) {
+    renderEnigmeMode();
+  } else {
+    renderStoryMode();
+  }
 }
 
 // ── CARNET D'AVENTURE — moteur générique (image + texte qui s'écrit + bouton),
@@ -4144,8 +4167,11 @@ function renderCompassMode() {
   const step = currentStep();
   if (!step) return;
 
-  // Aventure à 1 seul lieu — pas de navigation GPS entre étapes, on passe direct à l'énigme
-  if (currentAdv?.locations_count === 1 || currentAdv?.steps?.length === 1) {
+  // Aventure à 1 seul lieu, ou étape sans GPS (slide narrative) — pas de navigation
+  // GPS, on passe direct à l'énigme. Le second cas ne devrait normalement plus être
+  // atteint (renderStepEntry() route déjà ces étapes directement vers renderEnigmeMode),
+  // gardé ici par sécurité si renderCompassMode() est appelée directement ailleurs.
+  if (currentAdv?.locations_count === 1 || currentAdv?.steps?.length === 1 || !stepHasGps(step)) {
     renderEnigmeMode();
     return;
   }
@@ -5033,7 +5059,7 @@ function nextStep() {
   }
   gpsAutoUnlocked = false;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
-  renderStoryMode();
+  renderStepEntry();
 }
 
 function goToNextStep(choiceIndex) {
@@ -5075,7 +5101,7 @@ function goToNextStep(choiceIndex) {
 
   gpsAutoUnlocked = false;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
-  renderStoryMode();
+  renderStepEntry();
 }
 
 function handleChoice(choiceIndex) {
