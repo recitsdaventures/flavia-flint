@@ -1244,6 +1244,7 @@ let editingId = null;
 let scenarioSteps = [];
 let rootUid = null;
 let openStepUid = null;
+let pendingLinkFromUid = null; // uid de l'étape depuis laquelle on vient de choisir "+ Créer une nouvelle étape" dans le panneau
 let uidCounter = 0;
 let lastOrderToUidMap = {};
 let lastUidToOrderMap = {};
@@ -3736,10 +3737,21 @@ function createSlideOfType(kind) {
     rootUid = step.uid;
     scenarioSteps.push(step);
   } else {
-    const { ordered } = computeTree();
-    const leaf = [...ordered].reverse().find(o => o.step.transitions.filter(t => t.target_uid).length === 0);
+    // Si on vient du bouton "+ Créer une nouvelle étape" depuis le panneau d'une
+    // étape précise, on chaîne depuis CETTE étape-là plutôt que depuis la dernière
+    // étape "feuille" du scénario (utile si on n'édite pas la toute dernière étape).
+    let from = null;
+    if (pendingLinkFromUid) {
+      from = scenarioSteps.find(s => s.uid === pendingLinkFromUid);
+      pendingLinkFromUid = null;
+    }
+    if (!from) {
+      const { ordered } = computeTree();
+      const leaf = [...ordered].reverse().find(o => o.step.transitions.filter(t => t.target_uid).length === 0);
+      from = leaf ? leaf.step : null;
+    }
     scenarioSteps.push(step);
-    if (leaf) leaf.step.transitions.push({ label: '', target_uid: step.uid, is_correct: false, error_message: null });
+    if (from) from.transitions.push({ label: '', target_uid: step.uid, is_correct: false, error_message: null });
   }
   closeSlideTypeChooser();
   renderOutline();
@@ -4086,6 +4098,15 @@ function populateSingleNextSelect(step) {
 function updateSingleNextStep(targetUid) {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
   if (!step) return;
+  if (targetUid === '__new__') {
+    // On ferme le panneau pour révéler le sélecteur de type de slide dans la liste
+    // (il vit sous "+ Ajouter une slide", masqué derrière le panneau tant qu'il est ouvert),
+    // et on mémorise depuis quelle étape on doit chaîner la nouvelle.
+    pendingLinkFromUid = step.uid;
+    closeStepPanel();
+    openSlideTypeChooser();
+    return;
+  }
   step.transitions = targetUid ? [{ label: '', target_uid: targetUid, is_correct: false, error_message: null }] : [];
   renderOutline();
 }
@@ -4231,7 +4252,11 @@ function populateStepTargetSelect(selectEl, currentUid, excludeUid) {
   const { ordered, orphans } = computeTree();
   const all = [...ordered, ...orphans].filter(o => o.step.uid !== excludeUid);
   const emptyLabel = selectEl.id === 'panel-timer-fail' || selectEl.id === 'f-global-timer-fail' ? '— Aucun —' : '— choisir —';
-  selectEl.innerHTML = `<option value="">${emptyLabel}</option>` +
+  // Dans le panneau d'étape, toujours proposer de créer une toute nouvelle étape
+  // (pas seulement choisir parmi celles qui existent déjà) — sinon, pour la
+  // dernière étape du scénario, ce menu n'a tout simplement rien à proposer.
+  const newOption = selectEl.id === 'panel-next-step-select' ? `<option value="__new__">➕ Créer une nouvelle étape…</option>` : '';
+  selectEl.innerHTML = `<option value="">${emptyLabel}</option>` + newOption +
     all.map(o => `<option value="${o.step.uid}" ${o.step.uid === currentUid ? 'selected' : ''}>${o.label} — ${escapeHtml(stepSummary(o.step))}</option>`).join('');
 }
 
