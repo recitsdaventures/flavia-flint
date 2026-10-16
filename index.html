@@ -930,11 +930,24 @@
      pied de page (voulu par Firmin) : chaque visuel embarque désormais
      lui-même le titre et le texte — seuls Passer/Suivant et les pastilles
      restent du vrai HTML/CSS dynamique, jamais incrustés dans l'image.
-     object-fit:cover pour remplir tout le cadre sans aucune marge ;
-     object-position ajusté par slide (inline) pour que le recadrage mange
-     dans le décor plutôt que dans le titre/texte. */
-  .tuto-medal { position:absolute; inset:0; }
-  .tuto-medal img { width:100%; height:100%; object-fit:cover; display:block; }
+     Les 6 images n'ont pas toutes le même ratio portrait (certaines jusqu'à
+     0.75, bien plus "carrées" qu'un écran de téléphone ~0.45-0.56) et leur
+     titre va jusqu'au bord — un simple object-fit:cover les aurait rognées
+     et coupé le texte sur les téléphones étroits. Double couche à la place :
+     un calque de fond flouté/assombri en cover (comble tout l'écran sans
+     jamais montrer de bord dur) derrière un calque au premier plan en
+     contain (l'image complète, texte inclus, toujours visible en entier). */
+  .tuto-medal { position:absolute; inset:0; overflow:hidden; background:#1A2A1A; }
+  .tuto-medal-bg {
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; object-position:center; display:block;
+    filter:blur(30px) brightness(0.55) saturate(1.1);
+    transform:scale(1.2); /* pousse les bords flous du blur hors du cadre visible */
+  }
+  .tuto-medal-fg {
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:contain; object-position:center; display:block;
+  }
   /* Titre/texte toujours présents dans le DOM pour les lecteurs d'écran et
      le SEO, mais masqués visuellement puisque l'image les affiche déjà. */
   .tuto-text {
@@ -1941,27 +1954,45 @@
 
     <div class="tuto-slides-wrap" id="tuto-slides">
       <div class="tuto-slide active">
-        <div class="tuto-medal"><img src="tuto-1-bienvenue.webp" alt="" style="object-position:50% 75%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-1-bienvenue.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-1-bienvenue.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>Bienvenue dans les aventures de Flavia Flint</h2><p>Choisis un parcours et lance l'aventure. Flavia t'accompagne du début à la fin.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="tuto-2-boussole.webp" alt="" style="object-position:50% 78%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-2-boussole.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-2-boussole.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>Suis la boussole</h2><p>Flavia te présente ta mission, puis te guide d'étape en étape à travers le village.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="tuto-3-enigmes.webp" alt="" style="object-position:50% 85%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-3-enigmes.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-3-enigmes.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>Résous les énigmes</h2><p>Observe bien autour de toi : la réponse se cache sur place. Bloqué ? Des indices peuvent t'aider.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="tuto-4-badges.webp" alt="" style="object-position:50% 92%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-4-badges.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-4-badges.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>Gagne des badges et des points</h2><p>Chaque aventure terminée te rapporte un badge à collectionner et des points.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="tuto-5-classement.webp" alt="" style="object-position:50% 70%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-5-classement.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-5-classement.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>Grimpe au classement</h2><p>Tes points te font monter dans le classement des explorateurs.</p></div>
       </div>
       <div class="tuto-slide">
-        <div class="tuto-medal"><img src="tuto-6-tresor.webp" alt="" style="object-position:50% 85%"></div>
+        <div class="tuto-medal">
+          <img class="tuto-medal-bg" src="tuto-6-tresor.webp" alt="" aria-hidden="true">
+          <img class="tuto-medal-fg" src="tuto-6-tresor.webp" alt="">
+        </div>
         <div class="tuto-text"><h2>La chasse au trésor ultime</h2><p>Les mieux classés accèdent à la grande chasse au trésor annuelle, avec de nombreux lots à gagner.</p></div>
       </div>
     </div>
@@ -4761,7 +4792,7 @@ async function renderRewardMode() {
     </div>
     ${xpLabel}
     ${isLast && currentAdv?.badge_name ? `
-      <div class="badge-hex">${currentAdv.badge_image_url ? `<img src="${currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
+      <div class="badge-hex">${(currentAdv.badge_thumb_url || currentAdv.badge_image_url) ? `<img src="${currentAdv.badge_thumb_url || currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
       <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
     <div style="margin-top:16px;width:100%;">
       ${isLast ? `
@@ -4854,7 +4885,7 @@ async function showFinalReward() {
     <div class="reward-sub">${currentAdv?.outro_text || 'Flavia est fière de toi !'}</div>
     ${currentAdv?.xp_reward ? `<div class="xp-pill">⭐ +${currentAdv.xp_reward} XP gagnés</div>` : ''}
     ${currentAdv?.badge_name ? `
-      <div class="badge-hex">${currentAdv.badge_image_url ? `<img src="${currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
+      <div class="badge-hex">${(currentAdv.badge_thumb_url || currentAdv.badge_image_url) ? `<img src="${currentAdv.badge_thumb_url || currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
       <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
     <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin:16px 0;text-align:center;">
       <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
@@ -5282,7 +5313,7 @@ async function loadProfile() {
       // select élargi (au lieu de deux requêtes séparées) : ce même résultat sert à la
       // fois à la grille de badges ci-dessous et à l'historique des 5 dernières
       // aventures plus bas — un seul aller-retour réseau pour les deux.
-      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url)&order=completed_at.desc`)
+      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url)&order=completed_at.desc`)
         .catch(e => { console.error('Erreur chargement badges scénarios:', e); return []; }),
       supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
         .catch(e => { console.error('Erreur chargement chapitres Flavia lus:', e); return []; }),
@@ -5354,7 +5385,7 @@ async function loadProfile() {
 
     const scenarioBadgeEntries = uniqueScenarioBadges.map(c => ({
       date: c.completed_at ? new Date(c.completed_at) : new Date(0),
-      imageUrl: c.adventures?.badge_image_url || '',
+      imageUrl: c.adventures?.badge_thumb_url || c.adventures?.badge_image_url || '',
       icon: '🏅',
       label: c.adventures?.badge_name || c.adventures?.title || 'Badge'
     }));

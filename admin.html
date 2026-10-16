@@ -4442,13 +4442,13 @@ async function regenerateMissingThumbnails() {
   let advRows;
   try {
     advRows = await supa('GET', 'adventures', null,
-      '?select=id,title,cover_image_url,cover_thumb_url,sketch_image_url,sketch_thumb_url');
+      '?select=id,title,cover_image_url,cover_thumb_url,sketch_image_url,sketch_thumb_url,badge_image_url,badge_thumb_url');
   } catch (e) {
     showToast('Erreur chargement des aventures : ' + e.message, true);
     return;
   }
   const advTodo = advRows.filter(r =>
-    (r.cover_image_url && !r.cover_thumb_url) || (r.sketch_image_url && !r.sketch_thumb_url)
+    (r.cover_image_url && !r.cover_thumb_url) || (r.sketch_image_url && !r.sketch_thumb_url) || (r.badge_image_url && !r.badge_thumb_url)
   );
   // Couverture et croquis sont traités indépendamment : si l'un des deux
   // échoue (après ré-essais), l'autre est quand même enregistré — pas de
@@ -4470,6 +4470,14 @@ async function regenerateMissingThumbnails() {
         patch.sketch_thumb_url = await regenOne(row.sketch_image_url, 'sketches-thumb', 200, 0.75);
       } catch (e) {
         console.error(`Échec miniature (croquis) pour "${row.title}" :`, e);
+        hadError = true;
+      }
+    }
+    if (row.badge_image_url && !row.badge_thumb_url) {
+      try {
+        patch.badge_thumb_url = await regenOne(row.badge_image_url, 'badges-thumb', 400, 0.85);
+      } catch (e) {
+        console.error(`Échec miniature (badge) pour "${row.title}" :`, e);
         hadError = true;
       }
     }
@@ -4646,6 +4654,11 @@ async function saveAdventure(asDraft) {
     if (pending.badge) {
       btnSave.textContent = '⏳ Upload image badge…';
       advData.badge_image_url = await uploadImageToStorage(pending.badge, 'badges');
+      try {
+        advData.badge_thumb_url = await uploadThumbnail(pending.badge, 'badges-thumb', 400, 0.85);
+      } catch (e) {
+        console.error('Erreur génération miniature badge:', e);
+      }
     } else {
       const existing = document.getElementById('badge-img-tag')?.src;
       if (existing && existing.startsWith('http')) advData.badge_image_url = existing;
