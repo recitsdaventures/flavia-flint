@@ -3596,13 +3596,15 @@ function renderMapMarkers() {
   map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
   if (playerPos) updatePlayerMarker(playerPos.lat, playerPos.lng);
   adventures.forEach(adv => {
-    // Aventure à 1 seul lieu — utiliser les coordonnées principales de l'aventure
+    // Coordonnées principales de l'aventure (saisies dans le formulaire admin) —
+    // prioritaires quel que soit le nombre de lieux, car c'est ce point qui doit
+    // créer le pin sur la carte générale. À défaut, on retombe sur les coordonnées
+    // de la première étape (comportement historique).
     let lat, lng;
-    if (adv.locations_count === 1 && adv.main_lat) {
+    if (adv.main_lat && adv.main_lng) {
       lat = adv.main_lat;
       lng = adv.main_lng;
     } else {
-      // Comportement existant — coordonnées de la première étape
       const firstStep = adv.steps?.[0];
       if (!firstStep?.lat) return;
       lat = firstStep.lat;

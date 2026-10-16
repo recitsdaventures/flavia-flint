@@ -924,11 +924,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <option value="5">5 lieux et plus</option>
           </select>
           <div id="single-location-info" style="display:none;background:#F0F7F0;border-radius:8px;padding:10px 12px;font-size:12px;color:#2D4A2D;margin-top:6px;">
-            ℹ️ Avec 1 lieu unique, les coordonnées GPS ne sont saisies qu'une seule fois sur l'aventure principale. Les étapes servent uniquement à structurer le storytelling et les énigmes.
+            ℹ️ Avec 1 lieu unique, le rayon ci-dessous sert aussi de zone de validation GPS pour l'étape. Les étapes servent uniquement à structurer le storytelling et les énigmes.
           </div>
         </div>
-        <div class="form-group full" id="single-location-gps" style="display:none;">
-          <div class="step-section-label">📍 Coordonnées du lieu</div>
+        <div class="form-group full" id="single-location-gps">
+          <div class="step-section-label">📍 Position sur la carte (ville / point de départ)</div>
+          <div style="font-size:12px;color:#8A7A5C;margin:-4px 0 8px;">Ce point place l'aventure sur la carte générale. Les trajets GPS entre les étapes se règlent séparément, dans chaque étape du scénario.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
             <div class="form-group" style="margin:0;">
               <label style="font-size:12px;">Latitude</label>
@@ -4741,16 +4742,12 @@ function showToast(msg, isError = false) {
 
 // ── NOMBRE DE LIEUX : masque le GPS par étape quand l'aventure se joue en 1 seul lieu ──
 function onLocationsCountChange() {
-  // Les coordonnées GPS par étape restent toujours accessibles, quel que soit le
-  // nombre de lieux déclaré — sans elles, l'aventure n'a pas de point sur la carte
-  // publique (carte.html se base sur les coordonnées de la 1ère étape). L'affichage
-  // du bloc GPS d'une étape est désormais géré par son propre interrupteur
-  // "Cette étape a lieu à un endroit précis" (cf. toggleStepGps()) — on n'y touche
-  // plus ici, sinon ça écraserait ce choix à chaque ouverture du panneau.
+  // Le bloc de coordonnées GPS principales (#single-location-gps) reste toujours
+  // visible, quel que soit le nombre de lieux : c'est lui qui crée le point de
+  // l'aventure sur la carte générale (cf. renderMapMarkers() dans index.html).
+  // Seul le texte d'info change selon qu'il n'y a qu'un lieu unique ou plusieurs.
   const infoEl = document.getElementById('single-location-info');
-  if (infoEl) infoEl.style.display = 'none';
-  const gpsEl = document.getElementById('single-location-gps');
-  if (gpsEl) gpsEl.style.display = 'none';
+  if (infoEl) infoEl.style.display = (document.getElementById('f-locations-count').value === '1') ? 'block' : 'none';
 }
 
 function toggleGlobalTimer() {
