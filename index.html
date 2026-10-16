@@ -1337,13 +1337,15 @@
   /* ── CARNET D'AVENTURE (même présentation que le Chapitre 0, appliquée aux
      étapes de récit/énigme des scénarios d'aventure — hors mode boussole GPS) ──
      Pas d'encadré : .adv-scroll a un padding de 16px, donc une marge négative
-     ici fait déborder l'image jusqu'aux bords de l'écran (bord à bord, sans
-     radius ni ombre qui la rogneraient) ; .adv-nb-paper garde son propre
-     padding pour que le texte reste lisiblement inséré, sur le fond beige. */
+     sur les 4 côtés ici fait déborder jusqu'aux bords de l'écran (bord à bord,
+     sans radius ni ombre qui la rogneraient) — y compris en bas, sinon les
+     16px de padding de .adv-scroll laissent voir le fond parchemin uni de
+     l'écran sous la page du carnet (lignes d'écriture) ; .adv-nb-paper garde
+     son propre padding pour que le texte reste lisiblement inséré. */
   .adv-nb-wrap {
     display: flex; flex-direction: column;
     flex: 1; min-height: 0;
-    margin: -16px -16px 0 -16px;
+    margin: -16px;
   }
   /* mode-story / mode-enigme doivent pouvoir s'étirer sur toute la hauteur
      disponible de .adv-scroll (sinon display:block => hauteur en contenu
