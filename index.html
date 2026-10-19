@@ -816,6 +816,27 @@
   }
   #toast.visible { opacity: 1; }
 
+  /* ── BANNIÈRE MISE À JOUR DISPONIBLE ── */
+  /* Affichée quand un nouveau Service Worker (donc une nouvelle version du
+     code) a été installé en arrière-plan pendant que l'app était déjà
+     ouverte/installée chez le joueur — pour qu'il n'ait jamais besoin de
+     désinstaller/réinstaller l'app pour récupérer une mise à jour : il lui
+     suffit de taper sur "Recharger" (ou de rouvrir l'app plus tard, le SW
+     étant déjà actif en arrière-plan). */
+  #update-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    display: none; align-items: center; gap: 10px;
+    background: var(--green-dark); color: #fff;
+    padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    font-size: 12.5px; font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+  #update-banner.visible { display: flex; }
+  #update-banner span { flex: 1; }
+  #update-banner button { border: none; border-radius: 16px; cursor: pointer; font-weight: 700; }
+  #update-banner .update-reload-btn { background: var(--terra); color: #fff; padding: 6px 14px; font-size: 12.5px; }
+  #update-banner .update-dismiss-btn { background: rgba(255,255,255,0.15); color: #fff; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; flex-shrink: 0; }
+
   /* ══════════════════════════════
      ÉCRAN ACCUEIL — REFONTE
   ══════════════════════════════ */
@@ -1716,6 +1737,13 @@
 
   <!-- Toast notification -->
   <div id="toast"></div>
+
+  <!-- Bannière "nouvelle version disponible" (voir PWA — MISE À JOUR AUTOMATIQUE) -->
+  <div id="update-banner">
+    <span>✨ Nouvelle version disponible</span>
+    <button type="button" class="update-reload-btn" onclick="applyAppUpdate()">Recharger</button>
+    <button type="button" class="update-dismiss-btn" onclick="dismissUpdateBanner()">✕</button>
+  </div>
 
   <!-- ═══════════════════════════════════
        LANDING PAGE (première visite)
@@ -8540,12 +8568,80 @@ function soundArrival() {
 // ══════════════════════════════════════════
 // PWA — INSTALLATION
 // ══════════════════════════════════════════
-// Enregistrement du Service Worker
+// Enregistrement du Service Worker + détection de mise à jour.
+//
+// Un joueur qui a installé l'app (PWA) ou qui la garde simplement ouverte
+// dans un onglet ne revoit JAMAIS automatiquement un nouveau déploiement :
+// la page déjà chargée en mémoire ne change pas tant qu'elle n'est pas
+// rechargée. Sans ce qui suit, la seule façon pour lui de récupérer une
+// mise à jour serait de désinstaller/réinstaller l'app — inacceptable pour
+// nos joueurs. À la place : on détecte qu'un nouveau Service Worker vient
+// d'être installé en arrière-plan (= une nouvelle version du code est
+// prête) et on affiche une bannière "Nouvelle version disponible" avec un
+// bouton "Recharger", au lieu de recharger tout seul (ce qui couperait un
+// joueur en pleine aventure sans prévenir).
+let _swRegistration = null;
+let _updateReady = false;
+
+function showUpdateBanner() {
+  if (_updateReady) return; // déjà affichée
+  _updateReady = true;
+  document.getElementById('update-banner')?.classList.add('visible');
+}
+
+function dismissUpdateBanner() {
+  document.getElementById('update-banner')?.classList.remove('visible');
+  // Ne redemande pas tout de suite — la bannière réapparaîtra à la
+  // prochaine vérification (changement d'onglet, réouverture de l'app...)
+  // tant que la mise à jour n'a pas été appliquée.
+  _updateReady = false;
+}
+
+function applyAppUpdate() {
+  // Le Service Worker (sw.js) appelle déjà self.skipWaiting() à
+  // l'installation, donc le nouveau SW a normalement déjà pris le contrôle
+  // dès qu'il a fini de s'installer : un simple rechargement suffit à
+  // charger le nouveau code.
+  window.location.reload();
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW enregistré:', reg.scope))
+      .then(reg => {
+        _swRegistration = reg;
+        console.log('SW enregistré:', reg.scope);
+
+        // Un Service Worker est déjà en attente (cas où la mise à jour est
+        // arrivée pendant que l'app n'était pas au premier plan) : on
+        // prévient tout de suite plutôt que d'attendre un futur événement.
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+
+        // Nouvelle installation détectée (déploiement pendant que l'app est
+        // ouverte) : on suit son état, et dès qu'elle est prête — ET qu'un
+        // Service Worker contrôlait déjà la page (sinon c'est juste la
+        // toute première installation, pas une mise à jour) — on affiche
+        // la bannière.
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateBanner();
+            }
+          });
+        });
+      })
       .catch(err => console.log('SW erreur:', err));
+
+    // Les PWA installées restent souvent ouvertes en arrière-plan pendant
+    // des jours : le navigateur ne revérifie la présence d'une nouvelle
+    // version qu'à certains moments (navigation...). On force une
+    // vérification à chaque retour au premier plan pour rattraper les
+    // mises à jour publiées pendant que le joueur avait l'app en pause.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') _swRegistration?.update();
+    });
   });
 }
 
