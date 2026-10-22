@@ -455,6 +455,15 @@
     display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
   .compass-card h3 { font-size: 12px; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 1px; }
+  /* Boussole de la slide fusionnée boussole→arrivée : pas de carte séparée (plus
+     de fond parchemin/beige superposé à la page du carnet) — juste le cadran,
+     posé directement sur la même page que le texte manuscrit (cf. renderCompassMode()). */
+  .compass-dial-area { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 14px; }
+  /* Le cadran a le même fond beige clair que la page du carnet (pour rester posé
+     "dessus" plutôt que dans sa propre carte) — un filtre d'ombre le détache
+     visuellement malgré la couleur quasi identique (retour Firmin du 22/10 :
+     "faire ressortir les traits de la boussole"). */
+  .compass-dial-svg { filter: drop-shadow(0 3px 7px rgba(58,32,10,0.22)) drop-shadow(0 1px 2px rgba(58,32,10,0.15)); }
   .compass-info   { text-align: center; }
   .compass-dir    { font-size: 22px; font-weight: 800; color: var(--text-dark); }
   .compass-dist   { font-size: 13px; color: var(--terra); font-weight: 600; margin-top: 2px; }
@@ -1528,7 +1537,6 @@
      son contenu soit remplacé par le texte animé de l'énigme, sur la même slide
      (cf. transitionCompassToEnigme()) — pas de changement d'écran. */
   .compass-paper-fading { opacity: 0; }
-  #compass-paper { cursor: default; }
   .compass-enable-btn {
     margin-top: 2px; background: var(--green-dark); color: #fff; border: none;
     border-radius: 20px; padding: 9px 16px; font-size: 12.5px; font-weight: 700;
@@ -4234,16 +4242,27 @@ function stepHasGps(step) {
 }
 
 // Point d'entrée unique à chaque transition vers une nouvelle étape (lancement de
-// l'aventure, étape suivante, redirection après expiration d'un timer) : une étape
-// sans GPS saute l'écran "story" et la boussole pour aller droit à l'écran
-// d'interaction (renderEnigmeMode) — sinon le flux normal (story → boussole →
-// énigme) s'applique.
+// l'aventure, étape suivante, redirection après expiration d'un timer) :
+// - étape sans GPS → droit à l'écran d'interaction (renderEnigmeMode)
+// - étape avec GPS mais SANS texte narratif propre (pas de story_text, pas
+//   d'intro de scénario sur la 1ère étape) → droit à la boussole : ce cas ne
+//   montrait jusqu'ici qu'un texte générique "Direction : [lieu] !" redondant
+//   avec le message de guidage déjà affiché sur l'écran boussole (retour de
+//   Firmin du 22/10 : "la slide d'avant sert à rien")
+// - étape avec GPS ET un vrai texte narratif (story_text, ou intro de
+//   scénario) → l'écran "story" garde sa raison d'être et reste affiché en
+//   premier, son bouton menant ensuite à la boussole comme avant
 function renderStepEntry() {
   const step = currentStep();
-  if (step && !stepHasGps(step)) {
-    renderEnigmeMode();
-  } else {
+  if (!step) { renderStoryMode(); return; }
+  if (!stepHasGps(step)) { renderEnigmeMode(); return; }
+  const isFirst = currentStepIndex === 0;
+  const hasIntro = isFirst && !!(currentAdv.intro_image_url || currentAdv.intro_text);
+  const hasStoryText = !!step.story_text;
+  if (hasIntro || hasStoryText) {
     renderStoryMode();
+  } else {
+    renderCompassMode();
   }
 }
 
@@ -4375,45 +4394,55 @@ function renderCompassMode() {
   // le mode "toucher une zone") reste affichée en haut sans jamais être rechargée ;
   // seul le bas de la page (#compass-paper) change de contenu, en place, à l'arrivée
   // (cf. transitionCompassToEnigme()) — pas de changement d'écran/mode.
+  // Le texte de guidage est écrit à la main (même effet machine à écrire que le
+  // reste du carnet), la boussole n'apparaît qu'une fois le texte révélé — pas de
+  // bulle de message façon chat, pas de carte parchemin séparée : tout reste sur
+  // la même page beige, comme demandé par Firmin (retour du 22/10).
   document.getElementById('mode-compass').innerHTML = `
     <div class="adv-nb-wrap">
       ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
-      <div class="adv-nb-paper" id="compass-paper">
-        <div class="bubble-row" style="margin-bottom:12px;">
-          <div class="bubble-avatar">${compassSVG(26)}</div>
-          <div class="bubble flavia">Rends-toi à : <strong>${step.title || 'le prochain lieu'}</strong>. Je te guide !</div>
-        </div>
-        <div class="compass-card">
-          <h3>${iconImg('compass')} Direction</h3>
-          <svg width="110" height="110" viewBox="0 0 110 110">
-            <circle cx="55" cy="55" r="52" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="1.5"/>
-            <text x="55" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#2D4A2D">N</text>
-            <text x="55" y="101" text-anchor="middle" font-size="13" fill="#9CA3AF">S</text>
-            <text x="100" y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">E</text>
-            <text x="10"  y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">O</text>
+      <div class="adv-nb-paper" id="compass-paper" onclick="handleAdvNbTap(event)">
+        <div class="adv-nb-text" id="adv-nb-text"></div>
+        <div class="compass-dial-area" id="compass-reveal" style="display:none;">
+          <svg width="124" height="124" viewBox="0 0 110 110" class="compass-dial-svg">
+            <circle cx="55" cy="55" r="52" fill="#FBF5E4" stroke="#8B6F47" stroke-width="2.5"/>
+            <circle cx="55" cy="55" r="44" fill="none" stroke="#B8966A" stroke-width="1"/>
+            <line x1="55" y1="7"  x2="55" y2="14"  stroke="#8B6F47" stroke-width="2"/>
+            <line x1="55" y1="96" x2="55" y2="103" stroke="#8B6F47" stroke-width="2"/>
+            <line x1="7"  y1="55" x2="14"  y2="55" stroke="#8B6F47" stroke-width="2"/>
+            <line x1="96" y1="55" x2="103" y2="55" stroke="#8B6F47" stroke-width="2"/>
+            <text x="55" y="16"  text-anchor="middle" font-size="14" font-weight="800" fill="#2D4A2D">N</text>
+            <text x="55" y="101" text-anchor="middle" font-size="14" font-weight="700" fill="#4A5A4A">S</text>
+            <text x="100" y="59" text-anchor="middle" font-size="14" font-weight="700" fill="#4A5A4A">E</text>
+            <text x="10"  y="59" text-anchor="middle" font-size="14" font-weight="700" fill="#4A5A4A">O</text>
             <g id="compass-needle" style="transform-origin:55px 55px; transition: transform 0.25s ease-out;">
-              <polygon points="55,18 51,55 55,50 59,55" fill="#C4622D"/>
-              <polygon points="55,92 51,55 55,60 59,55" fill="#D4C5A9"/>
+              <polygon points="55,16 50,55 55,49 60,55" fill="#C4622D" stroke="#8B3F15" stroke-width="0.75" stroke-linejoin="round"/>
+              <polygon points="55,94 50,55 55,61 60,55" fill="#8B6F47" stroke="#6B5435" stroke-width="0.75" stroke-linejoin="round"/>
             </g>
-            <circle cx="55" cy="55" r="5" fill="#1A2A1A"/>
+            <circle cx="55" cy="55" r="5.5" fill="#1A2A1A" stroke="#FBF5E4" stroke-width="1.5"/>
           </svg>
           <div class="compass-info">
             <div class="compass-dir" id="compass-dir-live">Activation GPS…</div>
             <div class="compass-dist" id="compass-dist-live">📍 ${step.title || ''}</div>
           </div>
-          <button type="button" class="compass-enable-btn" id="compass-enable-btn" onclick="enableCompassOrientation()" style="display:none;">🧭 Activer la boussole</button>
-        </div>
-        <div id="gps-arrival-alert" style="display:none; background:var(--green-dark); color:white; border-radius:var(--radius-md); padding:12px 16px; margin-top:12px; font-size:13px; font-weight:600; text-align:center; animation:pulse-gps 1s ease-in-out infinite;">
-          🎯 Tu es arrivé ! L'énigme se débloque…
-        </div>
-        <div style="margin-top:14px;">
-          <button class="btn-primary" id="compass-manual-arrive-btn" onclick="transitionCompassToEnigme()">Je suis arrivé ! ✓</button>
+          <button type="button" class="compass-enable-btn" id="compass-enable-btn" onclick="event.stopPropagation(); enableCompassOrientation();" style="display:none;">🧭 Activer la boussole</button>
+          <div id="gps-arrival-alert" style="display:none; background:var(--green-dark); color:white; border-radius:var(--radius-md); padding:12px 16px; margin-top:10px; font-size:13px; font-weight:600; text-align:center; animation:pulse-gps 1s ease-in-out infinite;">
+            🎯 Tu es arrivé ! L'énigme se débloque…
+          </div>
+          <button class="btn-primary" id="compass-manual-arrive-btn" onclick="event.stopPropagation(); transitionCompassToEnigme();" style="margin-top:14px;">Je suis arrivé ! ✓</button>
         </div>
       </div>
     </div>`;
   showMode('compass');
   startGeolocation(step.lat, step.lng, step.radius_meters || 20);
-  maybeOfferCompassActivation();
+  typewriterAdvNb(`Rends-toi à : ${step.title || 'le prochain lieu'}. Je te guide !`, {
+    hasInteraction: true,
+    onRevealed: () => {
+      const w = document.getElementById('compass-reveal');
+      if (w) w.style.display = 'flex';
+      maybeOfferCompassActivation();
+    }
+  });
   saveCurrentProgress();
 }
 
