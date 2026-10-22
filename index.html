@@ -1450,7 +1450,7 @@
      apparaître le fond "parchemin" uni de l'écran en dessous (voulu par
      Firmin : la page du carnet doit déjà couvrir tout l'écran dès le début,
      seul le texte s'anime par-dessus). */
-  #mode-story, #mode-enigme { flex: 1; flex-direction: column; min-height: 0; }
+  #mode-story, #mode-compass, #mode-enigme { flex: 1; flex-direction: column; min-height: 0; }
   .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
   .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
   .adv-nb-image.hotspot-img { object-fit: contain; background: #0A140D; cursor: pointer; }
@@ -1522,6 +1522,17 @@
     padding: 20px 20px 16px;
     cursor: pointer;
     flex: 1; min-height: 0;
+    transition: opacity 0.3s ease;
+  }
+  /* Slide fusionnée boussole→arrivée : fondu de sortie de la boussole avant que
+     son contenu soit remplacé par le texte animé de l'énigme, sur la même slide
+     (cf. transitionCompassToEnigme()) — pas de changement d'écran. */
+  .compass-paper-fading { opacity: 0; }
+  #compass-paper { cursor: default; }
+  .compass-enable-btn {
+    margin-top: 2px; background: var(--green-dark); color: #fff; border: none;
+    border-radius: 20px; padding: 9px 16px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
   }
   .adv-nb-text {
     font-family: 'Caveat', 'Segoe UI', cursive;
@@ -2802,6 +2813,18 @@ let playerMarker     = null;
 let playerPos        = null;
 let geoWatcher       = null;
 let gpsAutoUnlocked  = false;
+// Boussole dynamique (slide fusionnée boussole+arrivée) : cap du joueur (device
+// orientation) et relèvement courant vers la cible GPS, combinés pour faire
+// tourner l'aiguille (cf. updateCompassNeedle()). _compassActivatedThisSession
+// évite de redemander la permission iOS (DeviceOrientationEvent.requestPermission)
+// plus d'une fois par partie une fois accordée.
+let _deviceHeading              = null;
+let _lastBearingToTarget        = null;
+let _compassActivatedThisSession = false;
+// Vrai uniquement une fois l'énigme (texte + élément interactif) affichée sur la
+// slide — tant que c'est faux, un tap sur l'image "toucher une zone" ne doit pas
+// valider une réponse (seul le bouton 🔍 zoome pendant la phase boussole).
+window._stepAnswerable = false;
 let currentHintLevel = 0;   // 0=aucun, 1/2/3=niveaux révélés
 let hintXpPenalty    = 0;   // XP déduit par les indices demandés
 window._adventureInProgress = false; // true uniquement quand l'écran aventure est actif
@@ -4343,45 +4366,61 @@ function renderCompassMode() {
     return;
   }
 
-  gpsAutoUnlocked = false;
+  gpsAutoUnlocked      = false;
+  window._stepAnswerable = false;
+  _lastBearingToTarget = null;
   startStepTimer(step);
 
+  // Slide fusionnée : l'image de destination (même logique qu'en énigme, y compris
+  // le mode "toucher une zone") reste affichée en haut sans jamais être rechargée ;
+  // seul le bas de la page (#compass-paper) change de contenu, en place, à l'arrivée
+  // (cf. transitionCompassToEnigme()) — pas de changement d'écran/mode.
   document.getElementById('mode-compass').innerHTML = `
-    <div class="bubble-row" style="margin-bottom:12px;">
-      <div class="bubble-avatar">${compassSVG(26)}</div>
-      <div class="bubble flavia">Rends-toi à : <strong>${step.title || 'le prochain lieu'}</strong>. Je te guide !</div>
-    </div>
-    <div class="compass-card">
-      <h3>${iconImg('compass')} Direction</h3>
-      <svg width="110" height="110" viewBox="0 0 110 110">
-        <circle cx="55" cy="55" r="52" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="1.5"/>
-        <text x="55" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#2D4A2D">N</text>
-        <text x="55" y="101" text-anchor="middle" font-size="13" fill="#9CA3AF">S</text>
-        <text x="100" y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">E</text>
-        <text x="10"  y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">O</text>
-        <polygon points="55,18 51,55 55,50 59,55" fill="#C4622D"/>
-        <polygon points="55,92 51,55 55,60 59,55" fill="#D4C5A9"/>
-        <circle cx="55" cy="55" r="5" fill="#1A2A1A"/>
-      </svg>
-      <div class="compass-info">
-        <div class="compass-dir" id="compass-dir-live">Activation GPS…</div>
-        <div class="compass-dist" id="compass-dist-live">📍 ${step.title || ''}</div>
+    <div class="adv-nb-wrap">
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
+      <div class="adv-nb-paper" id="compass-paper">
+        <div class="bubble-row" style="margin-bottom:12px;">
+          <div class="bubble-avatar">${compassSVG(26)}</div>
+          <div class="bubble flavia">Rends-toi à : <strong>${step.title || 'le prochain lieu'}</strong>. Je te guide !</div>
+        </div>
+        <div class="compass-card">
+          <h3>${iconImg('compass')} Direction</h3>
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="52" fill="#F5EDD8" stroke="#D4C5A9" stroke-width="1.5"/>
+            <text x="55" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#2D4A2D">N</text>
+            <text x="55" y="101" text-anchor="middle" font-size="13" fill="#9CA3AF">S</text>
+            <text x="100" y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">E</text>
+            <text x="10"  y="59" text-anchor="middle" font-size="13" fill="#9CA3AF">O</text>
+            <g id="compass-needle" style="transform-origin:55px 55px; transition: transform 0.25s ease-out;">
+              <polygon points="55,18 51,55 55,50 59,55" fill="#C4622D"/>
+              <polygon points="55,92 51,55 55,60 59,55" fill="#D4C5A9"/>
+            </g>
+            <circle cx="55" cy="55" r="5" fill="#1A2A1A"/>
+          </svg>
+          <div class="compass-info">
+            <div class="compass-dir" id="compass-dir-live">Activation GPS…</div>
+            <div class="compass-dist" id="compass-dist-live">📍 ${step.title || ''}</div>
+          </div>
+          <button type="button" class="compass-enable-btn" id="compass-enable-btn" onclick="enableCompassOrientation()" style="display:none;">🧭 Activer la boussole</button>
+        </div>
+        <div id="gps-arrival-alert" style="display:none; background:var(--green-dark); color:white; border-radius:var(--radius-md); padding:12px 16px; margin-top:12px; font-size:13px; font-weight:600; text-align:center; animation:pulse-gps 1s ease-in-out infinite;">
+          🎯 Tu es arrivé ! L'énigme se débloque…
+        </div>
+        <div style="margin-top:14px;">
+          <button class="btn-primary" id="compass-manual-arrive-btn" onclick="transitionCompassToEnigme()">Je suis arrivé ! ✓</button>
+        </div>
       </div>
-    </div>
-    <div id="gps-arrival-alert" style="display:none; background:var(--green-dark); color:white; border-radius:var(--radius-md); padding:12px 16px; margin-top:12px; font-size:13px; font-weight:600; text-align:center; animation:pulse-gps 1s ease-in-out infinite;">
-      🎯 Tu es arrivé ! L'énigme se débloque…
-    </div>
-    <div style="margin-top:14px;">
-      <button class="btn-primary" onclick="renderEnigmeMode()">Je suis arrivé ! ✓</button>
     </div>`;
   showMode('compass');
   startGeolocation(step.lat, step.lng, step.radius_meters || 20);
+  maybeOfferCompassActivation();
   saveCurrentProgress();
 }
 
 // ── GÉOLOCALISATION ──
 function startGeolocation(targetLat, targetLng, radiusMeters) {
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  _lastBearingToTarget = null;
   if (!navigator.geolocation) return;
 
   const update = (lat, lng) => {
@@ -4391,6 +4430,8 @@ function startGeolocation(targetLat, targetLng, radiusMeters) {
     const distEl  = document.getElementById('compass-dist-live');
     if (dirEl)  dirEl.textContent  = bearingToLabel(bearing);
     if (distEl) distEl.textContent = `📍 ${Math.round(dist)} m · ${bearingToLabel(bearing)}`;
+    _lastBearingToTarget = bearing;
+    updateCompassNeedle();
 
     if (dist <= radiusMeters && !gpsAutoUnlocked) {
       gpsAutoUnlocked = true;
@@ -4400,7 +4441,7 @@ function startGeolocation(targetLat, targetLng, radiusMeters) {
       if (alertEl) alertEl.style.display = 'block';
       navigator.geolocation.clearWatch(geoWatcher);
       geoWatcher = null;
-      setTimeout(() => renderEnigmeMode(), 1500);
+      setTimeout(() => transitionCompassToEnigme(), 1500);
     }
   };
 
@@ -4437,7 +4478,201 @@ function bearingToLabel(b) {
   return ['Nord','Nord-Est','Est','Sud-Est','Sud','Sud-Ouest','Ouest','Nord-Ouest'][Math.round(b / 45) % 8];
 }
 
-// ── ÉNIGME ──
+// ── BOUSSOLE DYNAMIQUE (orientation du téléphone) ──
+// Fait tourner l'aiguille SVG (#compass-needle) en combinant le relèvement GPS
+// vers la cible (_lastBearingToTarget, recalculé à chaque position dans
+// startGeolocation) et le cap actuel du téléphone (_deviceHeading, mis à jour par
+// handleDeviceOrientation). Sans orientation disponible, l'aiguille reste neutre :
+// la direction/distance textuelles (déjà présentes) restent la source d'info.
+function updateCompassNeedle() {
+  const needle = document.getElementById('compass-needle');
+  if (!needle || _lastBearingToTarget === null || _deviceHeading === null) return;
+  const angle = (_lastBearingToTarget - _deviceHeading + 360) % 360;
+  needle.style.transform = `rotate(${angle}deg)`;
+}
+
+function handleDeviceOrientation(event) {
+  let heading;
+  if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
+    // iOS Safari : déjà un cap compas (0 = Nord, sens horaire) — le plus fiable.
+    heading = event.webkitCompassHeading;
+  } else if (typeof event.alpha === 'number') {
+    // Android (deviceorientationabsolute) : alpha augmente dans le sens
+    // antihoraire depuis le Nord magnétique.
+    heading = (360 - event.alpha) % 360;
+  } else {
+    return;
+  }
+  _deviceHeading = heading;
+  updateCompassNeedle();
+}
+
+// Déclenché par un tap sur le bouton "Activer la boussole" (jamais automatique :
+// sur iOS 13+, DeviceOrientationEvent.requestPermission() exige un geste direct
+// du joueur, impossible à déclencher à l'arrivée sur l'écran).
+function enableCompassOrientation() {
+  const btn = document.getElementById('compass-enable-btn');
+  const start = () => {
+    const evtName = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.removeEventListener(evtName, handleDeviceOrientation);
+    window.addEventListener(evtName, handleDeviceOrientation);
+    _compassActivatedThisSession = true;
+    if (btn) btn.style.display = 'none';
+  };
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(state => {
+      if (state === 'granted') start(); else showCompassFallbackNotice();
+    }).catch(() => showCompassFallbackNotice());
+  } else if (window.DeviceOrientationEvent) {
+    start();
+  } else {
+    showCompassFallbackNotice();
+  }
+}
+
+// Affiche (une fois) le bouton d'activation si l'orientation est potentiellement
+// disponible ; sinon bascule direct sur le repli texte (pas de bouton inutile).
+function maybeOfferCompassActivation() {
+  const btn = document.getElementById('compass-enable-btn');
+  if (!btn) return;
+  if (_compassActivatedThisSession) { btn.style.display = 'none'; return; }
+  if (typeof window.DeviceOrientationEvent === 'undefined') {
+    btn.style.display = 'none';
+    showCompassFallbackNotice();
+    return;
+  }
+  btn.style.display = 'block';
+}
+
+function showCompassFallbackNotice() {
+  if (window._compassFallbackNoticeShown) return;
+  window._compassFallbackNoticeShown = true;
+  showToast("🧭 Pour optimiser le jeu, merci d'activer l'orientation et la géolocalisation de ton téléphone.", 4500);
+}
+
+// ── ÉNIGME : contenu (texte + élément interactif) par type d'étape ──
+// Factorisé car utilisé à l'identique par renderEnigmeMode() (étapes sans GPS,
+// rendues directement dans #mode-enigme) et par transitionCompassToEnigme()
+// (étapes avec GPS : ce contenu remplace la boussole, en place, dans #compass-paper,
+// sans changer d'écran — cf. demande de Firmin du 22/10).
+function enigmeBodyHtml(step) {
+  // Étape CONTINUER — pas d'énigme, juste un bouton (texte personnalisable côté
+  // admin) pour passer à la suite, sans aucune saisie ni bonne/mauvaise réponse.
+  if (step.step_type === 'continue') {
+    return `
+      <div class="adv-nb-text" id="adv-nb-text"></div>
+      <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>`;
+  }
+
+  // Étapes DÉCISION / QUIZ — choix en boutons. Décision : n'importe quel choix fait
+  // avancer. Quiz : seul le choix is_correct fait avancer (géré dans handleChoice()).
+  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
+    const choicesHtml = step.choices.map((c, i) => `
+      <button class="adv-nb-choice-btn" id="adv-nb-choice-${i}" onclick="handleChoice(${i})">
+        <span style="display:inline-flex;min-width:26px;height:26px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--terra);margin-right:9px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
+      </button>`).join('');
+    return `
+      <div class="adv-nb-text" id="adv-nb-text"></div>
+      <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
+      <div class="error-msg" id="quiz-error-msg" style="display:none;"></div>`;
+  }
+
+  // Étape TOUCHER UNE ZONE — réponse en touchant directement un détail sur l'image
+  // (déjà affichée) ou en plein écran via 🔍 ; validation dans
+  // handleHotspotImageTap()/handleLightboxTap(), gatées par window._stepAnswerable.
+  if (step.step_type === 'hotspot') {
+    return `
+      <div class="adv-nb-text" id="adv-nb-text"></div>
+      <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
+        <div class="error-msg" id="error-msg">Pas encore… regarde bien l'image (ou touche 🔍 pour zoomer) !</div>
+        <div id="hint-section"></div>
+      </div>`;
+  }
+
+  // Étape TEXTE LIBRE (et repli legacy) — champ texte libre, validé par checkAnswer().
+  return `
+    <div class="adv-nb-text" id="adv-nb-text"></div>
+    <div class="adv-nb-freetext" id="adv-nb-freetext">
+      <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
+             onkeydown="if(event.key==='Enter') checkAnswer()"/>
+      <div class="error-msg" id="error-msg">Pas tout à fait… réessaie ou prends un indice !</div>
+      <button class="btn-primary" onclick="event.stopPropagation(); checkAnswer();" style="margin-top:10px;">Valider ma réponse</button>
+      <div id="hint-section"></div>
+    </div>`;
+}
+
+// Démarre le texte animé + la logique propre à chaque type, une fois
+// enigmeBodyHtml(step) injecté dans le DOM (par renderEnigmeMode() ou
+// transitionCompassToEnigme()).
+function startEnigmeInteraction(step) {
+  if (step.step_type === 'continue') {
+    typewriterAdvNb(step.enigme || '', {
+      hasInteraction: false,
+      onRevealed: () => { const btn = document.getElementById('adv-nb-continue-btn'); if (btn) btn.style.display = 'block'; }
+    });
+    saveCurrentProgress();
+    return;
+  }
+  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
+    typewriterAdvNb(step.enigme || 'Quelle direction vas-tu prendre ?', {
+      hasInteraction: true,
+      onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'flex'; }
+    });
+    saveCurrentProgress();
+    return;
+  }
+  if (step.step_type === 'hotspot') {
+    typewriterAdvNb(step.enigme || 'Un détail a été ajouté à cette image. Touche-le !', {
+      hasInteraction: true,
+      onRevealed: () => { const w = document.getElementById('hotspot-feedback-wrap'); if (w) w.style.display = 'block'; }
+    });
+    renderHintSection();
+    saveCurrentProgress();
+    return;
+  }
+  typewriterAdvNb(step.enigme || '', {
+    hasInteraction: true,
+    onRevealed: () => { const w = document.getElementById('adv-nb-freetext'); if (w) w.style.display = 'block'; }
+  });
+  renderHintSection();
+  saveCurrentProgress();
+}
+
+// Arrivée sur une étape avec GPS : remplace EN PLACE le contenu de
+// #compass-paper (boussole → texte animé + énigme), avec un petit fondu, sans
+// jamais recharger l'image du haut ni changer d'écran/mode (demande de Firmin :
+// "on est toujours sur la même slide"). Repli sur le rendu plein écran classique
+// (renderEnigmeMode) si #compass-paper n'existe pas (sécurité).
+function transitionCompassToEnigme() {
+  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  currentHintLevel = 0;
+  hintXpPenalty    = 0;
+  const step = currentStep();
+  if (!step) return;
+  startStepTimer(step);
+  let choices = step.choices;
+  if (typeof choices === 'string') {
+    try { choices = JSON.parse(choices); } catch(e) { choices = []; }
+  }
+  step.choices = choices;
+  console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
+
+  const paper = document.getElementById('compass-paper');
+  if (!paper) { renderEnigmeMode(); return; }
+
+  paper.classList.add('compass-paper-fading');
+  setTimeout(() => {
+    paper.id = 'adv-nb-paper-active';
+    paper.classList.remove('compass-paper-fading');
+    paper.setAttribute('onclick', 'handleAdvNbTap(event)');
+    paper.innerHTML = enigmeBodyHtml(step);
+    window._stepAnswerable = true;
+    startEnigmeInteraction(step);
+  }, 320);
+}
+
+// ── ÉNIGME ── (étapes SANS GPS : rendu direct plein écran, image + énigme
+// construits ensemble — pas de phase boussole, donc pas de transition en place)
 function renderEnigmeMode() {
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
   currentHintLevel = 0;
@@ -4454,102 +4689,16 @@ function renderEnigmeMode() {
   step.choices = choices;
   console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
 
-  // Étape CONTINUER — pas d'énigme, juste un bouton (texte personnalisable côté admin)
-  // pour passer à la suite, sans aucune saisie ni bonne/mauvaise réponse.
-  if (step.step_type === 'continue') {
-    document.getElementById('mode-enigme').innerHTML = `
-      <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
-        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
-          <div class="adv-nb-text" id="adv-nb-text"></div>
-          <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>
-        </div>
-      </div>`;
-    showMode('enigme');
-    typewriterAdvNb(step.enigme || '', {
-      hasInteraction: false,
-      onRevealed: () => { const btn = document.getElementById('adv-nb-continue-btn'); if (btn) btn.style.display = 'block'; }
-    });
-    saveCurrentProgress();
-    return;
-  }
-
-  // Étapes DÉCISION / QUIZ — afficher les choix en boutons. Décision : n'importe quel
-  // choix fait avancer (juste vers une suite différente). Quiz : seul le choix marqué
-  // is_correct fait avancer ; un mauvais choix affiche error_message et laisse réessayer
-  // (géré dans handleChoice()).
-  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
-    const choicesHtml = step.choices.map((c, i) => `
-      <button class="adv-nb-choice-btn" id="adv-nb-choice-${i}" onclick="handleChoice(${i})">
-        <span style="display:inline-flex;min-width:26px;height:26px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--terra);margin-right:9px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
-      </button>`).join('');
-
-    document.getElementById('mode-enigme').innerHTML = `
-      <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
-        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
-          <div class="adv-nb-text" id="adv-nb-text"></div>
-          <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
-          <div class="error-msg" id="quiz-error-msg" style="display:none;"></div>
-        </div>
-      </div>`;
-    showMode('enigme');
-    typewriterAdvNb(step.enigme || 'Quelle direction vas-tu prendre ?', {
-      hasInteraction: true,
-      onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'flex'; }
-    });
-    saveCurrentProgress();
-    return;
-  }
-
-  // Étape TOUCHER UNE ZONE — le joueur doit repérer un détail sur l'image et le
-  // toucher directement (dessus, ou en plein écran via le zoom 🔍) plutôt que de
-  // taper une réponse. Validation dans handleHotspotImageTap()/handleLightboxTap().
-  if (step.step_type === 'hotspot') {
-    document.getElementById('mode-enigme').innerHTML = `
-      <div class="adv-nb-wrap">
-        ${advNbImageHtml(step.image_url, { hotspot: true, thumb: step.image_thumb_url })}
-        <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
-          <div class="adv-nb-text" id="adv-nb-text"></div>
-          <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
-            <div class="error-msg" id="error-msg">Pas encore… regarde bien l'image (ou touche 🔍 pour zoomer) !</div>
-            <div id="hint-section"></div>
-          </div>
-        </div>
-      </div>`;
-    showMode('enigme');
-    typewriterAdvNb(step.enigme || 'Un détail a été ajouté à cette image. Touche-le !', {
-      hasInteraction: true,
-      onRevealed: () => { const w = document.getElementById('hotspot-feedback-wrap'); if (w) w.style.display = 'block'; }
-    });
-    renderHintSection();
-    saveCurrentProgress();
-    return;
-  }
-
-  // Étape TEXTE LIBRE (et repli legacy) — champ texte libre (une réponse, comme une date
-  // ou un mot, validée par checkAnswer() — logique de validation inchangée)
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
-      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
-        <div class="adv-nb-text" id="adv-nb-text"></div>
-        <div class="adv-nb-freetext" id="adv-nb-freetext">
-          <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
-                 onkeydown="if(event.key==='Enter') checkAnswer()"/>
-          <div class="error-msg" id="error-msg">Pas tout à fait… réessaie ou prends un indice !</div>
-          <button class="btn-primary" onclick="event.stopPropagation(); checkAnswer();" style="margin-top:10px;">Valider ma réponse</button>
-          <div id="hint-section"></div>
-        </div>
+        ${enigmeBodyHtml(step)}
       </div>
     </div>`;
   showMode('enigme');
-  typewriterAdvNb(step.enigme || '', {
-    hasInteraction: true,
-    onRevealed: () => { const w = document.getElementById('adv-nb-freetext'); if (w) w.style.display = 'block'; }
-  });
-  renderHintSection();
-  saveCurrentProgress();
+  window._stepAnswerable = true;
+  startEnigmeInteraction(step);
 }
 
 // ── INDICES PROGRESSIFS ──
@@ -4650,6 +4799,10 @@ function evaluateHotspotTap(xPct, yPct, step) {
 }
 
 function handleHotspotImageTap(event) {
+  // Pendant la phase boussole (avant l'arrivée), l'image "toucher une zone" est
+  // déjà affichée en haut de la slide fusionnée mais ne doit pas encore accepter
+  // de réponse — seul le bouton 🔍 (zoom, sans validation) reste utilisable.
+  if (!window._stepAnswerable) return;
   const step = currentStep();
   if (!step) return;
   const rect = event.currentTarget.getBoundingClientRect();
@@ -4741,6 +4894,9 @@ function openImageLightbox(url, opts) {
 
 function handleLightboxTap(e, img) {
   if (!_lbState || !_lbState.hotspot) return;
+  // Même garde que handleHotspotImageTap() : zoomer pendant la phase boussole ne
+  // doit pas permettre de valider la réponse avant l'arrivée.
+  if (!window._stepAnswerable) return;
   const step = currentStep();
   if (!step) return;
   const rect = img.getBoundingClientRect();
@@ -7957,7 +8113,7 @@ function showMode(mode) {
   });
   const target = document.getElementById('mode-' + mode);
   if (target) {
-    target.style.display = (mode === 'reward' || mode === 'story' || mode === 'enigme') ? 'flex' : 'block';
+    target.style.display = (mode === 'reward' || mode === 'story' || mode === 'compass' || mode === 'enigme') ? 'flex' : 'block';
     document.getElementById('adv-scroll').scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
