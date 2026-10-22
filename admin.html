@@ -4154,7 +4154,17 @@ function deleteStepPanel() {
   const uid = openStepUid;
   scenarioSteps = scenarioSteps.filter(s => s.uid !== uid);
   scenarioSteps.forEach(s => {
-    s.transitions = s.transitions.filter(t => t.target_uid !== uid);
+    if (s.interaction_type === 'quiz') {
+      // Quiz : une réponse n'est pas liée à sa cible comme en décision — la
+      // supprimer entièrement effacerait aussi son texte (label) alors que
+      // seule la destination (désormais inexistante) doit disparaître ; elle
+      // redevient une réponse "sans destination", comme une mauvaise réponse
+      // normale (cf. bug du 22/10 : supprimer une étape vide créée par erreur
+      // avait silencieusement effacé 3 réponses sur 4 d'un quiz).
+      s.transitions.forEach(t => { if (t.target_uid === uid) t.target_uid = null; });
+    } else {
+      s.transitions = s.transitions.filter(t => t.target_uid !== uid);
+    }
     if (s.timer_fail_target_uid === uid) s.timer_fail_target_uid = null;
   });
   if (rootUid === uid) rootUid = scenarioSteps[0]?.uid || null;
