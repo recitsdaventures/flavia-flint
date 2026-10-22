@@ -1552,15 +1552,18 @@
     background: none; border: none; color: var(--terra-dark);
     font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; cursor: pointer;
   }
+  /* 2 réponses par ligne (plutôt qu'empilées pleine largeur) : prend beaucoup
+     moins de hauteur, pour laisser de la place au texte de la question
+     au-dessus (retour de Firmin du 22/10). */
   .adv-nb-choices {
-    display: none; flex-direction: column; gap: 10px; margin-top: 14px;
+    display: none; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin-top: 14px;
   }
   .adv-nb-choice-btn {
-    width: 100%; padding: 13px 16px; text-align: left;
+    width: 100%; padding: 10px 11px; text-align: left;
     background: #E9D4A3 url('card-parchment.webp') repeat; background-size: 200px 200px;
     border: 1px solid rgba(120,74,28,0.18);
     box-shadow: 0 3px 10px rgba(58,32,10,0.14);
-    border-radius: var(--radius-md); font-size: 15px; font-weight: 600;
+    border-radius: var(--radius-md); font-size: 13.5px; font-weight: 600;
     color: var(--text-dark); cursor: pointer; font-family: inherit;
   }
   .adv-nb-choice-btn:active { background-color: var(--beige-mid); border-color: var(--terra); }
@@ -4598,7 +4601,7 @@ function enigmeBodyHtml(step) {
   if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
     const choicesHtml = step.choices.map((c, i) => `
       <button class="adv-nb-choice-btn" id="adv-nb-choice-${i}" onclick="handleChoice(${i})">
-        <span style="display:inline-flex;min-width:26px;height:26px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--terra);margin-right:9px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
+        <span style="display:inline-flex;min-width:22px;height:22px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--terra);margin-right:7px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
       </button>`).join('');
     return `
       <div class="adv-nb-text" id="adv-nb-text"></div>
@@ -4645,7 +4648,7 @@ function startEnigmeInteraction(step) {
   if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
     typewriterAdvNb(step.enigme || 'Quelle direction vas-tu prendre ?', {
       hasInteraction: true,
-      onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'flex'; }
+      onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'grid'; }
     });
     saveCurrentProgress();
     return;
@@ -5490,8 +5493,10 @@ function handleChoice(choiceIndex) {
     return;
   }
 
-  // Animation boutons
-  const buttons = document.querySelectorAll('#mode-enigme button[onclick^="handleChoice"]');
+  // Animation boutons — pas de préfixe #mode-enigme : une étape quiz/décision avec
+  // GPS affiche désormais ses boutons dans #mode-compass (slide fusionnée boussole→
+  // arrivée, cf. transitionCompassToEnigme()), pas seulement dans #mode-enigme.
+  const buttons = document.querySelectorAll('button[onclick^="handleChoice"]');
   buttons.forEach((btn, i) => {
     btn.style.opacity     = i === choiceIndex ? '1' : '0.4';
     btn.style.borderColor = i === choiceIndex ? '#C4622D' : '#D4C5A9';
