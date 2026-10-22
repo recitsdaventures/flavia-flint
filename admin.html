@@ -3769,6 +3769,14 @@ function addBranch(parentUid) {
   if (parent.transitions.length >= 1 && parent.interaction_type !== 'quiz' && parent.interaction_type !== 'decision') {
     parent.interaction_type = 'decision';
   }
+  // Quiz : une réponse de plus n'a pas besoin de sa propre étape — une mauvaise
+  // réponse fait juste réessayer sur la même étape (cf. getChoiceTransitions()).
+  // Seule la bonne réponse a besoin d'une destination, à choisir ensuite dans son
+  // menu déroulant (qui permet aussi d'en créer une nouvelle, comme avant).
+  if (parent.interaction_type === 'quiz') {
+    parent.transitions.push({ label: '', target_uid: null, is_correct: false, error_message: null });
+    return null;
+  }
   const child = newStepObj();
   scenarioSteps.push(child);
   parent.transitions.push({ label: '', target_uid: child.uid, is_correct: false, error_message: null });
@@ -4227,11 +4235,24 @@ function renderTransitionsInPanel(step) {
 function updateTransition(index, field, value) {
   const step = scenarioSteps.find(s => s.uid === openStepUid);
   if (!step || !step.transitions[index]) return;
+  if (field === 'target_uid' && value === '__new__') {
+    // Permet de créer une toute nouvelle étape directement depuis le menu d'une
+    // réponse (utile en quiz, où les réponses n'ont plus systématiquement une
+    // étape déjà créée pour elles — cf. addBranch()).
+    const child = newStepObj();
+    scenarioSteps.push(child);
+    step.transitions[index].target_uid = child.uid;
+    renderOutline();
+    openStepPanel(openStepUid);
+    return;
+  }
   step.transitions[index][field] = value;
   if (field === 'label') {
     renderOutline();
-    const nTrans = step.transitions.filter(t => t.target_uid).length;
-    const requireLabel = nTrans >= 2;
+    // Chaque réponse affichée comme bouton dans l'app a besoin d'un texte dès
+    // qu'il y a un choix à faire (≥2 réponses) — qu'elle ait ou non une
+    // destination (une mauvaise réponse de quiz n'en a pas, cf. addBranch()).
+    const requireLabel = step.transitions.length >= 2;
     const input = document.getElementById('transition-label-' + index);
     if (input) input.classList.toggle('req-missing', requireLabel && !value);
   } else if (field === 'target_uid' || field === 'is_correct') {
@@ -4256,9 +4277,29 @@ function populateStepTargetSelect(selectEl, currentUid, excludeUid) {
   // Dans le panneau d'étape, toujours proposer de créer une toute nouvelle étape
   // (pas seulement choisir parmi celles qui existent déjà) — sinon, pour la
   // dernière étape du scénario, ce menu n'a tout simplement rien à proposer.
-  const newOption = selectEl.id === 'panel-next-step-select' ? `<option value="__new__">➕ Créer une nouvelle étape…</option>` : '';
+  // Inclut aussi les menus de destination des réponses quiz/décision : en quiz,
+  // une réponse n'a plus automatiquement sa propre étape déjà créée (cf.
+  // addBranch()), donc la bonne réponse a besoin de ce raccourci pour en créer une.
+  const allowNew = selectEl.id === 'panel-next-step-select' || selectEl.id.startsWith('transition-target-');
+  const newOption = allowNew ? `<option value="__new__">➕ Créer une nouvelle étape…</option>` : '';
   selectEl.innerHTML = `<option value="">${emptyLabel}</option>` + newOption +
     all.map(o => `<option value="${o.step.uid}" ${o.step.uid === currentUid ? 'selected' : ''}>${o.label} — ${escapeHtml(stepSummary(o.step))}</option>`).join('');
+}
+
+// Les réponses d'une étape à choix (quiz/décision) qui comptent vraiment comme
+// un choix affiché au joueur. Décision : chaque réponse doit mener quelque part
+// (pas de "réessaie"), donc on exige une target_uid comme avant. Quiz : une
+// mauvaise réponse n'a PAS besoin de destination — côté app, handleChoice()
+// affiche juste le message d'erreur et laisse le joueur réessayer sur la même
+// étape (next_step_order n'est même jamais lu dans ce cas) — seul le texte de
+// la réponse compte pour qu'elle apparaisse comme bouton ; seule la bonne
+// réponse a besoin d'une vraie cible (cf. retour de Firmin du 22/10 : les
+// mauvaises réponses de quiz ne doivent plus forcer la création d'une étape).
+function getChoiceTransitions(step) {
+  if (step.interaction_type === 'quiz') {
+    return step.transitions.filter(t => (t.label || '').trim());
+  }
+  return step.transitions.filter(t => t.target_uid);
 }
 
 // ── VALIDATION + TRANSFORMATION FINALE AVANT SAUVEGARDE ──
@@ -4269,10 +4310,13 @@ function computeFinalSteps() {
   const { ordered, orphans } = computeTree();
 
   for (const { step, label } of ordered) {
-    const targets = step.transitions.filter(t => t.target_uid);
     const isChoiceType = step.interaction_type === 'quiz' || step.interaction_type === 'decision';
+    const targets = isChoiceType ? getChoiceTransitions(step) : step.transitions.filter(t => t.target_uid);
     if (isChoiceType && targets.length > 0 && targets.some(t => !(t.label || '').trim())) {
       throw new Error(`L'étape ${label} a une réponse dont le texte est vide.`);
+    }
+    if (step.interaction_type === 'quiz' && targets.length > 0 && !targets.some(t => t.is_correct && t.target_uid)) {
+      throw new Error(`L'étape ${label} (quiz) n'a aucune bonne réponse menant à une étape suivante — coche "C'est la bonne réponse" sur la bonne réponse et choisis sa destination.`);
     }
     if (step.interaction_type === 'hotspot' && (step.hotspot_x == null || step.hotspot_y == null)) {
       throw new Error(`L'étape ${label} est en mode "toucher une zone" mais aucune zone n'a été placée sur l'image.`);
@@ -4294,9 +4338,13 @@ function computeFinalSteps() {
 
   return finalList.map((o, i) => {
     const step = o.step;
-    const transitions = step.transitions.filter(t => t.target_uid);
     const stepType = step.interaction_type || 'free_text';
     const isChoiceType = stepType === 'quiz' || stepType === 'decision';
+    // Quiz : les mauvaises réponses n'ont pas de target_uid (cf. getChoiceTransitions()
+    // plus haut) — is_endpoint ne doit donc regarder QUE si une réponse mène quelque
+    // part (la bonne), pas le nombre total de réponses affichées.
+    const transitions = isChoiceType ? getChoiceTransitions(step) : step.transitions.filter(t => t.target_uid);
+    const isEndpoint = isChoiceType ? !transitions.some(t => t.target_uid) : transitions.length === 0;
     return {
       order_num: i + 1,
       title: step.title || '',
@@ -4309,9 +4357,9 @@ function computeFinalSteps() {
       hotspot_x: stepType === 'hotspot' ? step.hotspot_x : null,
       hotspot_y: stepType === 'hotspot' ? step.hotspot_y : null,
       hotspot_radius: stepType === 'hotspot' ? (step.hotspot_radius ?? 6) : null,
-      is_endpoint: transitions.length === 0,
+      is_endpoint: isEndpoint,
       choices: isChoiceType
-        ? transitions.map(t => ({ label: t.label, next_step_order: uidToOrder[t.target_uid] || null, is_correct: !!t.is_correct, error_message: t.error_message || null }))
+        ? transitions.map(t => ({ label: t.label, next_step_order: t.target_uid ? (uidToOrder[t.target_uid] || null) : null, is_correct: !!t.is_correct, error_message: t.error_message || null }))
         : null,
       has_step_timer: step.has_step_timer || false,
       step_timer_seconds: step.step_timer_seconds ?? null,
