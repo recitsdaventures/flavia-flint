@@ -1522,6 +1522,16 @@
     background: rgba(0,0,0,0.4); border-radius: 20px; padding: 6px 12px;
     color: white; font-size: 12px; font-weight: 600; backdrop-filter: blur(4px);
   }
+  /* Bouton "Revoir la slide précédente" — regroupé avec "← Quitter" dans la barre
+     overlay immersive plutôt que dans le carnet (cf. demande de Firmin du 23/10 :
+     disponible de la même façon sur TOUTE slide, y compris celles sans image, sans
+     chevaucher le reste du contenu). Masqué par défaut, affiché par enterSlide()
+     dès qu'il existe une slide précédente à relire (window._slideHistory). */
+  .adv-immersive-back {
+    background: rgba(0,0,0,0.4); border: none; border-radius: 20px;
+    color: white; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    backdrop-filter: blur(4px); font-family: inherit;
+  }
   .adv-nb-paper {
     background: var(--beige-light);
     background-image: repeating-linear-gradient(
@@ -1569,16 +1579,6 @@
   .adv-nb-choice-btn:active { background-color: var(--beige-mid); border-color: var(--terra); }
   .adv-nb-choice-btn.error { border-color: #EF4444; background: #FEF2F2; }
   .adv-nb-freetext { display: none; margin-top: 14px; }
-
-  /* Lien "revoir la slide précédente" — discret, en haut de chaque carnet,
-     visible uniquement si une slide précédente existe (cf. slideBackLinkHtml()). */
-  .slide-back-link {
-    display: block; background: none; border: none; padding: 0;
-    margin-bottom: 8px; cursor: pointer; font-family: inherit;
-    font-size: 12.5px; font-weight: 600; color: var(--terra-dark);
-    opacity: 0.75; text-align: left;
-  }
-  .slide-back-link:active { opacity: 1; }
 
   /* Overlay de relecture en lecture seule (openPreviousSlidePeek) — même esprit
      visuel que la visionneuse plein écran (#image-lightbox), mais affiche le
@@ -2250,7 +2250,10 @@
   ═══════════════════════════════════ -->
   <div id="screen-adventure" class="screen">
     <div id="adv-immersive-bar" class="adv-immersive-bar">
-      <button class="adv-immersive-quit" onclick="confirmQuitAdventure()">← Quitter</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="adv-immersive-quit" onclick="confirmQuitAdventure()">← Quitter</button>
+        <button class="adv-immersive-back" id="adv-immersive-back-btn" onclick="openPreviousSlidePeek()" style="display:none;">↩︎ Revoir</button>
+      </div>
       <div class="adv-immersive-counter" id="adv-immersive-counter">Étape 1 / 1</div>
     </div>
     <div class="adv-header">
@@ -4192,6 +4195,7 @@ async function startAdventure() {
   gpsAutoUnlocked  = false;
   window._slideHistory = [];
   window._currentSlideSnapshot = null;
+  { const backBtn = document.getElementById('adv-immersive-back-btn'); if (backBtn) backBtn.style.display = 'none'; }
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
 
   // Trier les étapes par order_num (important pour les scénarios à embranchements)
@@ -4412,20 +4416,20 @@ function handleAdvNbTap(event) {
 // nouvelle slide (renderStoryMode, renderCompassMode, renderEnigmeMode,
 // transitionCompassToEnigme) : elle archive la slide qui vient de se terminer
 // dans _slideHistory, puis mémorise la nouvelle comme "slide courante". Le
-// bouton rendu par slideBackLinkHtml() ouvre cette dernière entrée de
-// l'historique en lecture pure (openPreviousSlidePeek) — aucune de ces
-// fonctions ne touche au minuteur, au GPS, aux indices ni à la progression.
+// bouton "↩︎ Revoir" de la barre immersive (#adv-immersive-back-btn, à côté de
+// "← Quitter" — demande de Firmin du 23/10 : disponible de la même façon sur
+// TOUTE slide, y compris sans image, plutôt qu'un lien dans le carnet qui se
+// faisait chevaucher par cette même barre) est montré/masqué ici selon qu'il y
+// a quelque chose à relire — aucune de ces fonctions ne touche au minuteur, au
+// GPS, aux indices ni à la progression.
 function enterSlide(image, text, title) {
   if (window._currentSlideSnapshot) {
     window._slideHistory.push(window._currentSlideSnapshot);
     if (window._slideHistory.length > 30) window._slideHistory.shift();
   }
   window._currentSlideSnapshot = { image: image || '', text: text || '', title: title || '' };
-}
-
-function slideBackLinkHtml() {
-  if (!window._slideHistory || !window._slideHistory.length) return '';
-  return `<button type="button" class="slide-back-link" onclick="event.stopPropagation(); openPreviousSlidePeek();">↩︎ Revoir la slide précédente</button>`;
+  const backBtn = document.getElementById('adv-immersive-back-btn');
+  if (backBtn) backBtn.style.display = window._slideHistory.length > 0 ? 'block' : 'none';
 }
 
 // Texte de repli par type d'étape — factorisé pour rester identique entre ce
@@ -4489,7 +4493,6 @@ function renderStoryMode() {
     <div class="adv-nb-wrap">
       ${advNbImageHtml(image, { thumb: imageThumb })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
-        ${slideBackLinkHtml()}
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <button class="adv-nb-next-btn" id="adv-nb-next-btn" onclick="event.stopPropagation(); renderCompassMode();">Aller au prochain lieu →</button>
       </div>
@@ -4537,7 +4540,6 @@ function renderCompassMode() {
     <div class="adv-nb-wrap">
       ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
       <div class="adv-nb-paper" id="compass-paper" onclick="handleAdvNbTap(event)">
-        ${slideBackLinkHtml()}
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <div class="compass-dial-area" id="compass-reveal" style="display:none;">
           <svg width="124" height="124" viewBox="0 0 110 110" class="compass-dial-svg">
@@ -4721,13 +4723,10 @@ function showCompassFallbackNotice() {
 // (étapes avec GPS : ce contenu remplace la boussole, en place, dans #compass-paper,
 // sans changer d'écran — cf. demande de Firmin du 22/10).
 function enigmeBodyHtml(step) {
-  const backLink = slideBackLinkHtml();
-
   // Étape CONTINUER — pas d'énigme, juste un bouton (texte personnalisable côté
   // admin) pour passer à la suite, sans aucune saisie ni bonne/mauvaise réponse.
   if (step.step_type === 'continue') {
     return `
-      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>`;
   }
@@ -4740,7 +4739,6 @@ function enigmeBodyHtml(step) {
         <span style="display:inline-flex;min-width:22px;height:22px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--terra);margin-right:7px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
       </button>`).join('');
     return `
-      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
       <div class="error-msg" id="quiz-error-msg" style="display:none;"></div>`;
@@ -4751,7 +4749,6 @@ function enigmeBodyHtml(step) {
   // handleHotspotImageTap()/handleLightboxTap(), gatées par window._stepAnswerable.
   if (step.step_type === 'hotspot') {
     return `
-      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
         <div class="error-msg" id="error-msg">Pas encore… regarde bien l'image (ou touche 🔍 pour zoomer) !</div>
@@ -4761,7 +4758,6 @@ function enigmeBodyHtml(step) {
 
   // Étape TEXTE LIBRE (et repli legacy) — champ texte libre, validé par checkAnswer().
   return `
-    ${backLink}
     <div class="adv-nb-text" id="adv-nb-text"></div>
     <div class="adv-nb-freetext" id="adv-nb-freetext">
       <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
