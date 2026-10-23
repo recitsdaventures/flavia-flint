@@ -4913,6 +4913,18 @@ async function saveAdventure(asDraft, keepModalOpen) {
           console.error('Erreur génération miniature étape:', e);
           s.image_thumb_url = '';
         }
+        // `steps` (sorti de computeFinalSteps()) est une COPIE de chaque étape — mettre
+        // à jour s.image_url ici ne touche pas scenarioSteps, la source que l'éditeur
+        // continue d'afficher. Avec saveStepPanelNow() (qui ne ferme plus/ne recharge
+        // plus tout l'éditeur — cf. 23/10), ça laissait l'image fraîchement uploadée
+        // "disparaître" du panneau juste après l'enregistrement. On resynchronise donc
+        // l'étape d'origine (retrouvée via son uid) avec l'URL définitive.
+        const liveStep = scenarioSteps.find(sc => sc.uid === s._uid);
+        if (liveStep) {
+          liveStep.image_url = s.image_url;
+          liveStep.image_thumb_url = s.image_thumb_url;
+          liveStep._pendingImgFile = null;
+        }
       }
       delete s._uid; delete s._pendingImgFile;
     }
@@ -4932,6 +4944,10 @@ async function saveAdventure(asDraft, keepModalOpen) {
     // mettre à jour CETTE aventure plutôt que d'en recréer une nouvelle.
     editingId = adventureId;
     if (keepModalOpen) {
+      // Le panneau d'étape reste affiché avec son contenu d'avant l'enregistrement
+      // (image tout juste uploadée comprise, cf. resynchronisation juste au-dessus) —
+      // on le rafraîchit pour que ce qui vient d'être sauvegardé s'affiche bien.
+      if (openStepUid) openStepPanel(openStepUid);
       await loadAdventures();
     } else {
       closeModal();
