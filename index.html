@@ -1449,7 +1449,7 @@
      son propre padding pour que le texte reste lisiblement inséré. */
   .adv-nb-wrap {
     display: flex; flex-direction: column;
-    flex: 1; min-height: 0;
+    flex: 1 0 auto;
     margin: -16px;
   }
   /* mode-story / mode-enigme doivent pouvoir s'étirer sur toute la hauteur
@@ -1458,8 +1458,14 @@
      l'écran sous l'image — au lieu de s'arrêter après le texte et laisser
      apparaître le fond "parchemin" uni de l'écran en dessous (voulu par
      Firmin : la page du carnet doit déjà couvrir tout l'écran dès le début,
-     seul le texte s'anime par-dessus). */
-  #mode-story, #mode-compass, #mode-enigme { flex: 1; flex-direction: column; min-height: 0; }
+     seul le texte s'anime par-dessus). flex-shrink:0 (via "1 0 auto", pas
+     "1" tout court + min-height:0) est indispensable pour un texte LONG :
+     avec min-height:0, la boîte — et donc son fond ligné — se figeait à la
+     hauteur d'un seul écran et le texte qui dépassait se retrouvait affiché
+     par-dessus le fond parchemin uni de l'écran en dessous dès qu'on
+     scrollait (bug remonté par Firmin le 23/10). flex-basis:auto laisse
+     chaque boîte grandir jusqu'à la hauteur réelle de son contenu. */
+  #mode-story, #mode-compass, #mode-enigme { flex: 1 0 auto; flex-direction: column; }
   .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
   .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
   .adv-nb-image.hotspot-img { object-fit: contain; background: #0A140D; cursor: pointer; }
@@ -1540,7 +1546,7 @@
     border-top: 3px solid var(--beige-dark);
     padding: 20px 20px 16px;
     cursor: pointer;
-    flex: 1; min-height: 0;
+    flex: 1 0 auto;
     transition: opacity 0.3s ease;
   }
   /* Slide fusionnée boussole→arrivée : fondu de sortie de la boussole avant que
