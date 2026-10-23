@@ -1125,6 +1125,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <div id="panel-endpoint-badge" style="font-size:12px;color:#059669;font-weight:600;display:none;margin-top:2px;">🏁 Fin de scénario</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveStepPanelNow()">✓ Enregistrer</button>
         <button type="button" class="step-delete" onclick="deleteStepPanel()">🗑️ Supprimer</button>
         <button class="modal-close" onclick="closeStepPanel()">✕</button>
       </div>
@@ -3878,6 +3879,14 @@ function closeStepPanel() {
   openStepUid = null;
 }
 
+// Bouton "✓ Enregistrer" du panneau d'étape : sauvegarde réellement l'aventure en
+// base (même logique que le bouton du bas de l'éditeur), mais laisse le panneau
+// d'étape ouvert — pour sécuriser le travail en cours sans perdre le fil de
+// l'étape qu'on était en train de modifier.
+function saveStepPanelNow() {
+  saveAdventure(false, true);
+}
+
 function renderPanelBody() {
   return `
     <div class="step-section-label">🎯 Type d'étape</div>
@@ -4266,6 +4275,13 @@ function updateTransition(index, field, value) {
     const input = document.getElementById('transition-label-' + index);
     if (input) input.classList.toggle('req-missing', requireLabel && !value);
   } else if (field === 'target_uid' || field === 'is_correct') {
+    // Ces deux champs changent directement le statut "fin"/"embranchement" de
+    // l'étape et la liste des orphelines dans le panneau de gauche (computeTree()) —
+    // sans ce renderOutline(), la colonne de gauche restait figée sur son état
+    // d'avant le changement tant qu'aucune autre action (ex: taper un libellé)
+    // ne la forçait à se redessiner, laissant croire à tort qu'une étape reliée
+    // était encore orpheline ou que l'étape restait "fin" malgré sa destination.
+    renderOutline();
     openStepPanel(openStepUid);
   }
 }
@@ -4774,7 +4790,13 @@ function resetAllImageFields() {
   window._pendingImgs = {};
 }
 // ── SAUVEGARDER DANS SUPABASE ──
-async function saveAdventure(asDraft) {
+// `keepModalOpen` : utilisé par le bouton "✓ Enregistrer" du panneau d'étape
+// (saveStepPanelNow()) — sauvegarde réellement en base (comme le bouton du bas)
+// mais SANS fermer tout l'éditeur d'aventure ni le panneau d'étape en cours,
+// pour que Firmin puisse sécuriser son travail au fil de l'édition d'un quiz
+// sans perdre le fil de ce qu'il était en train de modifier (demande du 23/10 :
+// "un bouton valider... comme ça je suis sûr que je n'ai pas fait un mis-clic").
+async function saveAdventure(asDraft, keepModalOpen) {
   const title = document.getElementById('f-title').value.trim();
   if (!title) { alert('Le titre est obligatoire.'); return; }
 
@@ -4898,8 +4920,16 @@ async function saveAdventure(asDraft) {
     scenarioSteps.forEach(s => { s._pendingImgFile = null; });
 
     showToast(editingId ? 'Aventure mise à jour ✓' : 'Nouvelle aventure créée ✓');
-    closeModal();
-    await loadAdventures();
+    // Mémorise l'id (y compris pour une aventure tout juste créée) : un futur appel
+    // à saveAdventure() — notamment la sauvegarde rapide du panneau d'étape — doit
+    // mettre à jour CETTE aventure plutôt que d'en recréer une nouvelle.
+    editingId = adventureId;
+    if (keepModalOpen) {
+      await loadAdventures();
+    } else {
+      closeModal();
+      await loadAdventures();
+    }
 
   } catch(e) {
     showToast('Erreur : ' + e.message, true);
