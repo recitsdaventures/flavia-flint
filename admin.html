@@ -3607,12 +3607,19 @@ function loadStepsFromAdventure(dbSteps) {
     }
 
     if ((obj.interaction_type === 'quiz' || obj.interaction_type === 'decision') && obj._legacyChoices.length > 0) {
+      // Quiz : une mauvaise réponse n'a jamais de next_step_order (cf. getChoiceTransitions()
+      // côté sauvegarde) — la filtrer ici sur target_uid la faisait disparaître à CHAQUE
+      // rechargement de l'éditeur, même quand elle avait été correctement enregistrée en
+      // base : c'était la vraie cause des réponses "qui ne s'enregistrent jamais" de Firmin
+      // (23/10). On garde donc toute réponse de quiz qui a un texte, peu importe sa
+      // destination ; une étape décision, elle, doit toujours mener quelque part.
+      const isQuiz = obj.interaction_type === 'quiz';
       obj.transitions = obj._legacyChoices.map(c => ({
         label: c.label || '',
         target_uid: orderToUid[c.next_step_order] || null,
         is_correct: !!c.is_correct,
         error_message: c.error_message || null
-      })).filter(t => t.target_uid);
+      })).filter(t => isQuiz ? (t.label || '').trim() : t.target_uid);
     } else {
       const nextUid = orderToUid[obj._legacyOrderNum + 1];
       obj.transitions = nextUid ? [{ label: '', target_uid: nextUid, is_correct: false, error_message: null }] : [];
