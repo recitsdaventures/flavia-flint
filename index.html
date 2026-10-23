@@ -1570,6 +1570,60 @@
   .adv-nb-choice-btn.error { border-color: #EF4444; background: #FEF2F2; }
   .adv-nb-freetext { display: none; margin-top: 14px; }
 
+  /* Lien "revoir la slide précédente" — discret, en haut de chaque carnet,
+     visible uniquement si une slide précédente existe (cf. slideBackLinkHtml()). */
+  .slide-back-link {
+    display: block; background: none; border: none; padding: 0;
+    margin-bottom: 8px; cursor: pointer; font-family: inherit;
+    font-size: 12.5px; font-weight: 600; color: var(--terra-dark);
+    opacity: 0.75; text-align: left;
+  }
+  .slide-back-link:active { opacity: 1; }
+
+  /* Overlay de relecture en lecture seule (openPreviousSlidePeek) — même esprit
+     visuel que la visionneuse plein écran (#image-lightbox), mais affiche le
+     carnet (image + texte) plutôt qu'une image zoomable, et ne contient aucun
+     élément interactif de jeu. */
+  #slide-peek-overlay {
+    position: fixed; inset: 0; z-index: 20000;
+    background: rgba(10,10,10,0.82);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; overflow-y: auto;
+  }
+  .slide-peek-card {
+    position: relative; width: 100%; max-width: 420px;
+    background: var(--beige-light); border-radius: var(--radius-md);
+    overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    margin: auto;
+  }
+  .slide-peek-img { width: 100%; max-height: 38vh; object-fit: cover; display: block; }
+  .slide-peek-close {
+    position: absolute; top: 10px; right: 10px; z-index: 2;
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.5); color: #fff; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .slide-peek-paper {
+    background: var(--beige-light);
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 33px, rgba(74,90,74,0.12) 34px
+    );
+    padding: 18px 18px 20px;
+  }
+  .slide-peek-banner {
+    font-size: 11.5px; font-weight: 700; color: var(--terra-dark);
+    opacity: 0.75; margin-bottom: 8px;
+  }
+  .slide-peek-title {
+    font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700;
+    color: var(--text-dark); margin-bottom: 4px;
+  }
+  .slide-peek-text {
+    font-family: 'Caveat', 'Segoe UI', cursive;
+    font-size: 22px; line-height: 1.35; font-weight: 500;
+    color: var(--text-dark); white-space: pre-wrap;
+  }
+
   /* ── TAMPON DE FIN DE CHAPITRE ──
      Popup centré (padding sur l'overlay + max-width sur la carte) qui ne
      touche jamais les bords de l'écran, même sur petit téléphone. */
@@ -2836,6 +2890,12 @@ let _compassActivatedThisSession = false;
 // slide — tant que c'est faux, un tap sur l'image "toucher une zone" ne doit pas
 // valider une réponse (seul le bouton 🔍 zoome pendant la phase boussole).
 window._stepAnswerable = false;
+// Historique court des slides affichées (image/texte/titre), pour permettre au
+// joueur de relire la précédente en lecture seule (bouton "↩︎ Revoir la slide
+// précédente") sans toucher au minuteur, au GPS ni à sa progression — demande
+// de Firmin du 23/10 ("juste relire"). Réinitialisé à chaque startAdventure().
+window._slideHistory = [];
+window._currentSlideSnapshot = null;
 let currentHintLevel = 0;   // 0=aucun, 1/2/3=niveaux révélés
 let hintXpPenalty    = 0;   // XP déduit par les indices demandés
 window._adventureInProgress = false; // true uniquement quand l'écran aventure est actif
@@ -4130,6 +4190,8 @@ async function startAdventure() {
   }
 
   gpsAutoUnlocked  = false;
+  window._slideHistory = [];
+  window._currentSlideSnapshot = null;
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
 
   // Trier les étapes par order_num (important pour les scénarios à embranchements)
@@ -4345,6 +4407,71 @@ function handleAdvNbTap(event) {
   if (!advNbState.hasInteraction && advNbState.onAdvance) advNbState.onAdvance();
 }
 
+// ── RELECTURE DE LA SLIDE PRÉCÉDENTE (lecture seule) ──
+// enterSlide() est appelée au tout début de chaque fonction qui affiche une
+// nouvelle slide (renderStoryMode, renderCompassMode, renderEnigmeMode,
+// transitionCompassToEnigme) : elle archive la slide qui vient de se terminer
+// dans _slideHistory, puis mémorise la nouvelle comme "slide courante". Le
+// bouton rendu par slideBackLinkHtml() ouvre cette dernière entrée de
+// l'historique en lecture pure (openPreviousSlidePeek) — aucune de ces
+// fonctions ne touche au minuteur, au GPS, aux indices ni à la progression.
+function enterSlide(image, text, title) {
+  if (window._currentSlideSnapshot) {
+    window._slideHistory.push(window._currentSlideSnapshot);
+    if (window._slideHistory.length > 30) window._slideHistory.shift();
+  }
+  window._currentSlideSnapshot = { image: image || '', text: text || '', title: title || '' };
+}
+
+function slideBackLinkHtml() {
+  if (!window._slideHistory || !window._slideHistory.length) return '';
+  return `<button type="button" class="slide-back-link" onclick="event.stopPropagation(); openPreviousSlidePeek();">↩︎ Revoir la slide précédente</button>`;
+}
+
+// Texte de repli par type d'étape — factorisé pour rester identique entre ce
+// qui est réellement tapé à l'écran (startEnigmeInteraction) et ce qui est
+// mémorisé pour la relecture (enterSlide).
+function enigmeSlideText(step) {
+  if (step.step_type === 'continue') return step.enigme || '';
+  if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
+    return step.enigme || 'Quelle direction vas-tu prendre ?';
+  }
+  if (step.step_type === 'hotspot') return step.enigme || 'Un détail a été ajouté à cette image. Touche-le !';
+  return step.enigme || '';
+}
+
+// Overlay plein écran, strictement en lecture : montre l'image + le texte de la
+// slide précédente, sans aucun élément interactif (pas de boutons de réponse,
+// pas de boussole). Fermer ne fait rien d'autre que retirer l'overlay.
+function openPreviousSlidePeek() {
+  if (!window._slideHistory || !window._slideHistory.length) return;
+  const snap = window._slideHistory[window._slideHistory.length - 1];
+  closePreviousSlidePeek();
+  const overlay = document.createElement('div');
+  overlay.id = 'slide-peek-overlay';
+  overlay.innerHTML = `
+    <div class="slide-peek-card">
+      <button type="button" class="slide-peek-close" onclick="closePreviousSlidePeek()">✕</button>
+      ${snap.image ? `<img class="slide-peek-img" src="${snap.image}" alt=""/>` : ''}
+      <div class="slide-peek-paper">
+        <div class="slide-peek-banner">↩︎ Relecture — ta progression n'est pas affectée</div>
+        ${snap.title ? `<div class="slide-peek-title">${escapeHtml(snap.title)}</div>` : ''}
+        <div class="slide-peek-text">${escapeHtml(snap.text)}</div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closePreviousSlidePeek(); });
+}
+
+function closePreviousSlidePeek() {
+  const overlay = document.getElementById('slide-peek-overlay');
+  if (overlay) overlay.remove();
+  if (!document.getElementById('image-lightbox') && !document.getElementById('badges-modal-overlay') && !document.getElementById('player-profile-overlay')) {
+    document.body.style.overflow = '';
+  }
+}
+
 // ── STORY ──
 function renderStoryMode() {
   const step    = currentStep();
@@ -4356,11 +4483,13 @@ function renderStoryMode() {
   const introPart = (isFirst && currentAdv.intro_text) ? currentAdv.intro_text : '';
   const stepPart  = step?.story_text || (introPart ? '' : `Direction : ${step?.title || 'le prochain lieu'} !`);
   const text = [introPart, stepPart].filter(Boolean).join('\n\n');
+  enterSlide(image, text, step?.title);
 
   document.getElementById('mode-story').innerHTML = `
     <div class="adv-nb-wrap">
       ${advNbImageHtml(image, { thumb: imageThumb })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
+        ${slideBackLinkHtml()}
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <button class="adv-nb-next-btn" id="adv-nb-next-btn" onclick="event.stopPropagation(); renderCompassMode();">Aller au prochain lieu →</button>
       </div>
@@ -4401,10 +4530,14 @@ function renderCompassMode() {
   // reste du carnet), la boussole n'apparaît qu'une fois le texte révélé — pas de
   // bulle de message façon chat, pas de carte parchemin séparée : tout reste sur
   // la même page beige, comme demandé par Firmin (retour du 22/10).
+  const guideText = `Rends-toi à : ${step.title || 'le prochain lieu'}. Je te guide !`;
+  enterSlide(step.image_url, guideText, step.title);
+
   document.getElementById('mode-compass').innerHTML = `
     <div class="adv-nb-wrap">
       ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
       <div class="adv-nb-paper" id="compass-paper" onclick="handleAdvNbTap(event)">
+        ${slideBackLinkHtml()}
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <div class="compass-dial-area" id="compass-reveal" style="display:none;">
           <svg width="124" height="124" viewBox="0 0 110 110" class="compass-dial-svg">
@@ -4438,7 +4571,7 @@ function renderCompassMode() {
     </div>`;
   showMode('compass');
   startGeolocation(step.lat, step.lng, step.radius_meters || 20);
-  typewriterAdvNb(`Rends-toi à : ${step.title || 'le prochain lieu'}. Je te guide !`, {
+  typewriterAdvNb(guideText, {
     hasInteraction: true,
     onRevealed: () => {
       const w = document.getElementById('compass-reveal');
@@ -4588,10 +4721,13 @@ function showCompassFallbackNotice() {
 // (étapes avec GPS : ce contenu remplace la boussole, en place, dans #compass-paper,
 // sans changer d'écran — cf. demande de Firmin du 22/10).
 function enigmeBodyHtml(step) {
+  const backLink = slideBackLinkHtml();
+
   // Étape CONTINUER — pas d'énigme, juste un bouton (texte personnalisable côté
   // admin) pour passer à la suite, sans aucune saisie ni bonne/mauvaise réponse.
   if (step.step_type === 'continue') {
     return `
+      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <button class="adv-nb-next-btn" id="adv-nb-continue-btn" onclick="event.stopPropagation(); renderRewardMode();" style="display:none;">${step.continue_label || 'Continuer →'}</button>`;
   }
@@ -4604,6 +4740,7 @@ function enigmeBodyHtml(step) {
         <span style="display:inline-flex;min-width:22px;height:22px;border-radius:50%;background:var(--beige-mid);align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--terra);margin-right:7px;vertical-align:middle;">${String.fromCharCode(65 + i)}</span>${c.label}
       </button>`).join('');
     return `
+      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <div class="adv-nb-choices" id="adv-nb-choices">${choicesHtml}</div>
       <div class="error-msg" id="quiz-error-msg" style="display:none;"></div>`;
@@ -4614,6 +4751,7 @@ function enigmeBodyHtml(step) {
   // handleHotspotImageTap()/handleLightboxTap(), gatées par window._stepAnswerable.
   if (step.step_type === 'hotspot') {
     return `
+      ${backLink}
       <div class="adv-nb-text" id="adv-nb-text"></div>
       <div class="adv-nb-freetext" id="hotspot-feedback-wrap" style="display:none;">
         <div class="error-msg" id="error-msg">Pas encore… regarde bien l'image (ou touche 🔍 pour zoomer) !</div>
@@ -4623,6 +4761,7 @@ function enigmeBodyHtml(step) {
 
   // Étape TEXTE LIBRE (et repli legacy) — champ texte libre, validé par checkAnswer().
   return `
+    ${backLink}
     <div class="adv-nb-text" id="adv-nb-text"></div>
     <div class="adv-nb-freetext" id="adv-nb-freetext">
       <input class="answer-input" type="text" placeholder="Ta réponse…" id="answer-input"
@@ -4638,7 +4777,7 @@ function enigmeBodyHtml(step) {
 // transitionCompassToEnigme()).
 function startEnigmeInteraction(step) {
   if (step.step_type === 'continue') {
-    typewriterAdvNb(step.enigme || '', {
+    typewriterAdvNb(enigmeSlideText(step), {
       hasInteraction: false,
       onRevealed: () => { const btn = document.getElementById('adv-nb-continue-btn'); if (btn) btn.style.display = 'block'; }
     });
@@ -4646,7 +4785,7 @@ function startEnigmeInteraction(step) {
     return;
   }
   if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
-    typewriterAdvNb(step.enigme || 'Quelle direction vas-tu prendre ?', {
+    typewriterAdvNb(enigmeSlideText(step), {
       hasInteraction: true,
       onRevealed: () => { const w = document.getElementById('adv-nb-choices'); if (w) w.style.display = 'grid'; }
     });
@@ -4654,7 +4793,7 @@ function startEnigmeInteraction(step) {
     return;
   }
   if (step.step_type === 'hotspot') {
-    typewriterAdvNb(step.enigme || 'Un détail a été ajouté à cette image. Touche-le !', {
+    typewriterAdvNb(enigmeSlideText(step), {
       hasInteraction: true,
       onRevealed: () => { const w = document.getElementById('hotspot-feedback-wrap'); if (w) w.style.display = 'block'; }
     });
@@ -4662,7 +4801,7 @@ function startEnigmeInteraction(step) {
     saveCurrentProgress();
     return;
   }
-  typewriterAdvNb(step.enigme || '', {
+  typewriterAdvNb(enigmeSlideText(step), {
     hasInteraction: true,
     onRevealed: () => { const w = document.getElementById('adv-nb-freetext'); if (w) w.style.display = 'block'; }
   });
@@ -4697,6 +4836,7 @@ function transitionCompassToEnigme() {
     paper.id = 'adv-nb-paper-active';
     paper.classList.remove('compass-paper-fading');
     paper.setAttribute('onclick', 'handleAdvNbTap(event)');
+    enterSlide(step.image_url, enigmeSlideText(step), step.title);
     paper.innerHTML = enigmeBodyHtml(step);
     window._stepAnswerable = true;
     startEnigmeInteraction(step);
@@ -4720,6 +4860,7 @@ function renderEnigmeMode() {
   }
   step.choices = choices;
   console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
+  enterSlide(step.image_url, enigmeSlideText(step), step.title);
 
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
