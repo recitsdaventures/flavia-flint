@@ -1586,49 +1586,48 @@
   .adv-nb-choice-btn.error { border-color: #EF4444; background: #FEF2F2; }
   .adv-nb-freetext { display: none; margin-top: 14px; }
 
-  /* Overlay de relecture en lecture seule (openPreviousSlidePeek) — même esprit
-     visuel que la visionneuse plein écran (#image-lightbox), mais affiche le
-     carnet (image + texte) plutôt qu'une image zoomable, et ne contient aucun
-     élément interactif de jeu. */
-  #slide-peek-overlay {
-    position: fixed; inset: 0; z-index: 20000;
-    background: rgba(10,10,10,0.82);
+  /* Bandeau affiché EN HAUT DU CARNET quand le joueur consulte une slide déjà
+     visitée (goToPreviousSlide()) — la slide est le vrai rendu (image, texte,
+     boussole le cas échéant), pas une vue réduite : seul ce bandeau + la
+     désactivation des boutons de réponse (voir applyHistoryModeChrome())
+     signalent qu'on n'est pas sur l'étape en cours. */
+  .adv-history-banner {
+    background: rgba(196,98,45,0.14); border: 1px solid rgba(196,98,45,0.35);
+    border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 14px;
+    font-size: 12.5px; font-weight: 700; color: var(--terra-dark);
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  }
+  .adv-history-return-btn {
+    background: var(--terra); color: #fff; border: none; border-radius: 16px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* Popup "recommencer ou reprendre" (askRestartOrResume()), affiché quand le
+     joueur relance une aventure déjà commencée — même famille visuelle que le
+     tampon de fin de chapitre (.chapter-stamp-overlay/.stamp-popup). */
+  .resume-choice-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    padding: 20px; overflow-y: auto;
+    padding: 24px;
   }
-  .slide-peek-card {
-    position: relative; width: 100%; max-width: 420px;
-    background: var(--beige-light); border-radius: var(--radius-md);
-    overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-    margin: auto;
+  .resume-choice-card {
+    background: var(--beige-light); border-radius: 24px;
+    padding: 28px 24px; width: 100%; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: popupAppear 0.3s ease forwards;
   }
-  .slide-peek-img { width: 100%; max-height: 38vh; object-fit: cover; display: block; }
-  .slide-peek-close {
-    position: absolute; top: 10px; right: 10px; z-index: 2;
-    width: 34px; height: 34px; border-radius: 50%; border: none;
-    background: rgba(0,0,0,0.5); color: #fff; font-size: 15px;
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  .resume-choice-icon { font-size: 40px; margin-bottom: 10px; }
+  .resume-choice-title {
+    font-family: 'Caveat', cursive; font-size: 21px; font-weight: 700;
+    color: var(--text-dark); margin-bottom: 8px; line-height: 1.25;
   }
-  .slide-peek-paper {
-    background: var(--beige-light);
-    background-image: repeating-linear-gradient(
-      to bottom, transparent, transparent 33px, rgba(74,90,74,0.12) 34px
-    );
-    padding: 18px 18px 20px;
+  .resume-choice-sub {
+    font-size: 13px; color: var(--text-dark); opacity: 0.8;
+    line-height: 1.4; margin-bottom: 18px;
   }
-  .slide-peek-banner {
-    font-size: 11.5px; font-weight: 700; color: var(--terra-dark);
-    opacity: 0.75; margin-bottom: 8px;
-  }
-  .slide-peek-title {
-    font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700;
-    color: var(--text-dark); margin-bottom: 4px;
-  }
-  .slide-peek-text {
-    font-family: 'Caveat', 'Segoe UI', cursive;
-    font-size: 22px; line-height: 1.35; font-weight: 500;
-    color: var(--text-dark); white-space: pre-wrap;
-  }
+  .resume-choice-btn { margin-bottom: 10px; }
+  .resume-choice-btn:last-child { margin-bottom: 0; }
 
   /* ── TAMPON DE FIN DE CHAPITRE ──
      Popup centré (padding sur l'overlay + max-width sur la carte) qui ne
@@ -2258,7 +2257,7 @@
     <div id="adv-immersive-bar" class="adv-immersive-bar">
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="adv-immersive-quit" onclick="confirmQuitAdventure()">← Quitter</button>
-        <button class="adv-immersive-back" id="adv-immersive-back-btn" onclick="openPreviousSlidePeek()" style="display:none;">↩︎ Revoir</button>
+        <button class="adv-immersive-back" id="adv-immersive-back-btn" onclick="goToPreviousSlide()" style="display:none;">↩︎ Revoir</button>
       </div>
       <div class="adv-immersive-counter" id="adv-immersive-counter">Étape 1 / 1</div>
     </div>
@@ -2899,12 +2898,22 @@ let _compassActivatedThisSession = false;
 // slide — tant que c'est faux, un tap sur l'image "toucher une zone" ne doit pas
 // valider une réponse (seul le bouton 🔍 zoome pendant la phase boussole).
 window._stepAnswerable = false;
-// Historique court des slides affichées (image/texte/titre), pour permettre au
-// joueur de relire la précédente en lecture seule (bouton "↩︎ Revoir la slide
-// précédente") sans toucher au minuteur, au GPS ni à sa progression — demande
-// de Firmin du 23/10 ("juste relire"). Réinitialisé à chaque startAdventure().
+// Historique des slides réellement traversées (étape + mode d'affichage), pour
+// permettre au joueur de VRAIMENT retourner sur la slide précédente (bouton
+// "↩︎ Revoir") plutôt qu'une simple vue en lecture seule — demande de Firmin
+// du 23/10 ("moi je veux vraiment qui puisse retourner sur la page arrière").
+// window._historyMode indique qu'on est en train de consulter une slide déjà
+// visitée : tout ce qui pourrait modifier le minuteur, le GPS ou la
+// progression est alors désactivé (voir startStepTimer/startGeolocation/
+// saveCurrentProgress et les render*Mode ci-dessous) ; window._liveSlidePoint
+// mémorise la position réelle du joueur pour y revenir exactement via
+// returnToLiveSlide(). Tout est réinitialisé à chaque startAdventure().
 window._slideHistory = [];
 window._currentSlideSnapshot = null;
+window._historyMode = false;
+window._historyForwardStack = [];
+window._liveSlidePoint = null;
+window._currentSlideMode = null;
 let currentHintLevel = 0;   // 0=aucun, 1/2/3=niveaux révélés
 let hintXpPenalty    = 0;   // XP déduit par les indices demandés
 window._adventureInProgress = false; // true uniquement quand l'écran aventure est actif
@@ -3976,6 +3985,11 @@ function startGlobalGPS() {
 // ══════════════════════════════════════════
 function saveCurrentProgress() {
   if (!currentAdv || !window._adventureInProgress) return;
+  // Pendant qu'on consulte une slide de l'historique (↩︎ Revoir), currentStepIndex/
+  // _currentStepId pointent temporairement vers cette ancienne étape — ne pas
+  // écraser la sauvegarde de reprise avec cette position, qui n'est pas la
+  // vraie position du joueur.
+  if (window._historyMode) return;
   localStorage.setItem('ff_current_adventure', JSON.stringify({
     adventure_id: currentAdv.id,
     step_index: currentStepIndex,
@@ -3986,37 +4000,56 @@ function saveCurrentProgress() {
   }));
 }
 
-function checkResumeAdventure(adv) {
+// Lit la sauvegarde locale de reprise (sortie accidentelle) pour CETTE
+// aventure, si elle existe et date de moins de 24h — sans rien demander au
+// joueur, juste la donnée brute. La décision (reprendre/recommencer) est
+// posée séparément par askRestartOrResume(), appelée depuis startAdventure().
+function getLocalAdventureProgress(adventureId) {
   const saved = localStorage.getItem('ff_current_adventure');
-  if (!saved) return false;
+  if (!saved) return null;
 
   let progress;
-  try { progress = JSON.parse(saved); } catch (e) { localStorage.removeItem('ff_current_adventure'); return false; }
+  try { progress = JSON.parse(saved); } catch (e) { localStorage.removeItem('ff_current_adventure'); return null; }
 
-  // Vérifier que c'est la même aventure et que c'est récent (moins de 24h)
   const isRecent = Date.now() - (progress.saved_at || 0) < 24 * 60 * 60 * 1000;
-  if (progress.adventure_id !== adv.id || !isRecent) {
+  if (progress.adventure_id !== adventureId || !isRecent) {
     localStorage.removeItem('ff_current_adventure');
-    return false;
+    return null;
   }
+  return progress;
+}
 
-  // Proposer de reprendre
-  const resume = confirm(
-    `🧭 Reprendre l'aventure ?\n\nTu avais commencé "${adv.title}" et tu en étais à l'étape ${(progress.step_index || 0) + 1}.\n\nTu veux reprendre où tu t'étais arrêté ?`
-  );
-
-  if (resume) {
-    currentStepIndex            = progress.step_index || 0;
-    window._currentStepId       = progress.step_id || adv.steps[0]?.id || null;
-    window._adventureStartTime  = progress.start_time || Date.now();
-    window._adventureAttempts   = progress.attempts || 0;
-    window._adventureTotalXp    = 0;
-    window._adventureHintPenalty = 0;
-    return true;
-  } else {
-    localStorage.removeItem('ff_current_adventure');
-    return false;
-  }
+// Popup "Recommencer / Reprendre" — demande de Firmin du 23/10 : dès qu'une
+// aventure a déjà été commencée (sauvegarde locale récente OU étapes déjà
+// complétées côté serveur), proposer clairement les deux choix plutôt qu'une
+// simple boîte de confirmation du navigateur. Retourne une Promise résolue
+// avec 'resume' ou 'restart' selon le bouton cliqué.
+function askRestartOrResume(adv, localProgress) {
+  return new Promise(resolve => {
+    const stepLabel = localProgress ? `l'étape ${(localProgress.step_index || 0) + 1}` : 'ta dernière étape';
+    const overlay = document.createElement('div');
+    overlay.id = 'resume-choice-overlay';
+    overlay.className = 'resume-choice-overlay';
+    overlay.innerHTML = `
+      <div class="resume-choice-card">
+        <div class="resume-choice-icon">🧭</div>
+        <div class="resume-choice-title">Tu avais déjà commencé<br/>« ${escapeHtml(adv.title || '')} »</div>
+        <div class="resume-choice-sub">Tu en étais à ${stepLabel}. Tu veux reprendre où tu t'étais arrêté, ou recommencer depuis le début ?</div>
+        <button type="button" class="btn-primary resume-choice-btn" id="resume-choice-resume">▶️ Reprendre où j'en étais</button>
+        <button type="button" class="btn-hint resume-choice-btn" id="resume-choice-restart">🔄 Recommencer depuis le début</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    const cleanup = (choice) => {
+      overlay.remove();
+      if (!document.getElementById('image-lightbox') && !document.getElementById('badges-modal-overlay') && !document.getElementById('player-profile-overlay')) {
+        document.body.style.overflow = '';
+      }
+      resolve(choice);
+    };
+    document.getElementById('resume-choice-resume').onclick  = () => cleanup('resume');
+    document.getElementById('resume-choice-restart').onclick = () => cleanup('restart');
+  });
 }
 
 // ══════════════════════════════════════════
@@ -4053,6 +4086,9 @@ function startGlobalTimer() {
 
 // Démarrer le timer d'une étape (appelé à chaque nouvelle étape ; ne redémarre pas si déjà en cours pour la même étape)
 function startStepTimer(step) {
+  // En train de consulter l'historique (↩︎ Revoir) : ne surtout pas toucher au
+  // minuteur de la vraie étape en cours, qu'elle ait ou non un minuteur configuré.
+  if (window._historyMode) return;
   if (!step?.has_step_timer || !step?.step_timer_seconds) {
     clearInterval(stepTimerInterval);
     stepTimerInterval  = null;
@@ -4201,6 +4237,10 @@ async function startAdventure() {
   gpsAutoUnlocked  = false;
   window._slideHistory = [];
   window._currentSlideSnapshot = null;
+  window._historyMode = false;
+  window._historyForwardStack = [];
+  window._liveSlidePoint = null;
+  window._currentSlideMode = null;
   { const backBtn = document.getElementById('adv-immersive-back-btn'); if (backBtn) backBtn.style.display = 'none'; }
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
 
@@ -4215,33 +4255,58 @@ async function startAdventure() {
   // pleine résolution ne sera chargée qu'à la demande, si le joueur zoome.
   preloadImages(currentAdv.steps.map(s => s.image_thumb_url || s.image_url));
 
-  // Reprise locale (sortie accidentelle) — prioritaire sur la reprise serveur
-  const resumedLocally = checkResumeAdventure(currentAdv);
+  // Détecte toute progression déjà existante sur cette aventure — sauvegarde
+  // locale récente (sortie accidentelle) ET/OU étapes déjà complétées côté
+  // serveur — pour proposer explicitement "recommencer" ou "reprendre"
+  // (demande de Firmin du 23/10 : à chaque clic sur un scénario déjà
+  // commencé, pas seulement après une sortie accidentelle).
+  const localProgress = getLocalAdventureProgress(currentAdv.id);
+  let serverDoneIds = new Set();
+  if (currentPlayer && currentAdv.steps?.length) {
+    try {
+      const progress = await supaFetch(
+        `player_progress?player_id=eq.${currentPlayer.id}&adventure_id=eq.${currentAdv.id}&completed=eq.true&select=step_id`
+      );
+      serverDoneIds = new Set(progress.map(p => p.step_id));
+    } catch (e) {
+      console.error('Erreur vérif progression:', e);
+    }
+  }
+  const hasExistingProgress = !!localProgress || serverDoneIds.size > 0;
+  const startChoice = hasExistingProgress ? await askRestartOrResume(currentAdv, localProgress) : 'restart';
 
-  if (!resumedLocally) {
+  if (startChoice === 'resume' && localProgress) {
+    // Reprise locale (sortie accidentelle) — prioritaire : c'est la position
+    // la plus précise, elle inclut le chrono et le compteur d'essais déjà en cours.
+    currentStepIndex            = localProgress.step_index || 0;
+    window._currentStepId       = localProgress.step_id || currentAdv.steps[0]?.id || null;
+    window._adventureStartTime  = localProgress.start_time || Date.now();
+    window._adventureAttempts   = localProgress.attempts || 0;
+    window._adventureTotalXp    = 0;
+    window._adventureHintPenalty = 0;
+  } else if (startChoice === 'resume') {
+    // Pas de sauvegarde locale récente, mais des étapes déjà complétées côté
+    // serveur : reprendre à la première étape non complétée.
     currentStepIndex = 0;
-
-    // Chrono et compteur d'essais
     window._adventureStartTime = Date.now();
     window._adventureAttempts  = 0;
     window._adventureTotalXp   = 0;
     window._adventureHintPenalty = 0;
-    window._currentStepId      = currentAdv.steps[0]?.id || null;
-
-    // Reprise à la dernière étape non complétée
-    if (currentPlayer && currentAdv.steps?.length) {
-      try {
-        const progress = await supaFetch(
-          `player_progress?player_id=eq.${currentPlayer.id}&adventure_id=eq.${currentAdv.id}&completed=eq.true&select=step_id`
-        );
-        const doneIds  = new Set(progress.map(p => p.step_id));
-        const resumeIdx = currentAdv.steps.findIndex(s => !doneIds.has(s.id));
-        currentStepIndex = resumeIdx >= 0 ? resumeIdx : 0;
-        window._currentStepId = currentAdv.steps[currentStepIndex]?.id || window._currentStepId;
-      } catch (e) {
-        console.error('Erreur reprise:', e);
-      }
+    window._currentStepId = currentAdv.steps[0]?.id || null;
+    const resumeIdx = currentAdv.steps.findIndex(s => !serverDoneIds.has(s.id));
+    if (resumeIdx >= 0) {
+      currentStepIndex = resumeIdx;
+      window._currentStepId = currentAdv.steps[resumeIdx].id;
     }
+  } else {
+    // 'restart' (ou aucune progression existante) : toujours depuis la 1ère étape.
+    localStorage.removeItem('ff_current_adventure');
+    currentStepIndex = 0;
+    window._adventureStartTime = Date.now();
+    window._adventureAttempts  = 0;
+    window._adventureTotalXp   = 0;
+    window._adventureHintPenalty = 0;
+    window._currentStepId = currentAdv.steps[0]?.id || null;
   }
 
   // L'écran aventure devient actif : la protection anti-sortie peut s'activer
@@ -4417,30 +4482,32 @@ function handleAdvNbTap(event) {
   if (!advNbState.hasInteraction && advNbState.onAdvance) advNbState.onAdvance();
 }
 
-// ── RELECTURE DE LA SLIDE PRÉCÉDENTE (lecture seule) ──
-// enterSlide() est appelée au tout début de chaque fonction qui affiche une
-// nouvelle slide (renderStoryMode, renderCompassMode, renderEnigmeMode,
-// transitionCompassToEnigme) : elle archive la slide qui vient de se terminer
-// dans _slideHistory, puis mémorise la nouvelle comme "slide courante". Le
-// bouton "↩︎ Revoir" de la barre immersive (#adv-immersive-back-btn, à côté de
-// "← Quitter" — demande de Firmin du 23/10 : disponible de la même façon sur
-// TOUTE slide, y compris sans image, plutôt qu'un lien dans le carnet qui se
-// faisait chevaucher par cette même barre) est montré/masqué ici selon qu'il y
-// a quelque chose à relire — aucune de ces fonctions ne touche au minuteur, au
-// GPS, aux indices ni à la progression.
-function enterSlide(image, text, title) {
+// ── RETOUR SUR LA SLIDE PRÉCÉDENTE (vraie navigation, pas une simple vue) ──
+// enterSlide(mode) est appelée au tout début de chaque fonction qui affiche
+// une nouvelle slide (renderStoryMode, renderCompassMode, renderEnigmeMode,
+// transitionCompassToEnigme) : elle archive la position (étape + mode) qui
+// vient de se terminer dans _slideHistory, puis mémorise la nouvelle comme
+// "slide courante". Le bouton "↩︎ Revoir" de la barre immersive affiche/masque
+// selon qu'il y a quelque chose à relire. Pendant qu'une slide de l'historique
+// est affichée (window._historyMode), enterSlide() ne touche à rien : on ne
+// doit ni corrompre l'historique ni perdre la position réelle du joueur —
+// demande de Firmin du 23/10 : "je veux vraiment qui puisse retourner sur la
+// page arrière [...] cela ne modifie rien au chrono et point etc".
+function enterSlide(mode) {
+  if (window._historyMode) return;
   if (window._currentSlideSnapshot) {
     window._slideHistory.push(window._currentSlideSnapshot);
     if (window._slideHistory.length > 30) window._slideHistory.shift();
   }
-  window._currentSlideSnapshot = { image: image || '', text: text || '', title: title || '' };
+  window._currentSlideMode = mode;
+  window._currentSlideSnapshot = { stepIndex: currentStepIndex, stepId: window._currentStepId, mode };
   const backBtn = document.getElementById('adv-immersive-back-btn');
   if (backBtn) backBtn.style.display = window._slideHistory.length > 0 ? 'block' : 'none';
 }
 
 // Texte de repli par type d'étape — factorisé pour rester identique entre ce
-// qui est réellement tapé à l'écran (startEnigmeInteraction) et ce qui est
-// mémorisé pour la relecture (enterSlide).
+// qui est réellement tapé à l'écran (startEnigmeInteraction) et le contenu
+// HTML reconstruit par enigmeBodyHtml().
 function enigmeSlideText(step) {
   if (step.step_type === 'continue') return step.enigme || '';
   if ((step.step_type === 'decision' || step.step_type === 'quiz') && step.choices && step.choices.length > 0) {
@@ -4450,35 +4517,83 @@ function enigmeSlideText(step) {
   return step.enigme || '';
 }
 
-// Overlay plein écran, strictement en lecture : montre l'image + le texte de la
-// slide précédente, sans aucun élément interactif (pas de boutons de réponse,
-// pas de boussole). Fermer ne fait rien d'autre que retirer l'overlay.
-function openPreviousSlidePeek() {
-  if (!window._slideHistory || !window._slideHistory.length) return;
-  const snap = window._slideHistory[window._slideHistory.length - 1];
-  closePreviousSlidePeek();
-  const overlay = document.createElement('div');
-  overlay.id = 'slide-peek-overlay';
-  overlay.innerHTML = `
-    <div class="slide-peek-card">
-      <button type="button" class="slide-peek-close" onclick="closePreviousSlidePeek()">✕</button>
-      ${snap.image ? `<img class="slide-peek-img" src="${snap.image}" alt=""/>` : ''}
-      <div class="slide-peek-paper">
-        <div class="slide-peek-banner">↩︎ Relecture — ta progression n'est pas affectée</div>
-        ${snap.title ? `<div class="slide-peek-title">${escapeHtml(snap.title)}</div>` : ''}
-        <div class="slide-peek-text">${escapeHtml(snap.text)}</div>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  document.body.style.overflow = 'hidden';
-  overlay.addEventListener('click', e => { if (e.target === overlay) closePreviousSlidePeek(); });
+// Appelle le vrai rendu correspondant au mode mémorisé dans l'historique — la
+// slide affichée en arrière est donc EXACTEMENT la même (image, texte,
+// boussole éventuelle, zoom) que lorsqu'elle était la slide en cours, pas une
+// reconstitution simplifiée.
+function renderHistorySlide(mode) {
+  if (mode === 'story') renderStoryMode();
+  else if (mode === 'compass') renderCompassMode();
+  else if (mode === 'transition') transitionCompassToEnigme();
+  else renderEnigmeMode();
 }
 
-function closePreviousSlidePeek() {
-  const overlay = document.getElementById('slide-peek-overlay');
-  if (overlay) overlay.remove();
-  if (!document.getElementById('image-lightbox') && !document.getElementById('badges-modal-overlay') && !document.getElementById('player-profile-overlay')) {
-    document.body.style.overflow = '';
+// Bouton "↩︎ Revoir" : recule d'une slide dans l'historique réel. Un clic
+// supplémentaire pendant qu'on est déjà en train de relire recule encore plus
+// loin. currentStepIndex/_currentStepId sont bien changés (vraie navigation
+// arrière), mais _historyMode désactive toute conséquence sur le minuteur, le
+// GPS ou la progression (voir les guards dans startStepTimer, startGeolocation,
+// saveCurrentProgress et les render*Mode ci-dessous).
+function goToPreviousSlide() {
+  if (!window._slideHistory.length) return;
+  if (!window._historyMode) {
+    window._liveSlidePoint = { stepIndex: currentStepIndex, stepId: window._currentStepId, mode: window._currentSlideMode };
+    window._historyForwardStack = [];
+  }
+  const prev = window._slideHistory.pop();
+  window._historyForwardStack.push(prev);
+  window._historyMode = true;
+  window._currentSlideMode = prev.mode;
+  currentStepIndex = prev.stepIndex;
+  window._currentStepId = prev.stepId;
+  renderHistorySlide(prev.mode);
+}
+
+// Bouton "→ Revenir à l'étape en cours" (injecté par applyHistoryModeChrome) :
+// restaure exactement la position réelle du joueur et remet l'historique dans
+// l'état où il était avant le premier clic sur "↩︎ Revoir", pour qu'il reste
+// utilisable de la même façon ensuite.
+function returnToLiveSlide() {
+  while (window._historyForwardStack && window._historyForwardStack.length) {
+    window._slideHistory.push(window._historyForwardStack.pop());
+  }
+  window._historyMode = false;
+  if (!window._liveSlidePoint) return;
+  currentStepIndex = window._liveSlidePoint.stepIndex;
+  window._currentStepId = window._liveSlidePoint.stepId;
+  const mode = window._liveSlidePoint.mode;
+  window._liveSlidePoint = null;
+  // _slideHistory vient d'être restauré ci-dessus : sans ça, le prochain
+  // enterSlide() (appelé normalement par le render ci-dessous, puisqu'on n'est
+  // plus en _historyMode) pousserait l'ancien instantané "en direct" par-dessus,
+  // créant un doublon de la slide qu'on retrouve déjà en place.
+  window._currentSlideSnapshot = null;
+  renderHistorySlide(mode);
+}
+
+// Injecté à la fin de chaque render*Mode()/transitionCompassToEnigme() : tant
+// qu'on consulte une slide de l'historique, désactive tout bouton/champ qui
+// ferait avancer ou répondre (le zoom image reste permis, c'est sans risque),
+// et affiche un bandeau avec le bouton de retour.
+function applyHistoryModeChrome() {
+  if (!window._historyMode) return;
+  const modeId = { story: 'mode-story', compass: 'mode-compass', transition: 'mode-compass', enigme: 'mode-enigme' }[window._currentSlideMode];
+  const container = modeId ? document.getElementById(modeId) : null;
+  if (!container) return;
+  container.querySelectorAll('button, input, textarea').forEach(el => {
+    if (el.id === 'adv-history-return-btn' || el.classList.contains('adv-nb-zoom-btn')) return;
+    el.disabled = true;
+    el.style.opacity = '0.45';
+    el.style.pointerEvents = 'none';
+  });
+  const paper = container.querySelector('.adv-nb-paper, #compass-paper, #adv-nb-paper-active');
+  if (paper && !document.getElementById('adv-history-banner')) {
+    const banner = document.createElement('div');
+    banner.id = 'adv-history-banner';
+    banner.className = 'adv-history-banner';
+    banner.innerHTML = `↩︎ Tu relis une étape précédente — ton chrono, ton GPS et tes points ne sont pas affectés.
+      <button type="button" id="adv-history-return-btn" class="adv-history-return-btn" onclick="event.stopPropagation(); returnToLiveSlide();">→ Revenir à l'étape en cours</button>`;
+    paper.prepend(banner);
   }
 }
 
@@ -4493,7 +4608,7 @@ function renderStoryMode() {
   const introPart = (isFirst && currentAdv.intro_text) ? currentAdv.intro_text : '';
   const stepPart  = step?.story_text || (introPart ? '' : `Direction : ${step?.title || 'le prochain lieu'} !`);
   const text = [introPart, stepPart].filter(Boolean).join('\n\n');
-  enterSlide(image, text, step?.title);
+  enterSlide('story');
 
   document.getElementById('mode-story').innerHTML = `
     <div class="adv-nb-wrap">
@@ -4510,6 +4625,7 @@ function renderStoryMode() {
     onAdvance: () => renderCompassMode()
   });
   saveCurrentProgress();
+  applyHistoryModeChrome();
 }
 
 // ── BOUSSOLE ──
@@ -4526,10 +4642,18 @@ function renderCompassMode() {
     return;
   }
 
-  gpsAutoUnlocked      = false;
-  window._stepAnswerable = false;
-  _lastBearingToTarget = null;
-  startStepTimer(step);
+  // Ces réinitialisations (verrou GPS, minuteur d'étape) ne doivent avoir lieu
+  // que pour la VRAIE étape en cours — si on consulte cette slide depuis
+  // l'historique (↩︎ Revoir), on affiche son contenu sans toucher au GPS/
+  // minuteur en cours sur l'étape réelle du joueur.
+  if (!window._historyMode) {
+    gpsAutoUnlocked      = false;
+    window._stepAnswerable = false;
+    _lastBearingToTarget = null;
+    startStepTimer(step);
+  } else {
+    window._stepAnswerable = false;
+  }
 
   // Slide fusionnée : l'image de destination (même logique qu'en énigme, y compris
   // le mode "toucher une zone") reste affichée en haut sans jamais être rechargée ;
@@ -4540,7 +4664,7 @@ function renderCompassMode() {
   // bulle de message façon chat, pas de carte parchemin séparée : tout reste sur
   // la même page beige, comme demandé par Firmin (retour du 22/10).
   const guideText = `Rends-toi à : ${step.title || 'le prochain lieu'}. Je te guide !`;
-  enterSlide(step.image_url, guideText, step.title);
+  enterSlide('compass');
 
   document.getElementById('mode-compass').innerHTML = `
     <div class="adv-nb-wrap">
@@ -4588,10 +4712,14 @@ function renderCompassMode() {
     }
   });
   saveCurrentProgress();
+  applyHistoryModeChrome();
 }
 
 // ── GÉOLOCALISATION ──
 function startGeolocation(targetLat, targetLng, radiusMeters) {
+  // En train de consulter l'historique (↩︎ Revoir) : ne pas couper le suivi
+  // GPS réellement en cours sur la vraie étape du joueur.
+  if (window._historyMode) return;
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
   _lastBearingToTarget = null;
   if (!navigator.geolocation) return;
@@ -4817,9 +4945,13 @@ function startEnigmeInteraction(step) {
 // "on est toujours sur la même slide"). Repli sur le rendu plein écran classique
 // (renderEnigmeMode) si #compass-paper n'existe pas (sécurité).
 function transitionCompassToEnigme() {
-  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
-  currentHintLevel = 0;
-  hintXpPenalty    = 0;
+  // En consultation d'historique (↩︎ Revoir), ne pas couper le GPS réel ni
+  // réinitialiser les indices/minuteur de la vraie étape en cours.
+  if (!window._historyMode) {
+    if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+    currentHintLevel = 0;
+    hintXpPenalty    = 0;
+  }
   const step = currentStep();
   if (!step) return;
   startStepTimer(step);
@@ -4838,19 +4970,24 @@ function transitionCompassToEnigme() {
     paper.id = 'adv-nb-paper-active';
     paper.classList.remove('compass-paper-fading');
     paper.setAttribute('onclick', 'handleAdvNbTap(event)');
-    enterSlide(step.image_url, enigmeSlideText(step), step.title);
+    enterSlide('transition');
     paper.innerHTML = enigmeBodyHtml(step);
-    window._stepAnswerable = true;
+    window._stepAnswerable = !window._historyMode;
     startEnigmeInteraction(step);
+    applyHistoryModeChrome();
   }, 320);
 }
 
 // ── ÉNIGME ── (étapes SANS GPS : rendu direct plein écran, image + énigme
 // construits ensemble — pas de phase boussole, donc pas de transition en place)
 function renderEnigmeMode() {
-  if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
-  currentHintLevel = 0;
-  hintXpPenalty    = 0;
+  // En consultation d'historique (↩︎ Revoir), ne pas couper le GPS réel ni
+  // réinitialiser les indices de la vraie étape en cours.
+  if (!window._historyMode) {
+    if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+    currentHintLevel = 0;
+    hintXpPenalty    = 0;
+  }
   const step = currentStep();
   if (!step) return;
   // Ne redémarre pas le timer si celui de cette étape est déjà en cours (ex: lancé depuis renderCompassMode)
@@ -4862,7 +4999,7 @@ function renderEnigmeMode() {
   }
   step.choices = choices;
   console.log('Étape:', step.title, 'Type:', step.step_type, 'Choices:', choices);
-  enterSlide(step.image_url, enigmeSlideText(step), step.title);
+  enterSlide('enigme');
 
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
@@ -4872,8 +5009,9 @@ function renderEnigmeMode() {
       </div>
     </div>`;
   showMode('enigme');
-  window._stepAnswerable = true;
+  window._stepAnswerable = !window._historyMode;
   startEnigmeInteraction(step);
+  applyHistoryModeChrome();
 }
 
 // ── INDICES PROGRESSIFS ──
