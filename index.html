@@ -8424,7 +8424,25 @@ async function showAdventureRanking(advId, advTitle) {
 function showMode(mode) {
   ['story','compass','enigme','reward'].forEach(m => {
     const el = document.getElementById('mode-' + m);
-    if (el) el.style.display = 'none';
+    if (el) {
+      el.style.display = 'none';
+      // Vide le contenu des écrans qu'on quitte : chaque render*Mode()
+      // reconstruit entièrement SON PROPRE écran à chaque fois, mais ne
+      // nettoie jamais les autres — un vieux #compass-paper (ou son contenu
+      // "fusionné" par transitionCompassToEnigme()) peut donc rester dans
+      // #mode-compass longtemps après être passé à l'étape suivante. Comme
+      // ce contenu réutilise toujours les mêmes id (#adv-nb-text,
+      // #adv-nb-choices, etc.), il reste en mémoire un doublon d'id avec le
+      // NOUVEL écran actif — et document.getElementById() renvoie TOUJOURS
+      // le premier du DOM, donc l'ancien, resté invisible (display:none).
+      // Le texte tapé par typewriterAdvNb() finissait ainsi écrit dans cet
+      // élément fantôme caché, jamais dans le vrai texte visible — bug
+      // trouvé le 23/10 via le retour de Firmin ("le texte n'apparaît pas")
+      // sur une étape atteinte juste après l'arrivée GPS d'une étape
+      // précédente (transitionCompassToEnigme laissait justement ce genre
+      // de contenu fusionné derrière elle dans #mode-compass).
+      if (m !== mode) el.innerHTML = '';
+    }
   });
   const target = document.getElementById('mode-' + mode);
   if (target) {
