@@ -945,7 +945,8 @@
     width: 18px; height: 18px; flex-shrink: 0; opacity: 0.9;
   }
 
-  /* ── CARROUSEL — boucle CSS infinie, aucun JS de défilement ── */
+  /* ── CARROUSEL — défilement tactile natif (swipe libre gauche/droite) ;
+     léger auto-défilement indicatif qui s'arrête dès que le joueur touche ── */
   .carousel-wrapper {
     overflow: hidden;
     width: 100%;
@@ -957,15 +958,14 @@
   .carousel-track {
     display: flex;
     gap: 12px;
-    width: max-content;
-    animation: scroll-infinite 20s linear infinite;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-  .carousel-track:hover { animation-play-state: paused; }
-  .carousel-track .carousel-item { width: 180px; flex-shrink: 0; cursor: pointer; }
-  @keyframes scroll-infinite {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
+  .carousel-track::-webkit-scrollbar { display: none; }
+  .carousel-track .carousel-item { width: 180px; flex-shrink: 0; cursor: pointer; scroll-snap-align: start; }
 
   /* ── LISTE AVENTURES ── */
   .home-adv-list { padding: 4px 0 20px; }
@@ -3622,22 +3622,40 @@ function buildCarouselCard(adv) {
     </div>`;
 }
 
+let _carouselAutoScrollTimer = null;
+
+function stopCarouselAutoScroll() {
+  if (_carouselAutoScrollTimer) { clearInterval(_carouselAutoScrollTimer); _carouselAutoScrollTimer = null; }
+}
+
+function startCarouselAutoScroll(track) {
+  stopCarouselAutoScroll();
+  _carouselAutoScrollTimer = setInterval(() => {
+    const max = track.scrollWidth - track.clientWidth;
+    if (max <= 0) return;
+    if (track.scrollLeft >= max - 1) {
+      track.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      track.scrollLeft += 1;
+    }
+  }, 40); // ~25px/s : juste assez pour suggérer qu'on peut glisser, bien plus lent qu'avant
+}
+
 function renderCarousel() {
   const track = document.getElementById('carousel-track');
   if (!track || !adventures.length) return;
 
-  // Doubler les cartes : la boucle CSS translate à -50%, donc la 2e moitié
-  // prend le relais exactement où la 1re s'arrête, sans aucun calcul JS.
-  const cardsHtml = adventures.map(adv => buildCarouselCard(adv)).join('');
-  track.innerHTML = cardsHtml + cardsHtml;
+  // Pas de doublement des cartes : le joueur fait défiler lui-même au doigt
+  // (scroll horizontal natif), dans les deux sens.
+  track.innerHTML = adventures.map(adv => buildCarouselCard(adv)).join('');
 
-  // Ajuster la durée selon le nombre de cartes (plus de cartes = plus lent, vitesse constante)
-  const duration = Math.max(15, adventures.length * 4);
-  track.style.animationDuration = duration + 's';
-
-  // Pause de l'animation pendant un toucher (sans réimplémenter le défilement)
-  track.ontouchstart = () => { track.style.animationPlayState = 'paused'; };
-  track.ontouchend   = () => { track.style.animationPlayState = 'running'; };
+  // Léger auto-défilement indicatif, arrêté définitivement dès le premier
+  // contact du joueur avec le carrousel — il garde alors le contrôle total.
+  if (adventures.length > 2) startCarouselAutoScroll(track);
+  if (!track._swipeStopBound) {
+    track.addEventListener('pointerdown', stopCarouselAutoScroll, { passive: true });
+    track._swipeStopBound = true;
+  }
 }
 
 // ══════════════════════════════════════════
