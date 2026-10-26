@@ -1469,6 +1469,9 @@
   .adv-nb-image-wrap { background: #12241A; overflow: hidden; position: relative; margin: 0; padding: 0; }
   .adv-nb-image { width: 100%; height: 45vh; object-fit: cover; object-position: center; display: block; }
   .adv-nb-image.hotspot-img { object-fit: contain; background: #0A140D; cursor: pointer; }
+  .adv-nb-qrscan-wrap { display: flex; align-items: center; justify-content: center; }
+  .adv-nb-qrscan-video { width: 100%; height: 45vh; object-fit: cover; background: #000; display: block; }
+  .adv-nb-qrscan-hint { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: #fff; font-size: 13px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.6); pointer-events: none; }
 
   /* Petit bouton "agrandir" superposé sur les images d'étape (aventures) — ouvre
      la visionneuse plein écran avec zoom (openImageLightbox). Sur une étape
@@ -4438,6 +4441,16 @@ let advNbState = { typing: false, fullText: '', hasInteraction: false, onReveale
 // compressée utilisée pour l'affichage normal (beaucoup plus rapide à charger) — à
 // défaut de miniature (anciennes étapes), on retombe simplement sur l'original.
 function advNbImageHtml(url, opts) {
+  // Étape "scanner un QR code" : remplace entièrement la zone image par la
+  // caméra (scan inline, démarré/arrêté par startInlineQRScan()/stopInlineQRScan())
+  // — affiché même si l'étape n'a pas d'image_url, contrairement aux autres types.
+  if (opts && opts.qrScan) {
+    return `<div class="adv-nb-image-wrap adv-nb-qrscan-wrap">
+      <video id="qr-inline-video" class="adv-nb-qrscan-video" playsinline muted></video>
+      <canvas id="qr-inline-canvas" style="display:none;"></canvas>
+      <div class="adv-nb-qrscan-hint" id="qr-inline-hint">📷 Vise le QR code à scanner</div>
+    </div>`;
+  }
   if (!url) return '';
   const hotspot = !!(opts && opts.hotspot);
   const displaySrc = (opts && opts.thumb) || url;
@@ -4686,7 +4699,7 @@ function renderCompassMode() {
 
   document.getElementById('mode-compass').innerHTML = `
     <div class="adv-nb-wrap">
-      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot', qrScan: step.step_type === 'qr_scan' })}
       <div class="adv-nb-paper" id="compass-paper" onclick="handleAdvNbTap(event)">
         <div class="adv-nb-text" id="adv-nb-text"></div>
         <div class="compass-dial-area" id="compass-reveal" style="display:none;">
@@ -4908,6 +4921,18 @@ function enigmeBodyHtml(step) {
       </div>`;
   }
 
+  // Étape SCANNER UN QR CODE — réponse en scannant un QR code réel (boîte de
+  // géocaching, etc.) ; validation dans scanInlineQRFrame(), gatée par
+  // window._stepAnswerable comme pour le hotspot.
+  if (step.step_type === 'qr_scan') {
+    return `
+      <div class="adv-nb-text" id="adv-nb-text"></div>
+      <div class="adv-nb-freetext" id="qr-feedback-wrap" style="display:none;">
+        <div class="error-msg" id="error-msg">Ce n'est pas le bon code… cherche encore !</div>
+        <div id="hint-section"></div>
+      </div>`;
+  }
+
   // Étape TEXTE LIBRE (et repli legacy) — champ texte libre, validé par checkAnswer().
   return `
     <div class="adv-nb-text" id="adv-nb-text"></div>
@@ -4944,6 +4969,16 @@ function startEnigmeInteraction(step) {
     typewriterAdvNb(enigmeSlideText(step), {
       hasInteraction: true,
       onRevealed: () => { const w = document.getElementById('hotspot-feedback-wrap'); if (w) w.style.display = 'block'; }
+    });
+    renderHintSection();
+    saveCurrentProgress();
+    return;
+  }
+  if (step.step_type === 'qr_scan') {
+    startInlineQRScan(step);
+    typewriterAdvNb(enigmeSlideText(step), {
+      hasInteraction: true,
+      onRevealed: () => { const w = document.getElementById('qr-feedback-wrap'); if (w) w.style.display = 'block'; }
     });
     renderHintSection();
     saveCurrentProgress();
@@ -5021,7 +5056,7 @@ function renderEnigmeMode() {
 
   document.getElementById('mode-enigme').innerHTML = `
     <div class="adv-nb-wrap">
-      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot' })}
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url, hotspot: step.step_type === 'hotspot', qrScan: step.step_type === 'qr_scan' })}
       <div class="adv-nb-paper" onclick="handleAdvNbTap(event)">
         ${enigmeBodyHtml(step)}
       </div>
@@ -8102,6 +8137,69 @@ function closeQRScanner() {
   showMode('reward');
 }
 
+// ── SCAN QR INLINE (étape de type "qr_scan") ──────────────────────────────
+// Contrairement au scanner plein écran ci-dessus (QR de fin d'aventure / livres
+// Professeur Flint), ce scanner reste intégré DANS la slide (en haut, à la
+// place de l'image) — même logique que handleHotspotImageTap() : la
+// validation se fait en place, sans jamais changer d'écran, et reste gatée
+// par window._stepAnswerable pour ne rien valider pendant une consultation
+// d'historique (↩︎ Revoir) ou avant l'arrivée GPS (fusion boussole→énigme).
+let _qrInlineStream = null;
+let _qrInlineInterval = null;
+let _qrInlineLastMismatch = null;
+
+function stopInlineQRScan() {
+  if (_qrInlineStream) { _qrInlineStream.getTracks().forEach(t => t.stop()); _qrInlineStream = null; }
+  if (_qrInlineInterval) { clearInterval(_qrInlineInterval); _qrInlineInterval = null; }
+  _qrInlineLastMismatch = null;
+}
+
+async function startInlineQRScan(step) {
+  stopInlineQRScan();
+  if (window._historyMode) return; // lecture seule : pas de caméra sur une slide passée
+  const video = document.getElementById('qr-inline-video');
+  if (!video) return;
+  try {
+    _qrInlineStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = _qrInlineStream;
+    await video.play();
+  } catch (e) {
+    const hint = document.getElementById('qr-inline-hint');
+    if (hint) hint.textContent = '📷 Autorise la caméra pour scanner le QR code';
+    return;
+  }
+  _qrInlineInterval = setInterval(() => scanInlineQRFrame(step), 300);
+}
+
+function scanInlineQRFrame(step) {
+  const video  = document.getElementById('qr-inline-video');
+  const canvas = document.getElementById('qr-inline-canvas');
+  if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (!code || !window._stepAnswerable) return;
+  const expected = (step.answer || '').trim();
+  const scanned  = (code.data || '').trim();
+  if (expected && scanned === expected) {
+    stopInlineQRScan();
+    vibrateFeedback(200);
+    soundSuccess();
+    renderRewardMode();
+    return;
+  }
+  if (scanned !== _qrInlineLastMismatch) {
+    _qrInlineLastMismatch = scanned;
+    vibrateFeedback([100, 50, 100]);
+    soundError();
+    const err = document.getElementById('error-msg');
+    if (err) err.style.display = 'block';
+  }
+}
+
 // ── QR CODES LIVRES PROFESSEUR FLINT (format "FFBOOK:<id>:START" / "FFBOOK:<id>:END") ──
 async function handleBookQR(data) {
   const m = /^FFBOOK:([a-zA-Z0-9-]+):(START|END)$/i.exec((data || '').trim());
@@ -8440,6 +8538,7 @@ async function showAdventureRanking(advId, advTitle) {
 // UTILS
 // ══════════════════════════════════════════
 function showMode(mode) {
+  stopInlineQRScan();
   ['story','compass','enigme','reward'].forEach(m => {
     const el = document.getElementById('mode-' + m);
     if (el) {
@@ -8470,6 +8569,7 @@ function showMode(mode) {
 }
 
 function goToScreen(name, btn) {
+  stopInlineQRScan();
   // Avertir si on quitte une aventure en cours (uniquement si l'écran aventure est réellement actif)
   if (window._adventureInProgress &&
       name !== 'adventure' &&

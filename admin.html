@@ -3595,7 +3595,7 @@ function loadStepsFromAdventure(dbSteps) {
   // Déduit aussi interaction_type pour les anciennes étapes (pas encore de valeur explicite en base) :
   // 'continue'/'free_text'/'quiz'/'decision' sont utilisés directement s'ils sont déjà présents (nouveau
   // format), sinon on retombe sur une heuristique à partir de step_type/answer/choices (ancien format).
-  const EXPLICIT_TYPES = ['continue', 'free_text', 'quiz', 'decision', 'hotspot'];
+  const EXPLICIT_TYPES = ['continue', 'free_text', 'quiz', 'decision', 'hotspot', 'qr_scan'];
   scenarioSteps.forEach(obj => {
     if (EXPLICIT_TYPES.includes(obj._legacyStepType)) {
       obj.interaction_type = obj._legacyStepType;
@@ -3687,7 +3687,7 @@ function renderOutline() {
   if (scenarioSteps.length === 0) { updateGlobalTimerFailSelect(); return; }
 
   const { ordered, orphans } = computeTree();
-  const TYPE_ICONS = { continue: '➡️', free_text: '✏️', quiz: '🔘', decision: '🔀' };
+  const TYPE_ICONS = { continue: '➡️', free_text: '✏️', quiz: '🔘', decision: '🔀', hotspot: '🎯', qr_scan: '📷' };
   const rowHtml = (item) => {
     const { step, label, depth } = item;
     const nTrans = step.transitions.filter(t => t.target_uid).length;
@@ -3904,6 +3904,7 @@ function renderPanelBody() {
         <option value="quiz">🔘 Réponses multiples (quiz, une bonne réponse)</option>
         <option value="decision">🔀 Réponses décisionnelles (le choix change la suite)</option>
         <option value="hotspot">🎯 Toucher une zone de l'image</option>
+        <option value="qr_scan">📷 Scanner un QR code</option>
       </select>
     </div>
     <div style="margin:0 0 10px;">
@@ -3962,7 +3963,7 @@ function renderPanelBody() {
     </div>
     <div id="panel-type-freetext">
       <div class="form-group" style="margin:0 0 10px;" id="panel-answer-wrap">
-        <label style="font-size:12px;">Réponse attendue</label>
+        <label style="font-size:12px;" id="panel-answer-label">Réponse attendue</label>
         <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
       </div>
       <div class="form-group" style="margin:0;">
@@ -4046,16 +4047,31 @@ const ENIGME_LABELS = {
   free_text: 'Texte de l\'énigme',
   quiz: 'Question posée au joueur',
   decision: 'Texte affiché avant le choix',
-  hotspot: 'Consigne affichée au joueur (ex : "Un détail a été ajouté à cette image, trouve-le !")'
+  hotspot: 'Consigne affichée au joueur (ex : "Un détail a été ajouté à cette image, trouve-le !")',
+  qr_scan: 'Consigne affichée au joueur (ex : "Trouve la boîte et scanne le QR code caché dessous !")'
+};
+
+// Libellé + placeholder du champ "answer", réutilisé pour stocker soit une
+// réponse texte libre, soit le contenu exact du QR code attendu.
+const ANSWER_LABELS = {
+  free_text: { label: 'Réponse attendue', placeholder: 'La réponse correcte' },
+  qr_scan:   { label: 'Code QR attendu',  placeholder: 'Le contenu exact du QR code à scanner' }
 };
 
 function applyInteractionTypeVisibility(type) {
   document.getElementById('panel-type-continue').style.display = type === 'continue' ? 'block' : 'none';
   document.getElementById('panel-enigme-wrap').style.display = 'block';
-  document.getElementById('panel-type-freetext').style.display = (type === 'free_text' || type === 'hotspot') ? 'block' : 'none';
-  document.getElementById('panel-answer-wrap').style.display = type === 'free_text' ? 'block' : 'none';
+  document.getElementById('panel-type-freetext').style.display = (type === 'free_text' || type === 'hotspot' || type === 'qr_scan') ? 'block' : 'none';
+  document.getElementById('panel-answer-wrap').style.display = (type === 'free_text' || type === 'qr_scan') ? 'block' : 'none';
+  const answerCfg = ANSWER_LABELS[type];
+  if (answerCfg) {
+    const answerLbl = document.getElementById('panel-answer-label');
+    const answerInp = document.getElementById('panel-answer');
+    if (answerLbl) answerLbl.textContent = answerCfg.label;
+    if (answerInp) answerInp.placeholder = answerCfg.placeholder;
+  }
   document.getElementById('panel-type-hotspot').style.display = type === 'hotspot' ? 'block' : 'none';
-  document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text' || type === 'hotspot') ? 'block' : 'none';
+  document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text' || type === 'hotspot' || type === 'qr_scan') ? 'block' : 'none';
   document.getElementById('panel-choices-wrap').style.display = (type === 'quiz' || type === 'decision') ? 'block' : 'none';
   const enigmeLabel = document.getElementById('panel-enigme-sublabel');
   if (enigmeLabel) enigmeLabel.textContent = ENIGME_LABELS[type] || 'Texte de l\'énigme';
@@ -4068,7 +4084,7 @@ function onInteractionTypeChange() {
   step.interaction_type = type;
   applyInteractionTypeVisibility(type);
   if (type === 'hotspot') renderHotspotEditor(step);
-  if (type === 'continue' || type === 'free_text' || type === 'hotspot') {
+  if (type === 'continue' || type === 'free_text' || type === 'hotspot' || type === 'qr_scan') {
     // Ces types ne branchent jamais : au plus une transition.
     if (step.transitions.length > 1) step.transitions = step.transitions.slice(0, 1);
     populateSingleNextSelect(step);
@@ -4354,6 +4370,9 @@ function computeFinalSteps() {
     if (step.interaction_type === 'hotspot' && (step.hotspot_x == null || step.hotspot_y == null)) {
       throw new Error(`L'étape ${label} est en mode "toucher une zone" mais aucune zone n'a été placée sur l'image.`);
     }
+    if (step.interaction_type === 'qr_scan' && !(step.answer || '').trim()) {
+      throw new Error(`L'étape ${label} est en mode "scanner un QR code" mais aucun code attendu n'a été saisi.`);
+    }
   }
 
   let finalList = [...ordered];
@@ -4384,8 +4403,8 @@ function computeFinalSteps() {
       lat: step.lat, lng: step.lng, radius_meters: step.radius_meters || 20,
       continue_label: stepType === 'continue' ? (step.continue_label || '') : '',
       enigme: step.enigme || '',
-      answer: stepType === 'free_text' ? (step.answer || '') : '',
-      hint: (stepType === 'free_text' || stepType === 'hotspot') ? (step.hint || '') : '',
+      answer: (stepType === 'free_text' || stepType === 'qr_scan') ? (step.answer || '') : '',
+      hint: (stepType === 'free_text' || stepType === 'hotspot' || stepType === 'qr_scan') ? (step.hint || '') : '',
       step_type: stepType,
       hotspot_x: stepType === 'hotspot' ? step.hotspot_x : null,
       hotspot_y: stepType === 'hotspot' ? step.hotspot_y : null,
