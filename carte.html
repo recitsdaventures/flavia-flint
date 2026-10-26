@@ -52,9 +52,8 @@
     display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: rgba(245,237,216,0.85);
   }
   .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; flex-shrink: 0; }
-  .legend-dot.flavia { background: var(--gold); }
-  .legend-dot.book   { background: var(--blue-book); }
+  .legend-symbol { font-size: 13px; flex-shrink: 0; }
+  .ff-map-marker { background: transparent; border: none; }
 
   /* ── CARTE ── */
   #map-wrap { flex: 1; position: relative; min-height: 0; }
@@ -106,8 +105,7 @@
     letter-spacing: 0.5px; padding: 3px 8px; border-radius: 20px; margin-bottom: 6px;
     color: white;
   }
-  .popup-badge.flavia { background: var(--gold-dark); }
-  .popup-badge.book   { background: var(--blue-book); }
+
   .popup-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; line-height: 1.3; }
   .popup-meta  { font-size: 12px; color: #4A5A4A; line-height: 1.5; }
   .popup-meta div { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
@@ -127,8 +125,11 @@
   <div id="map-header">
     <h1><span class="compass-emoji">🧭</span> La Carte des Explorateurs — Récits d'Aventures</h1>
     <div id="map-legend">
-      <div class="legend-item"><span class="legend-dot flavia"></span> Aventures Flavia Flint</div>
-      <div class="legend-item"><span class="legend-dot book"></span> Livrets Professeur Flint</div>
+      <div class="legend-item"><span class="legend-symbol">📍</span> Géocache sans boîte</div>
+      <div class="legend-item"><span class="legend-symbol">📦</span> Trésors oubliés</div>
+      <div class="legend-item"><span class="legend-symbol">🚶</span> Balade découverte</div>
+      <div class="legend-item"><span class="legend-symbol">🧭</span> Chasse au trésor de Flavia</div>
+      <div class="legend-item"><span class="legend-symbol">🎩</span> Professeur Flint</div>
     </div>
   </div>
 
@@ -175,14 +176,51 @@
     </svg>`;
   }
 
-  function buildAdventurePopup(adv) {
+  // Taxonomie de contenu ajoutée le 25/10 côté admin (content_type + sub_theme sur
+  // `adventures`) — résout ici le symbole/couleur/libellé à afficher sur la carte.
+  // Les aventures pas encore classées (content_type vide) gardent l'apparence
+  // historique (boussole dorée), identique à "chasse_tresor_flavia" : aucune
+  // régression visuelle tant que Firmin n'a pas retagué son contenu existant.
+  const SUB_THEME_MAP = {
+    patrimoine:   { icon: '🏰', label: 'Patrimoine' },
+    biodiversite: { icon: '🌿', label: 'Biodiversité' },
+    arts_metiers: { icon: '🛠️', label: 'Arts & métiers' },
+    legendes:     { icon: '👻', label: 'Légendes locales' }
+  };
+  function contentTypeMapMeta(adv) {
+    if (adv.content_type === 'geocache_sans_boite') {
+      return { icon: '📍', color: '#C4622D', label: 'Géocache sans boîte' };
+    }
+    if (adv.content_type === 'tresors_oublies') {
+      return { icon: '📦', color: '#8B5A2B', label: 'Trésors oubliés' };
+    }
+    if (adv.content_type === 'balade_decouverte') {
+      const sub = SUB_THEME_MAP[adv.sub_theme];
+      return { icon: sub?.icon || '🚶', color: '#3D7A4A', label: 'Balade découverte' + (sub ? ' — ' + sub.label : '') };
+    }
+    // chasse_tresor_flavia ET valeur par défaut (non classé) : apparence historique.
+    return { icon: '🧭', color: '#E8A020', label: 'Chasse au trésor de Flavia' };
+  }
+  // Fabrique un marker Leaflet rond avec un emoji dedans (remplace les anciens
+  // circleMarker à pastille unie, qui ne pouvaient pas porter de symbole).
+  function emojiDivIcon(emoji, bgColor) {
+    return L.divIcon({
+      className: 'ff-map-marker',
+      html: `<div style="width:34px;height:34px;border-radius:50%;background:${bgColor};border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${emoji}</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -17]
+    });
+  }
+
+  function buildAdventurePopup(adv, meta) {
     const cover = adv.cover_image_url
       ? `<img class="popup-cover" src="${adv.cover_image_url}" alt=""/>`
       : `<div class="popup-emoji-banner" style="background:linear-gradient(135deg,#2D4A2D,#3D6B3D);">${compassIconSVG(30)}</div>`;
     return `
       <div>
         ${cover}
-        <div class="popup-badge flavia">🧭 Aventure Flavia Flint</div>
+        <div class="popup-badge" style="background:${meta.color};">${meta.icon} ${escapeHtml(meta.label)}</div>
         <div class="popup-title">${escapeHtml(adv.title)}</div>
         <div class="popup-meta">
           ${adv.location ? `<div>📍 ${escapeHtml(adv.location)}</div>` : ''}
@@ -200,7 +238,7 @@
     return `
       <div>
         ${cover}
-        <div class="popup-badge book">📖 Livret Professeur Flint</div>
+        <div class="popup-badge" style="background:#2D5A8E;">🎩 Les aventures du Professeur Flint</div>
         <div class="popup-title">${escapeHtml(book.title)}</div>
         <div class="popup-meta">
           ${book.location ? `<div>📍 ${escapeHtml(book.location)}</div>` : ''}
@@ -241,17 +279,14 @@
         const firstStep = steps[0];
         if (!firstStep?.lat || !firstStep?.lng) return;
 
-        const marker = L.circleMarker([firstStep.lat, firstStep.lng], {
-          radius: 14, fillColor: '#E8A020', color: 'white', weight: 2.5, fillOpacity: 0.92
-        }).addTo(map);
-        marker.bindPopup(buildAdventurePopup(adv), { maxWidth: 300, minWidth: 240, className: 'ff-popup' });
+        const meta = contentTypeMapMeta(adv);
+        const marker = L.marker([firstStep.lat, firstStep.lng], { icon: emojiDivIcon(meta.icon, meta.color) }).addTo(map);
+        marker.bindPopup(buildAdventurePopup(adv, meta), { maxWidth: 300, minWidth: 240, className: 'ff-popup' });
       });
 
       (books || []).forEach(book => {
         if (!book.lat || !book.lng) return;
-        const marker = L.circleMarker([book.lat, book.lng], {
-          radius: 14, fillColor: '#2D5A8E', color: 'white', weight: 2.5, fillOpacity: 0.92
-        }).addTo(map);
+        const marker = L.marker([book.lat, book.lng], { icon: emojiDivIcon('🎩', '#2D5A8E') }).addTo(map);
         marker.bindPopup(buildBookPopup(book), { maxWidth: 300, minWidth: 240, className: 'ff-popup' });
       });
 
