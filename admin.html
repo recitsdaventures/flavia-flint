@@ -914,6 +914,26 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           </select>
         </div>
         <div class="form-group">
+          <label>Type de contenu <span class="label-hint">(détermine le symbole sur la carte)</span></label>
+          <select id="f-content-type" onchange="onContentTypeChange()">
+            <option value="">— Non défini —</option>
+            <option value="geocache_sans_boite">📍 Géocache sans boîte</option>
+            <option value="tresors_oublies">📦 Trésors oubliés</option>
+            <option value="balade_decouverte">🚶 Balade découverte</option>
+            <option value="chasse_tresor_flavia">🧭 Chasse au trésor de Flavia</option>
+          </select>
+        </div>
+        <div class="form-group" id="content-subtheme-wrap" style="display:none;">
+          <label>Sous-thème <span class="label-hint">(symbole spécifique sur la carte)</span></label>
+          <select id="f-sub-theme">
+            <option value="">— Choisir —</option>
+            <option value="patrimoine">🏰 Patrimoine</option>
+            <option value="biodiversite">🌿 Biodiversité</option>
+            <option value="arts_metiers">🛠️ Arts &amp; métiers</option>
+            <option value="legendes">👻 Légendes locales</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Nombre de lieux <span class="label-hint">(1 = un seul endroit, pas de navigation GPS entre étapes)</span></label>
           <select id="f-locations-count" onchange="onLocationsCountChange()">
             <option value="1">1 lieu unique</option>
@@ -1232,6 +1252,38 @@ function iconImg(name, sizePx) {
 // ── STATE ──
 let adventures = [];
 let editingId = null;
+
+// ── TAXONOMIE DES TYPES DE CONTENU (admin + futur symbole carte.html) ──
+// Demande Firmin 25/10 : classer chaque aventure dans une des 5 familles de contenu,
+// avec un symbole dédié pour la carte. "Les aventures du Professeur Flint" (livrets
+// physiques premium) ne rentre PAS ici : ce contenu vit dans sa propre table
+// `professor_flint_books` (déjà gérée via le formulaire "bf-*" plus bas), donc son
+// symbole (🎩) sera posé directement sur ces points-là côté carte, sans tag à choisir ici.
+const CONTENT_TYPES = {
+  geocache_sans_boite:  { label: 'Géocache sans boîte',        icon: '📍' },
+  tresors_oublies:      { label: 'Trésors oubliés',            icon: '📦' },
+  balade_decouverte:    { label: 'Balade découverte',          icon: '🚶' },
+  chasse_tresor_flavia: { label: 'Chasse au trésor de Flavia', icon: '🧭' },
+};
+const SUB_THEMES = {
+  patrimoine:   { label: 'Patrimoine',      icon: '🏰' },
+  biodiversite: { label: 'Biodiversité',    icon: '🌿' },
+  arts_metiers: { label: 'Arts & métiers',  icon: '🛠️' },
+  legendes:     { label: 'Légendes locales', icon: '👻' },
+};
+function onContentTypeChange() {
+  const type = document.getElementById('f-content-type')?.value;
+  const wrap = document.getElementById('content-subtheme-wrap');
+  if (wrap) wrap.style.display = type === 'balade_decouverte' ? 'block' : 'none';
+}
+// Icône affichée dans la liste admin : priorité au symbole de sous-thème (balade découverte),
+// sinon le symbole du type de contenu, sinon rien (aventure pas encore classée).
+function contentTypeIconFor(adv) {
+  if (adv.content_type === 'balade_decouverte' && adv.sub_theme && SUB_THEMES[adv.sub_theme]) {
+    return SUB_THEMES[adv.sub_theme].icon;
+  }
+  return CONTENT_TYPES[adv.content_type]?.icon || '';
+}
 
 // ── ÉTAPES DU SCÉNARIO (modèle unifié : transitions explicites, IDs E1/E2/E2' calculés) ──
 let scenarioSteps = [];
@@ -3366,7 +3418,7 @@ function buildTable(data) {
     </tr></thead>
     <tbody>` + data.map(a => `
       <tr>
-        <td><div class="adv-name">${a.title}</div><div class="adv-sub">${a.duration || ''} · ${a.age_range || ''}</div></td>
+        <td><div class="adv-name">${contentTypeIconFor(a) ? contentTypeIconFor(a) + ' ' : ''}${a.title}</div><div class="adv-sub">${a.duration || ''} · ${a.age_range || ''}</div></td>
         <td>${a.location || '—'}</td>
         <td><strong>${(a.steps||[]).length}</strong> étape${(a.steps||[]).length > 1 ? 's' : ''}</td>
         <td><span class="diff-pill ${a.difficulty === 'Facile' ? 'diff-easy' : a.difficulty === 'Intermédiaire' ? 'diff-medium' : 'diff-hard'}">${a.difficulty || '—'}</span></td>
@@ -3399,6 +3451,9 @@ function openModal(id) {
     document.getElementById('f-location').value = adv.location || '';
     document.getElementById('f-duration').value = adv.duration || '';
     document.getElementById('f-diff').value = adv.difficulty || 'Facile';
+    document.getElementById('f-content-type').value = adv.content_type || '';
+    document.getElementById('f-sub-theme').value = adv.sub_theme || '';
+    onContentTypeChange();
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
@@ -3453,6 +3508,9 @@ function openModal(id) {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
     ['f-title','f-desc','f-location','f-duration'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-diff').value = 'Facile';
+    document.getElementById('f-content-type').value = '';
+    document.getElementById('f-sub-theme').value = '';
+    onContentTypeChange();
     document.getElementById('f-age').value = '5–12 ans';
     document.getElementById('f-status').value = 'draft';
     resetAllImageFields();
@@ -4835,6 +4893,10 @@ async function saveAdventure(asDraft, keepModalOpen) {
     location:        document.getElementById('f-location').value,
     duration:        document.getElementById('f-duration').value,
     difficulty:      document.getElementById('f-diff').value,
+    content_type:    document.getElementById('f-content-type')?.value || null,
+    sub_theme:       document.getElementById('f-content-type')?.value === 'balade_decouverte'
+                        ? (document.getElementById('f-sub-theme')?.value || null)
+                        : null,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
     box_hint:         document.getElementById('f-box-hint').value,
