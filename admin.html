@@ -1026,14 +1026,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <label>Solution — emplacement exact <span class="label-hint">(affiché en dernier recours)</span></label>
           <textarea id="f-box-solution" rows="2" placeholder="Ex : Exactement sous le 3ème banc à gauche de la fontaine, attachée avec du scotch sous le siège..."></textarea>
         </div>
-        <div class="form-group full" id="qr-preview-section" style="display:none;">
-          <label>QR Code de fin d'aventure <span class="label-hint">(à imprimer et plastifier)</span></label>
-          <div style="background:white;padding:16px;border-radius:12px;border:1px solid #E2E8E2;text-align:center;">
-            <div id="qr-code-display"></div>
-            <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide la fin de l'aventure quand le joueur le scanne dans l'app</div>
-            <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
-          </div>
-        </div>
       </div>
 
       <div style="margin-bottom:4px;">
@@ -3430,7 +3422,6 @@ function openModal(id) {
       document.getElementById('f-global-timer-visible').value = 'true';
       document.getElementById('f-global-timer-fail').value = '';
     }
-    generateQRForAdventure(adv.id);
     // Cover
     if (adv.cover_image_url) {
       document.getElementById('cover-img-tag').src = adv.cover_image_url;
@@ -3479,8 +3470,6 @@ function openModal(id) {
     document.getElementById('f-global-timer-minutes').value = '';
     document.getElementById('f-global-timer-visible').value = 'true';
     document.getElementById('f-global-timer-fail').value = '';
-    document.getElementById('qr-preview-section').style.display = 'none';
-    document.getElementById('qr-code-display').innerHTML = '';
     scenarioSteps = []; rootUid = null; openStepUid = null;
     renderOutline();
   }
@@ -3962,6 +3951,14 @@ function renderPanelBody() {
         <label style="font-size:12px;" id="panel-answer-label">Réponse attendue</label>
         <input type="text" id="panel-answer" placeholder="La réponse correcte" oninput="syncPanelToStep()"/>
       </div>
+      <div id="panel-qr-tool-wrap" style="display:none;margin:0 0 10px;">
+        <button type="button" onclick="generateQRForStep()" style="width:100%;padding:10px;background:#F5EDD8;border:1.5px solid #D4C5A9;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">🔳 Générer le QR code à imprimer</button>
+        <div id="panel-qr-preview-section" style="display:none;margin-top:10px;background:white;padding:16px;border-radius:12px;border:1px solid #E2E8E2;text-align:center;">
+          <div id="panel-qr-display"></div>
+          <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide cette étape quand le joueur le scanne dans l'app</div>
+          <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
+        </div>
+      </div>
       <div class="form-group" style="margin:0;">
         <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
         <textarea id="panel-hint" rows="3" placeholder="Regarde en haut|C'est quelque chose de rond|C'est la fontaine du village" oninput="syncPanelToStep()"></textarea>
@@ -4066,6 +4063,7 @@ function applyInteractionTypeVisibility(type) {
     if (answerLbl) answerLbl.textContent = answerCfg.label;
     if (answerInp) answerInp.placeholder = answerCfg.placeholder;
   }
+  document.getElementById('panel-qr-tool-wrap').style.display = type === 'qr_scan' ? 'block' : 'none';
   document.getElementById('panel-type-hotspot').style.display = type === 'hotspot' ? 'block' : 'none';
   document.getElementById('panel-single-next-wrap').style.display = (type === 'continue' || type === 'free_text' || type === 'hotspot' || type === 'qr_scan') ? 'block' : 'none';
   document.getElementById('panel-choices-wrap').style.display = (type === 'quiz' || type === 'decision') ? 'block' : 'none';
@@ -4910,9 +4908,6 @@ async function saveAdventure(asDraft, keepModalOpen) {
       adventureId = created[0].id;
     }
 
-    // ── Génération automatique de l'URL du QR code de fin d'aventure (basée sur l'ID) ──
-    const satisfactionUrl = `https://flavia-flint.vercel.app/validate?id=${adventureId}`;
-    await supa('PATCH', 'adventures', { satisfaction_url: satisfactionUrl }, `?id=eq.${adventureId}`);
 
     // ── Upload des images des étapes (déjà calculées et validées en haut de la fonction) ──
     // L'original pleine résolution reste utilisé par la visionneuse plein écran (zoom) ;
@@ -5002,15 +4997,15 @@ function toggleGlobalTimer() {
 }
 
 // ── QR CODE ──
-function generateQRCode(url) {
-  const section = document.getElementById('qr-preview-section');
-  const display = document.getElementById('qr-code-display');
-  if (url && url.startsWith('http')) {
+function generateQRCode(text) {
+  const section = document.getElementById('panel-qr-preview-section');
+  const display = document.getElementById('panel-qr-display');
+  if (text) {
     section.style.display = 'block';
     display.innerHTML = '';
     try {
       new QRCode(display, {
-        text: url,
+        text: text,
         width: 200,
         height: 200,
         colorDark: '#1A2A1A',
@@ -5026,36 +5021,29 @@ function generateQRCode(url) {
   }
 }
 
-// Récupère l'URL de validation (satisfaction_url) fraîche depuis Supabase et affiche le QR code.
-// L'URL est auto-générée par saveAdventure() à partir de l'ID de l'aventure — plus de champ manuel.
-async function generateQRForAdventure(advId) {
-  if (!advId) {
-    document.getElementById('qr-preview-section').style.display = 'none';
-    document.getElementById('qr-code-display').innerHTML = '';
+// Génère le QR code à imprimer pour l'étape "scanner un QR code" actuellement
+// ouverte dans le panneau — à partir du champ "Code QR attendu" (panel-answer),
+// pas d'une URL : le joueur scanne ce texte exact pour valider l'étape.
+function generateQRForStep() {
+  const value = (document.getElementById('panel-answer')?.value || '').trim();
+  if (!value) {
+    showToast('Remplis d\'abord le champ "Code QR attendu" avant de générer le QR code.', true);
     return;
   }
-  try {
-    const rows = await supa('GET', 'adventures', null, `?id=eq.${advId}&select=satisfaction_url`);
-    const url = rows?.[0]?.satisfaction_url || '';
-    if (!url) {
-      showToast('QR code pas encore généré — enregistre le scénario une première fois.', true);
-    }
-    generateQRCode(url);
-  } catch(e) {
-    showToast('Erreur récupération du QR code : ' + e.message, true);
-  }
+  generateQRCode(value);
 }
 
 function printQRCode() {
-  const canvas = document.querySelector('#qr-code-display canvas');
+  const canvas = document.querySelector('#panel-qr-display canvas');
   if (!canvas) return;
-  const win = window.open('');
   const advTitle = document.getElementById('f-title').value || 'Aventure';
+  const stepLabel = document.getElementById('panel-id-label')?.textContent || '';
+  const win = window.open('');
   win.document.write(`
     <html><body style="text-align:center;font-family:sans-serif;padding:40px;">
       <h2>Les Aventures de Flavia Flint</h2>
-      <h3>${advTitle}</h3>
-      <p style="color:#666;">Scanne ce QR code pour valider ton aventure !</p>
+      <h3>${advTitle}${stepLabel ? ' — ' + stepLabel : ''}</h3>
+      <p style="color:#666;">Scanne ce QR code pour valider cette étape !</p>
       <img src="${canvas.toDataURL()}" style="width:250px;height:250px;"/>
       <p style="font-size:12px;color:#999;margin-top:20px;">Récits d'Aventures — recitsdaventures.com</p>
     </body></html>
