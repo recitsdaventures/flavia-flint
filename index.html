@@ -976,6 +976,22 @@
   .carousel-track::-webkit-scrollbar { display: none; }
   .carousel-track .carousel-item { width: 180px; flex-shrink: 0; cursor: pointer; scroll-snap-align: start; }
 
+  /* ── FILTRES PAR CATÉGORIE (taxonomie de contenu, au-dessus de "Toutes les
+     aventures") ── */
+  .adv-filter-bar {
+    display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding: 2px 0 12px; margin: 0 -16px; padding-left: 16px; padding-right: 16px;
+  }
+  .adv-filter-bar::-webkit-scrollbar { display: none; }
+  .adv-filter-chip {
+    flex-shrink: 0; white-space: nowrap;
+    background: var(--beige-light); color: var(--green-dark);
+    border: 1.5px solid rgba(45,74,45,0.18); border-radius: 20px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .adv-filter-chip.active { background: var(--terra); border-color: var(--terra); color: white; }
+
   /* ── LISTE AVENTURES ── */
   .home-adv-list { padding: 4px 0 20px; }
   .adv-card {
@@ -1756,6 +1772,20 @@
     width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px;
     accent-color: var(--terra); cursor: pointer;
   }
+  /* ── GÉOCACHE SANS BOÎTE : écran d'arrivée GPS + ouverture de la cache ──
+     (content_type = geocache_sans_boite, 1 lieu unique — demande Firmin 26/10) */
+  .geocache-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 30px 10px 10px; text-align: center; }
+  .geocache-chest { font-size: 64px; line-height: 1; }
+  .geocache-chest-ready { animation: geocache-pulse 1.3s ease-in-out infinite; }
+  .geocache-chest-opening { animation: geocache-open 0.8s ease forwards; }
+  @keyframes geocache-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+  @keyframes geocache-open {
+    0%   { transform: scale(1) rotate(0deg); }
+    30%  { transform: scale(1.3) rotate(-8deg); }
+    60%  { transform: scale(1.55) rotate(8deg); }
+    100% { transform: scale(1.9) rotate(0deg); opacity: 0; }
+  }
+  .geocache-dist { font-size: 14px; font-weight: 700; color: var(--green-dark); }
 </style>
 </head>
 <body>
@@ -2145,6 +2175,13 @@
       <!-- Toutes les aventures -->
       <div class="home-section-new" style="padding-top:4px;">
         <div class="home-section-label"><img class="label-compass" src="icon-compass.webp" alt=""/>Toutes les aventures<span class="label-line"></span></div>
+      </div>
+      <div class="adv-filter-bar" id="adv-filter-bar">
+        <button type="button" class="adv-filter-chip active" data-cat="all" onclick="setAdventureCategoryFilter('all')">Tous</button>
+        <button type="button" class="adv-filter-chip" data-cat="geocache_sans_boite" onclick="setAdventureCategoryFilter('geocache_sans_boite')">📍 Géocaches</button>
+        <button type="button" class="adv-filter-chip" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')">📦 Trésors oubliés</button>
+        <button type="button" class="adv-filter-chip" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')">🚶 Balades découverte</button>
+        <button type="button" class="adv-filter-chip" data-cat="chasse_tresor_flavia" onclick="setAdventureCategoryFilter('chasse_tresor_flavia')">🧭 Chasses de Flavia</button>
       </div>
       <div class="home-adv-list">
         <div id="adventure-cards-list">
@@ -2876,6 +2913,11 @@ let playerMarker     = null;
 let playerPos        = null;
 let geoWatcher       = null;
 let gpsAutoUnlocked  = false;
+// Géocache sans boîte (content_type dédié, 1 lieu unique) : même esprit que
+// gpsAutoUnlocked/geoWatcher ci-dessus, mais volontairement séparés pour ne
+// jamais interagir avec la logique boussole multi-lieux existante.
+let _geocacheWatcher  = null;
+let _geocacheUnlocked = false;
 // Boussole dynamique (slide fusionnée boussole+arrivée) : cap du joueur (device
 // orientation) et relèvement courant vers la cible GPS, combinés pour faire
 // tourner l'aiguille (cf. updateCompassNeedle()). _compassActivatedThisSession
@@ -3651,6 +3693,17 @@ function renderCarousel() {
 // ══════════════════════════════════════════
 // ÉCRAN ACCUEIL — CARDS
 // ══════════════════════════════════════════
+// Filtre de catégorie actif pour "Toutes les aventures" (barre de pills au-dessus de
+// la liste) — ne touche pas au carrousel Nouveautés, qui reste toutes catégories confondues.
+let _adventureCategoryFilter = 'all';
+function setAdventureCategoryFilter(cat) {
+  _adventureCategoryFilter = cat;
+  document.querySelectorAll('#adv-filter-bar .adv-filter-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  renderAdventureCards();
+}
+
 function renderAdventureCards() {
   const container = document.getElementById('adventure-cards-list');
   if (!adventures.length) {
@@ -3658,7 +3711,15 @@ function renderAdventureCards() {
     renderCarousel();
     return;
   }
-  container.innerHTML = adventures.map(adv => {
+  const filtered = _adventureCategoryFilter === 'all'
+    ? adventures
+    : adventures.filter(adv => adv.content_type === _adventureCategoryFilter);
+  if (!filtered.length) {
+    container.innerHTML = '<div class="adv-card-empty">Aucune aventure dans cette catégorie pour le moment.</div>';
+    renderCarousel();
+    return;
+  }
+  container.innerHTML = filtered.map(adv => {
     return `
       <div class="adv-card" onclick="selectAdventureFromCard('${adv.id}')" style="
         background:#E9D4A3 url('card-parchment.webp') repeat;
@@ -4243,6 +4304,7 @@ async function startAdventure() {
   }
 
   gpsAutoUnlocked  = false;
+  _geocacheUnlocked = false;
   window._slideHistory = [];
   window._currentSlideSnapshot = null;
   window._historyMode = false;
@@ -4251,6 +4313,7 @@ async function startAdventure() {
   window._currentSlideMode = null;
   { const backBtn = document.getElementById('adv-immersive-back-btn'); if (backBtn) backBtn.style.display = 'none'; }
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
 
   // Trier les étapes par order_num (important pour les scénarios à embranchements)
   currentAdv.steps.sort((a, b) => a.order_num - b.order_num);
@@ -4403,6 +4466,11 @@ function stepHasGps(step) {
 function renderStepEntry() {
   const step = currentStep();
   if (!step) { renderStoryMode(); return; }
+  if (currentAdv?.content_type === 'geocache_sans_boite' && currentAdv?.locations_count === 1
+      && currentAdv?.main_lat != null && currentAdv?.main_lng != null && !_geocacheUnlocked) {
+    renderGeocacheArrivalMode();
+    return;
+  }
   if (!stepHasGps(step)) { renderEnigmeMode(); return; }
   const isFirst = currentStepIndex === 0;
   const hasIntro = isFirst && !!(currentAdv.intro_image_url || currentAdv.intro_text);
@@ -4739,6 +4807,7 @@ function startGeolocation(targetLat, targetLng, radiusMeters) {
   // GPS réellement en cours sur la vraie étape du joueur.
   if (window._historyMode) return;
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
   _lastBearingToTarget = null;
   if (!navigator.geolocation) return;
 
@@ -4777,6 +4846,89 @@ function startGeolocation(targetLat, targetLng, radiusMeters) {
     },
     { enableHighAccuracy: true, maximumAge: 3000 }
   );
+}
+
+// ── GÉOCACHE SANS BOÎTE (content_type dédié, 1 lieu unique) ──
+// Écran d'arrivée minimal : distance au point (main_lat/main_lng/main_radius,
+// saisis dans l'admin au niveau de l'aventure), un coffre qui se réveille une
+// fois dans le rayon, et son animation d'ouverture au tap — puis renderRewardMode()
+// exactement comme n'importe quelle fin d'étape (XP + badge), car c'est la seule
+// et unique étape de ce type d'aventure.
+function renderGeocacheArrivalMode() {
+  const step = currentStep();
+  if (!step) return;
+  const lat    = currentAdv.main_lat;
+  const lng    = currentAdv.main_lng;
+  const radius = currentAdv.main_radius || 50;
+
+  if (!window._historyMode) {
+    window._stepAnswerable = false;
+    _geocacheUnlocked = false;
+  }
+  enterSlide('compass');
+
+  document.getElementById('mode-compass').innerHTML = `
+    <div class="adv-nb-wrap">
+      ${advNbImageHtml(step.image_url, { thumb: step.image_thumb_url })}
+      <div class="adv-nb-paper">
+        <div class="geocache-wrap">
+          ${(step.enigme || step.title) ? `<div class="adv-nb-text" style="position:static;">${escapeHtml(step.enigme || step.title)}</div>` : ''}
+          <div class="geocache-chest" id="geocache-chest">📦</div>
+          <div class="geocache-dist" id="geocache-dist-live">📍 Rapproche-toi du point indiqué…</div>
+          <button type="button" class="btn-primary" id="geocache-open-btn" style="display:none;" onclick="openGeocache();">🗝️ Ouvrir la cache</button>
+        </div>
+      </div>
+    </div>`;
+  showMode('compass');
+  startGeocacheGeolocation(lat, lng, radius);
+  saveCurrentProgress();
+}
+
+// Watcher GPS dédié — volontairement séparé de startGeolocation() (boussole
+// multi-lieux) : pas de cap/aiguille ici, juste une distance et un seuil de
+// déblocage, pour ne jamais interagir avec cette logique-là.
+function startGeocacheGeolocation(targetLat, targetLng, radiusMeters) {
+  if (window._historyMode) return;
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
+  const distEl = document.getElementById('geocache-dist-live');
+  if (!navigator.geolocation) {
+    if (distEl) distEl.textContent = 'GPS indisponible sur cet appareil.';
+    return;
+  }
+  const update = (lat, lng) => {
+    const dist = getDistance(lat, lng, targetLat, targetLng);
+    const el = document.getElementById('geocache-dist-live');
+    if (el) el.textContent = dist <= radiusMeters ? '🎯 Tu y es !' : `📍 Encore ${Math.round(dist)} m`;
+    if (dist <= radiusMeters && !_geocacheUnlocked) {
+      _geocacheUnlocked = true;
+      vibrateFeedback(50);
+      soundArrival();
+      if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
+      const btn   = document.getElementById('geocache-open-btn');
+      const chest = document.getElementById('geocache-chest');
+      if (btn) btn.style.display = 'block';
+      if (chest) chest.classList.add('geocache-chest-ready');
+    }
+  };
+  if (playerPos) update(playerPos.lat, playerPos.lng);
+  _geocacheWatcher = navigator.geolocation.watchPosition(
+    pos => { playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }; update(pos.coords.latitude, pos.coords.longitude); },
+    () => { const el = document.getElementById('geocache-dist-live'); if (el) el.textContent = 'GPS indisponible — vérifie que la localisation est activée.'; },
+    { enableHighAccuracy: true, maximumAge: 3000 }
+  );
+}
+
+// Tap sur "Ouvrir la cache" : petite animation puis écran de récompense classique
+// (XP + badge configurés sur l'aventure) — currentStepIndex est déjà sur la seule
+// étape de l'aventure, donc renderRewardMode() la traite comme la dernière.
+function openGeocache() {
+  const chest = document.getElementById('geocache-chest');
+  const btn   = document.getElementById('geocache-open-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  if (chest) chest.classList.add('geocache-chest-opening');
+  vibrateFeedback([100, 50, 100]);
+  soundSuccess();
+  setTimeout(() => { renderRewardMode(); }, 850);
 }
 
 // ── MATHS GPS ──
@@ -4996,6 +5148,7 @@ function transitionCompassToEnigme() {
   // réinitialiser les indices/minuteur de la vraie étape en cours.
   if (!window._historyMode) {
     if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
     currentHintLevel = 0;
     hintXpPenalty    = 0;
   }
@@ -5032,6 +5185,7 @@ function renderEnigmeMode() {
   // réinitialiser les indices de la vraie étape en cours.
   if (!window._historyMode) {
     if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
     currentHintLevel = 0;
     hintXpPenalty    = 0;
   }
@@ -5662,6 +5816,7 @@ function nextStep() {
     window._currentStepId = currentAdv.steps[currentStepIndex].id;
   }
   gpsAutoUnlocked = false;
+  _geocacheUnlocked = false;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   renderStepEntry();
 }
@@ -5704,6 +5859,7 @@ function goToNextStep(choiceIndex) {
   }
 
   gpsAutoUnlocked = false;
+  _geocacheUnlocked = false;
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   renderStepEntry();
 }
@@ -8646,6 +8802,7 @@ function goToScreen(name, btn) {
     localStorage.removeItem('ff_current_adventure');
     stopAllTimers();
     if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
   }
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -8683,6 +8840,7 @@ function goBack() {
   localStorage.removeItem('ff_current_adventure');
   stopAllTimers();
   if (geoWatcher) { navigator.geolocation.clearWatch(geoWatcher); geoWatcher = null; }
+  if (_geocacheWatcher) { navigator.geolocation.clearWatch(_geocacheWatcher); _geocacheWatcher = null; }
   goToScreen('home', document.getElementById('nav-home'));
 }
 
