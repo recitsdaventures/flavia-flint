@@ -4922,6 +4922,7 @@ function enigmeBodyHtml(step) {
           <div style="font-size:13px;color:#991B1B;margin-bottom:10px;">📸 Prends en photo l'endroit où tu penses que la boîte aurait dû se trouver.</div>
           <input type="file" accept="image/*" capture="environment" id="qr-lost-box-photo-input" style="display:none;" onchange="handleLostBoxPhoto(event)"/>
           <button type="button" id="btn-qr-take-photo" onclick="event.stopPropagation(); document.getElementById('qr-lost-box-photo-input').click();" style="width:100%;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📷 Prendre la photo</button>
+          <button type="button" onclick="event.stopPropagation(); skipLostBoxReport();" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;color:#991B1B;font-size:12px;text-decoration:underline;cursor:pointer;">Pas de connexion / pas de photo possible — passer</button>
         </div>
       </div>`;
   }
@@ -8212,6 +8213,14 @@ function toggleLostBoxPanel() {
   if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
+// Repli total si la photo ne peut pas être envoyée (pas de connexion sur le terrain,
+// cf. le bug d'autorisation Storage corrigé le 25/10) : aucun signalement n'est créé,
+// mais l'étape se valide quand même pour que le joueur termine l'aventure et garde son badge.
+function skipLostBoxReport() {
+  stopInlineQRScan();
+  renderRewardMode();
+}
+
 async function handleLostBoxPhoto(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -8253,7 +8262,7 @@ async function handleLostBoxPhoto(event) {
     renderRewardMode();
   } catch (e) {
     console.error('Erreur signalement boîte perdue:', e);
-    alert('Erreur lors de l\'envoi de la photo. Réessaie.');
+    alert('Erreur lors de l\'envoi de la photo. Réessaie, ou utilise le lien "pas de connexion" juste en dessous pour continuer sans envoyer de signalement.');
     if (btn) { btn.disabled = false; btn.textContent = '📷 Prendre la photo'; }
   }
 }
