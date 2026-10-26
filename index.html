@@ -631,7 +631,16 @@
     background: rgba(0,0,0,0.1); color: var(--text-mid); font-size: 16px;
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   }
-  .badges-modal-card .badges-grid { overflow-y: auto; margin-bottom: 0; padding-bottom: 4px; }
+  .badges-modal-card .badges-grid { margin-bottom: 0; }
+  .badges-modal-scroll { overflow-y: auto; flex: 1; padding-bottom: 4px; }
+  /* En-têtes de catégorie dans "Tous mes badges" — classement du plus prestigieux
+     au plus simple (demande Firmin 25/10), même logique de regroupement que la
+     taxonomie de contenu de l'admin. */
+  .badges-category-group { margin-bottom: 18px; }
+  .badges-category-title {
+    font-size: 12px; font-weight: 700; color: var(--text-mid);
+    text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px; opacity: 0.85;
+  }
 
   /* Fiche "profil public" d'un autre joueur — ouverte depuis le classement
      (podium + lignes). Lecture seule : aucune action de modification. */
@@ -5799,6 +5808,37 @@ function leaveGuestMode() {
 const BADGE_ROW_LIMIT = 5;
 let _allScenarioBadges = [];
 
+// Catégories de badges, du plus prestigieux au plus simple (classement Firmin 25/10,
+// aligné sur la taxonomie de contenu ajoutée côté admin). "aventure_prof_flint" vient
+// des livrets physiques (book_participations), pas de la table adventures — les deux
+// univers sont réunis ici uniquement pour l'affichage.
+const BADGE_CATEGORY_ORDER = ['histoire_flavia', 'chasse_tresor_flavia', 'aventure_prof_flint', 'balade_decouverte', 'tresors_oublies', 'geocache_sans_boite', 'autres'];
+const BADGE_CATEGORY_LABELS = {
+  histoire_flavia:      '📖 Histoire de Flavia Flint',
+  chasse_tresor_flavia: '🧭 Chasses aux trésors de Flavia',
+  aventure_prof_flint:  '🎩 Les aventures du Professeur Flint',
+  balade_decouverte:    '🚶 Balades découverte',
+  tresors_oublies:      '📦 Trésors oubliés',
+  geocache_sans_boite:  '📍 Géocaches sans boîte',
+  autres:               '🏅 Autres badges'
+};
+// Regroupe une liste de badges { ..., category } par catégorie, dans l'ordre fixe
+// ci-dessus, chaque groupe précédé de son nom. tileFn rend une tuile individuelle —
+// passé en paramètre car le profil perso (badgeTileHtml, avec zoom par idx) et le
+// profil public d'un autre joueur (publicBadgeTileHtml, sans idx) ont des rendus
+// différents.
+function groupedBadgesHtml(badges, tileFn) {
+  return BADGE_CATEGORY_ORDER.map(cat => {
+    const items = badges.filter(b => (b.category || 'autres') === cat);
+    if (!items.length) return '';
+    return `
+      <div class="badges-category-group">
+        <div class="badges-category-title">${BADGE_CATEGORY_LABELS[cat]}</div>
+        <div class="badges-grid">${items.map(tileFn).join('')}</div>
+      </div>`;
+  }).join('');
+}
+
 // b : { imageUrl, icon, label } — forme commune aux badges de scénario
 // (adventure_completions) et aux tampons de chapitre Flavia Flint (player_unlocked_chapters).
 // idx : position de ce badge dans _allScenarioBadges — sert à le retrouver au clic
@@ -5846,6 +5886,10 @@ function renderScenarioBadges(badges) {
 function openBadgesModal() {
   if (!_allScenarioBadges.length) return;
   closeBadgesModal();
+  // On garde l'index d'origine (_idx) dans _allScenarioBadges avant de filtrer/regrouper
+  // par catégorie, sinon openBadgeZoom(idx) pointerait sur le mauvais badge une fois
+  // l'ordre d'affichage changé.
+  const withIdx = _allScenarioBadges.map((b, i) => ({ ...b, _idx: i }));
   const overlay = document.createElement('div');
   overlay.id = 'badges-modal-overlay';
   overlay.className = 'badges-modal-overlay';
@@ -5855,7 +5899,7 @@ function openBadgesModal() {
         <div class="badges-modal-title">🏅 Mes badges (${_allScenarioBadges.length})</div>
         <button type="button" class="badges-modal-close" onclick="closeBadgesModal()">✕</button>
       </div>
-      <div class="badges-grid">${_allScenarioBadges.map((b, i) => badgeTileHtml(b, i)).join('')}</div>
+      <div class="badges-modal-scroll">${groupedBadgesHtml(withIdx, b => badgeTileHtml(b, b._idx))}</div>
     </div>`;
   document.body.appendChild(overlay);
   document.body.style.overflow = 'hidden';
@@ -5895,7 +5939,8 @@ async function loadProfile() {
       progressData,
       scenarioCompletions,
       readChapters,
-      partnerBadges
+      partnerBadges,
+      bookCompletions
     ] = await Promise.all([
       supaFetch(`players?id=eq.${playerId}`),
       supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
@@ -5905,13 +5950,19 @@ async function loadProfile() {
         .catch(e => { console.error('Erreur chargement progression:', e); return []; }),
       // select élargi (au lieu de deux requêtes séparées) : ce même résultat sert à la
       // fois à la grille de badges ci-dessous et à l'historique des 5 dernières
-      // aventures plus bas — un seul aller-retour réseau pour les deux.
-      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url)&order=completed_at.desc`)
+      // aventures plus bas — un seul aller-retour réseau pour les deux. content_type/
+      // sub_theme ajoutés pour classer le badge dans la bonne catégorie (25/10).
+      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url,content_type,sub_theme)&order=completed_at.desc`)
         .catch(e => { console.error('Erreur chargement badges scénarios:', e); return []; }),
       supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
         .catch(e => { console.error('Erreur chargement chapitres Flavia lus:', e); return []; }),
       supaFetch(`player_partner_badges?player_id=eq.${playerId}&select=*,partner_qr_codes(badge_name,partner_name,badge_image_url,xp_reward)&order=scanned_at.desc`)
         .catch(e => { console.error('Erreur badges partenaires:', e); return []; }),
+      // Livrets Professeur Flint terminés — catégorie "aventure_prof_flint" de la
+      // collection de badges (demande Firmin 25/10), même si ce n'est pas dans la
+      // table adventures.
+      supaFetch(`book_participations?player_id=eq.${playerId}&status=eq.completed&select=*,professor_flint_books(title,cover_image_url,cover_thumb_url,emoji)&order=completed_at.desc`)
+        .catch(e => { console.error('Erreur chargement livrets Professeur Flint terminés:', e); return []; }),
       checkAndAwardTitles()
     ]);
 
@@ -5980,7 +6031,8 @@ async function loadProfile() {
       date: c.completed_at ? new Date(c.completed_at) : new Date(0),
       imageUrl: c.adventures?.badge_thumb_url || c.adventures?.badge_image_url || '',
       icon: '🏅',
-      label: c.adventures?.badge_name || c.adventures?.title || 'Badge'
+      label: c.adventures?.badge_name || c.adventures?.title || 'Badge',
+      category: c.adventures?.content_type || 'autres'
     }));
     const chapterBadgeEntries = (readChapters || [])
       .filter(u => u.flavia_chapters)
@@ -5988,10 +6040,28 @@ async function loadProfile() {
         date: u.unlocked_at ? new Date(u.unlocked_at) : new Date(0),
         imageUrl: u.flavia_chapters?.stamp_image_url || '',
         icon: u.flavia_chapters?.stamp_icon || '🧭',
-        label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre'
+        label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre',
+        category: 'histoire_flavia'
       }));
-    // Du plus récent au plus ancien, toutes sources de badges confondues.
-    const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries]
+    // Un badge par livret Professeur Flint terminé (même logique anti-doublon que
+    // les scénarios : un seul badge par livre, même rejoué/refait).
+    const seenBookIds = new Set();
+    const uniqueBookCompletions = (bookCompletions || []).filter(c => {
+      if (!c.book_id || seenBookIds.has(c.book_id)) return false;
+      seenBookIds.add(c.book_id);
+      return true;
+    });
+    const bookBadgeEntries = uniqueBookCompletions.map(c => ({
+      date: c.completed_at ? new Date(c.completed_at) : new Date(0),
+      imageUrl: c.professor_flint_books?.cover_thumb_url || c.professor_flint_books?.cover_image_url || '',
+      icon: c.professor_flint_books?.emoji || '🎩',
+      label: c.professor_flint_books?.title || 'Livret Professeur Flint',
+      category: 'aventure_prof_flint'
+    }));
+    // Du plus récent au plus ancien, toutes sources de badges confondues — cet ordre
+    // sert à la rangée de prévisualisation (profile-badges-grid) ; la fenêtre "Tous mes
+    // badges" les réorganise ensuite par catégorie (cf. groupedBadgesHtml).
+    const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries]
       .sort((a, b) => b.date - a.date);
 
     document.getElementById('profile-stat-badges').textContent = allBadgeEntries.length;
@@ -7610,20 +7680,22 @@ async function openPlayerProfile(playerId) {
   overlay.addEventListener('click', e => { if (e.target === overlay) closePlayerProfile(); });
 
   try {
-    const [players, allPlayers, completions, readChapters] = await Promise.all([
+    const [players, allPlayers, completions, readChapters, bookCompletions] = await Promise.all([
       supaFetch(`players_public?id=eq.${playerId}&select=id,pseudo,avatar_emoji,total_xp,team_name,city,bio`),
       supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
-      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url)&order=completed_at.desc`)
+      supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url,content_type,sub_theme)&order=completed_at.desc`)
         .catch(e => { console.error('Erreur chargement aventures du joueur:', e); return []; }),
       supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
-        .catch(e => { console.error('Erreur chargement chapitres du joueur:', e); return []; })
+        .catch(e => { console.error('Erreur chargement chapitres du joueur:', e); return []; }),
+      supaFetch(`book_participations?player_id=eq.${playerId}&status=eq.completed&select=*,professor_flint_books(title,cover_image_url,cover_thumb_url,emoji)&order=completed_at.desc`)
+        .catch(e => { console.error('Erreur chargement livrets Professeur Flint du joueur:', e); return []; })
     ]);
     const player = players[0];
     if (!player) {
       renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Ce profil est introuvable.</div>');
       return;
     }
-    renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters));
+    renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions));
   } catch (e) {
     console.error('Erreur chargement profil joueur:', e);
     renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Impossible de charger ce profil pour le moment.</div>');
@@ -7646,7 +7718,7 @@ function closePlayerProfile() {
   }
 }
 
-function buildPlayerProfileHtml(player, allPlayers, completions, readChapters) {
+function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions) {
   const xp      = player.total_xp || 0;
   const rank    = allPlayers.findIndex(p => p.id === player.id) + 1;
   const cityLine = player.city ? `<div class="player-profile-sub">📍 ${escapeHtml(player.city)}</div>` : '';
@@ -7661,7 +7733,8 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters) {
     date: c.completed_at ? new Date(c.completed_at) : new Date(0),
     imageUrl: c.adventures?.badge_thumb_url || c.adventures?.badge_image_url || '',
     icon: '🏅',
-    label: c.adventures?.badge_name || c.adventures?.title || 'Badge'
+    label: c.adventures?.badge_name || c.adventures?.title || 'Badge',
+    category: c.adventures?.content_type || 'autres'
   }));
   const chapterBadgeEntries = (readChapters || [])
     .filter(u => u.flavia_chapters)
@@ -7669,12 +7742,28 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters) {
       date: u.unlocked_at ? new Date(u.unlocked_at) : new Date(0),
       imageUrl: u.flavia_chapters?.stamp_image_url || '',
       icon: u.flavia_chapters?.stamp_icon || '🧭',
-      label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre'
+      label: u.flavia_chapters?.stamp_text || u.flavia_chapters?.title || 'Chapitre',
+      category: 'histoire_flavia'
     }));
-  const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries].sort((a, b) => b.date - a.date);
+  const seenBookIds = new Set();
+  const uniqueBookCompletions = (bookCompletions || []).filter(c => {
+    if (!c.book_id || seenBookIds.has(c.book_id)) return false;
+    seenBookIds.add(c.book_id);
+    return true;
+  });
+  const bookBadgeEntries = uniqueBookCompletions.map(c => ({
+    date: c.completed_at ? new Date(c.completed_at) : new Date(0),
+    imageUrl: c.professor_flint_books?.cover_thumb_url || c.professor_flint_books?.cover_image_url || '',
+    icon: c.professor_flint_books?.emoji || '🎩',
+    label: c.professor_flint_books?.title || 'Livret Professeur Flint',
+    category: 'aventure_prof_flint'
+  }));
+  const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries].sort((a, b) => b.date - a.date);
 
+  // Regroupées par catégorie, du plus prestigieux au plus simple (même classement
+  // que sur son propre profil — demande Firmin 25/10).
   const badgesHtml = allBadgeEntries.length
-    ? `<div class="badges-grid" style="margin-bottom:0;">${allBadgeEntries.map(publicBadgeTileHtml).join('')}</div>`
+    ? groupedBadgesHtml(allBadgeEntries, publicBadgeTileHtml)
     : '<div style="color:#9CA3AF;font-size:13px;padding:6px 0;">Aucun badge encore.</div>';
 
   const history = (completions || []).slice(0, 5);
