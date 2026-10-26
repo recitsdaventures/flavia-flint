@@ -2607,29 +2607,7 @@
         <div style="text-align:center;font-size:13px;color:#9CA3AF;margin-top:8px;" id="star-label">Appuie sur une étoile</div>
       </div>
 
-      <!-- Question 2 : Tampons -->
-      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
-        <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:4px;">
-          🔖 Combien de tampons as-tu récupérés ?
-        </div>
-        <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px;">Dans la boîte de fin d'aventure</div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
-          <button onclick="adjustStamps(-1)" style="
-            width:40px;height:40px;border-radius:50%;
-            background:#F5EDD8;border:1.5px solid #D4C5A9;
-            font-size:20px;cursor:pointer;font-weight:700;">−</button>
-          <div style="text-align:center;">
-            <div style="font-size:36px;font-weight:800;color:#2D4A2D;" id="stamps-count">0</div>
-            <div style="font-size:12px;color:#9CA3AF;">tampon(s)</div>
-          </div>
-          <button onclick="adjustStamps(1)" style="
-            width:40px;height:40px;border-radius:50%;
-            background:#2D4A2D;border:none;
-            font-size:20px;cursor:pointer;color:white;font-weight:700;">+</button>
-        </div>
-      </div>
-
-      <!-- Question 3 : Commentaire libre -->
+      <!-- Question 2 : Commentaire libre -->
       <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">
           💬 Un commentaire ? (optionnel)
@@ -4930,6 +4908,12 @@ function enigmeBodyHtml(step) {
       <div class="adv-nb-freetext" id="qr-feedback-wrap" style="display:none;">
         <div class="error-msg" id="error-msg">Ce n'est pas le bon code… cherche encore !</div>
         <div id="hint-section"></div>
+        <button type="button" id="btn-qr-lost-box" onclick="event.stopPropagation(); toggleLostBoxPanel();" style="width:100%;margin-top:10px;padding:12px;background:none;border:1.5px solid #DC2626;border-radius:12px;color:#DC2626;font-size:13px;font-weight:600;cursor:pointer;">🚨 Signaler la boîte perdue</button>
+        <div id="qr-lost-box-panel" style="display:none;margin-top:10px;background:#FFF7F4;border:1px solid #FECACA;border-radius:12px;padding:12px 14px;">
+          <div style="font-size:13px;color:#991B1B;margin-bottom:10px;">📸 Prends en photo l'endroit où tu penses que la boîte aurait dû se trouver.</div>
+          <input type="file" accept="image/*" capture="environment" id="qr-lost-box-photo-input" style="display:none;" onchange="handleLostBoxPhoto(event)"/>
+          <button type="button" id="btn-qr-take-photo" onclick="event.stopPropagation(); document.getElementById('qr-lost-box-photo-input').click();" style="width:100%;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📷 Prendre la photo</button>
+        </div>
       </div>`;
   }
 
@@ -5307,8 +5291,8 @@ async function renderRewardMode() {
     stopAllTimers();
 
     // Google Analytics — placé ici plutôt que dans showFinalReward() car ce bloc
-    // s'exécute pour TOUTE fin d'aventure (avec ou sans QR/satisfaction_url),
-    // alors que showFinalReward() n'est appelé que dans le flux QR.
+    // s'exécute pour TOUTE fin d'aventure, alors que showFinalReward() n'est
+    // appelé que depuis le partage réseaux sociaux de l'écran de récompenses.
     if (typeof gtag === 'function') {
       gtag('event', 'adventure_completed', {
         adventure_id: currentAdv?.id,
@@ -5331,6 +5315,7 @@ async function renderRewardMode() {
 
   // Chrono : calcul durée et sauvegarde adventure_completions si dernière étape
   let formattedTime = '0:00';
+  let compassesEarned = 0;
   if (isLast) {
     const durationSeconds = Math.floor((Date.now() - (window._adventureStartTime || Date.now())) / 1000);
     const minutes = Math.floor(durationSeconds / 60);
@@ -5367,6 +5352,7 @@ async function renderRewardMode() {
         // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
         // — uniquement à la première complétion, pas de gain infini au replay.
         awardCompasses(userId, COMPASS_PER_ADVENTURE);
+        compassesEarned = COMPASS_PER_ADVENTURE;
       } else {
         console.log('[finishAdventure] Scénario déjà complété par ce joueur — boussoles non réattribuées (anti-doublon)');
       }
@@ -5383,41 +5369,6 @@ async function renderRewardMode() {
     soundFanfare();
   }
 
-  // Flux QR : écran intermédiaire avant les résultats
-  if (isLast && currentAdv.satisfaction_url) {
-    document.getElementById('mode-reward').innerHTML = `
-      <div class="reward-burst">🎉</div>
-      <div class="reward-title">Aventure terminée !</div>
-      <div class="reward-sub">Il ne te reste plus qu'à trouver la boîte secrète et scanner le QR code !</div>
-      <div style="width:100%;margin-top:16px;">
-        <button class="btn-primary" onclick="openQRScanner()">📷 Scanner le QR code de fin</button>
-      </div>
-      <div id="box-hint-section" style="width:100%;margin-top:12px;">
-        <button onclick="showBoxHint()" id="btn-box-hint" style="width:100%;padding:12px;background:none;border:1.5px solid #E8A020;border-radius:12px;color:#92400E;font-size:13px;font-weight:600;cursor:pointer;">💡 Indice — où est la boîte ?</button>
-        <div id="box-hint-content" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 14px;margin-top:8px;font-size:13px;color:#92400E;line-height:1.5;">
-          ${currentAdv.box_hint || 'La boîte est cachée près du dernier lieu de l\'aventure. Regarde bien autour de toi !'}
-        </div>
-      </div>
-      <div id="box-solution-section" style="width:100%;margin-top:8px;display:none;">
-        <button onclick="showBoxSolution()" id="btn-box-solution" style="width:100%;padding:12px;background:none;border:1.5px solid #C4622D;border-radius:12px;color:#C4622D;font-size:13px;font-weight:600;cursor:pointer;">🔍 Solution — emplacement exact</button>
-        <div id="box-solution-content" style="display:none;background:#FFF7F4;border:1px solid #FECACA;border-radius:12px;padding:12px 14px;margin-top:8px;font-size:13px;color:#991B1B;line-height:1.5;">
-          ${currentAdv.box_solution || 'Contacte l\'organisateur si tu ne trouves pas la boîte.'}
-        </div>
-      </div>
-      <div id="box-skip-section" style="width:100%;margin-top:8px;display:none;">
-        <button onclick="showFinalReward()" style="width:100%;padding:12px;background:none;border:1.5px solid #D4C5A9;border-radius:12px;color:#6B7280;font-size:13px;cursor:pointer;">⏭ La boîte est introuvable — voir mes résultats quand même</button>
-      </div>
-      <div id="box-report-section" style="width:100%;margin-top:8px;display:none;">
-        <button onclick="toggleReportForm()" style="width:100%;padding:12px;background:none;border:1.5px solid #DC2626;border-radius:12px;color:#DC2626;font-size:13px;cursor:pointer;font-weight:600;">🚨 Signaler la boîte perdue</button>
-        <div id="report-form" style="display:none;margin-top:10px;">
-          <textarea id="report-comment" placeholder="Décris où tu as cherché, depuis quand tu es là..." style="width:100%;padding:10px 12px;border:1.5px solid #FECACA;border-radius:10px;font-size:13px;resize:none;height:80px;background:#FFF7F4;color:#1A2A1A;font-family:inherit;box-sizing:border-box;"></textarea>
-          <button onclick="sendBoxReport()" style="width:100%;margin-top:8px;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📤 Envoyer le signalement</button>
-        </div>
-      </div>`;
-    showMode('reward');
-    return;
-  }
-
   const flaviaMsg = isLast && currentAdv.outro_text
     ? currentAdv.outro_text
     : 'Flavia est fière de toi, aventurier !';
@@ -5430,6 +5381,9 @@ async function renderRewardMode() {
   const xpLabel = earnedXp > 0
     ? `<div class="xp-pill">⭐ +${earnedXp} XP gagnés${totalHintPenalty > 0 ? ` <span style="font-size:11px;opacity:.7;">(−${totalHintPenalty} indices)</span>` : ''}</div>`
     : '';
+  const compassLabel = (isLast && compassesEarned > 0)
+    ? `<div class="xp-pill">🧭 +${compassesEarned} boussoles gagnées</div>`
+    : '';
 
   document.getElementById('mode-reward').innerHTML = `
     <div class="reward-burst">${isLast ? '🏆' : '🎉'}</div>
@@ -5440,6 +5394,7 @@ async function renderRewardMode() {
       <div class="bubble flavia">${flaviaMsg}</div>
     </div>
     ${xpLabel}
+    ${compassLabel}
     ${isLast && currentAdv?.badge_name ? `
       <div class="badge-hex">${(currentAdv.badge_thumb_url || currentAdv.badge_image_url) ? `<img src="${currentAdv.badge_thumb_url || currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
       <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
@@ -5450,7 +5405,7 @@ async function renderRewardMode() {
           <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
           <div style="font-size:13px;color:#6B7280;margin-top:6px;">${window._adventureAttempts || 0} essai${(window._adventureAttempts || 0) > 1 ? 's' : ''} raté${(window._adventureAttempts || 0) > 1 ? 's' : ''}</div>
         </div>
-        <button class="btn-primary" onclick="goBack()">← Retour aux aventures</button>`
+        <button class="btn-primary" onclick="openSatisfactionScreen()">Continuer →</button>`
         : `<button class="btn-primary" onclick="goToNextStep()">Continuer →</button>`}
     </div>
     ${isLast && isGuest() ? `
@@ -5637,47 +5592,6 @@ async function markAsShared(xpAmount) {
   showToast(`🎉 +${xp} XP pour le partage !`);
 }
 
-
-function showBoxHint() {
-  document.getElementById('box-hint-content').style.display = 'block';
-  document.getElementById('btn-box-hint').style.display = 'none';
-  document.getElementById('box-solution-section').style.display = 'block';
-}
-
-function showBoxSolution() {
-  document.getElementById('box-solution-content').style.display = 'block';
-  document.getElementById('btn-box-solution').style.display = 'none';
-  document.getElementById('box-skip-section').style.display = 'block';
-  document.getElementById('box-report-section').style.display = 'block';
-}
-
-function toggleReportForm() {
-  const form = document.getElementById('report-form');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-async function sendBoxReport() {
-  const comment = document.getElementById('report-comment').value.trim();
-  const user = JSON.parse(localStorage.getItem('ff_user') || '{}');
-  if (!comment) { alert('Écris un commentaire avant d\'envoyer.'); return; }
-  try {
-    await supaFetch('box_reports', {
-      method: 'POST',
-      body: {
-        adventure_id: currentAdv.id,
-        player_id: user.id || null,
-        comment,
-        reported_at: new Date().toISOString()
-      }
-    });
-    document.getElementById('report-form').innerHTML = `
-      <div style="text-align:center;padding:12px;color:#059669;font-weight:600;">
-        ✅ Signalement envoyé ! Merci, on va vérifier rapidement.
-      </div>`;
-  } catch(e) {
-    alert('Erreur envoi signalement. Réessaie.');
-  }
-}
 
 // ── SAUVEGARDE PROGRESSION ──
 async function saveProgress(step, xpOverride) {
@@ -8200,6 +8114,61 @@ function scanInlineQRFrame(step) {
   }
 }
 
+// ── SIGNALER LA BOÎTE PERDUE (étape "qr_scan") : repli quand le joueur ne
+// trouve pas/plus la boîte physique — une photo du lieu suffit à valider
+// l'étape (pas d'attente d'une validation admin), et le signalement (avec sa
+// photo) reste consultable dans admin.html pour que Firmin aille la réparer.
+function toggleLostBoxPanel() {
+  const panel = document.getElementById('qr-lost-box-panel');
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function handleLostBoxPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const step = currentStep();
+  if (!step || !window._stepAnswerable) return;
+
+  const btn = document.getElementById('btn-qr-take-photo');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi en cours...'; }
+
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const filename = `box-reports/${currentAdv?.id || 'adv'}-${Date.now()}.${ext}`;
+    const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + (localStorage.getItem('ff_access_token') || SUPA_KEY),
+        'Content-Type': file.type,
+        'x-upsert': 'true'
+      },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error('Erreur upload photo signalement');
+    const photoUrl = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
+
+    await supaFetch('box_reports', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: {
+        adventure_id: currentAdv?.id || null,
+        player_id: currentPlayer?.id || null,
+        photo_url: photoUrl,
+        comment: `Signalement avec photo — boîte introuvable (étape : ${step.title || 'scanner un QR code'})`
+      }
+    });
+
+    showToast('Signalement envoyé — merci, on continue l\'aventure !');
+    stopInlineQRScan();
+    renderRewardMode();
+  } catch (e) {
+    console.error('Erreur signalement boîte perdue:', e);
+    alert('Erreur lors de l\'envoi de la photo. Réessaie.');
+    if (btn) { btn.disabled = false; btn.textContent = '📷 Prendre la photo'; }
+  }
+}
+
 // ── QR CODES LIVRES PROFESSEUR FLINT (format "FFBOOK:<id>:START" / "FFBOOK:<id>:END") ──
 async function handleBookQR(data) {
   const m = /^FFBOOK:([a-zA-Z0-9-]+):(START|END)$/i.exec((data || '').trim());
@@ -8315,15 +8284,14 @@ function showPartnerBadgeResult(partnerQR, alreadyCollected) {
   if (!alreadyCollected) vibrateFeedback([200, 100, 200]);
 }
 
-// ── QUESTIONNAIRE SATISFACTION (post-scan QR fin d'aventure) ──
+// ── QUESTIONNAIRE SATISFACTION (accessible après toute aventure terminée,
+// via le bouton "Continuer" de l'écran de récompenses — plus besoin de scanner
+// un QR pour y accéder, cf. demande de Firmin du 26/10) ──
 let currentStarRating = 0;
-let currentStampsCount = 0;
 
 function openSatisfactionScreen() {
   currentStarRating = 0;
-  currentStampsCount = 0;
   document.getElementById('satisfaction-comment').value = '';
-  document.getElementById('stamps-count').textContent = '0';
   document.querySelectorAll('#star-rating button').forEach(b => {
     b.style.opacity = '0.3';
     b.style.transform = 'scale(1)';
@@ -8343,11 +8311,6 @@ function setStarRating(n) {
   document.getElementById('star-label').textContent = labels[n] || '';
 }
 
-function adjustStamps(delta) {
-  currentStampsCount = Math.max(0, currentStampsCount + delta);
-  document.getElementById('stamps-count').textContent = currentStampsCount;
-}
-
 async function submitSatisfaction() {
   const comment = document.getElementById('satisfaction-comment').value.trim();
   try {
@@ -8357,7 +8320,6 @@ async function submitSatisfaction() {
         player_id: isGuest() ? null : currentPlayer?.id,
         adventure_id: currentAdv?.id || null,
         rating: currentStarRating || null,
-        stamps_count: currentStampsCount,
         comment: comment || null
       },
       prefer: 'return=minimal'
@@ -8365,15 +8327,11 @@ async function submitSatisfaction() {
   } catch (e) {
     console.error('Erreur envoi questionnaire satisfaction:', e);
   }
-  goToScreen('adventure', null);
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  showMode('reward');
+  goBack();
 }
 
 function skipSatisfaction() {
-  goToScreen('adventure', null);
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  showMode('reward');
+  goBack();
 }
 
 function showBookStartForm(book) {

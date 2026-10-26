@@ -621,7 +621,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <div class="stat-card"><div class="label">XP total distribué</div><div class="value" id="kpi-xp">…</div><div class="sub">Points gagnés</div></div>
         <div class="stat-card"><div class="label">Boîtes signalées</div><div class="value" id="kpi-reports">…</div><div class="sub" id="kpi-reports-sub"></div></div>
         <div class="stat-card"><div class="label">Note moyenne</div><div class="value" id="kpi-rating">…</div><div class="sub">Sur 5 étoiles</div></div>
-        <div class="stat-card"><div class="label">Tampons moyens</div><div class="value" id="kpi-stamps">…</div><div class="sub">Par boîte</div></div>
       </div>
 
       <!-- Graphique croissance joueurs -->
@@ -1320,7 +1319,7 @@ async function loadDashboard() {
       supa('GET', 'box_reports', null, `?select=*,adventures(title)${reportsSince}&order=reported_at.desc&limit=5`),
       supa('GET', 'players', null, '?select=pseudo,avatar_emoji,city,total_xp,created_at&order=created_at.desc&limit=10'),
       supa('GET', 'players', null, '?select=city&city=not.is.null'),
-      supa('GET', 'satisfaction_responses', null, `?select=rating,stamps_count${responsesSince}`)
+      supa('GET', 'satisfaction_responses', null, `?select=rating${responsesSince}`)
     ]);
 
     // KPI simples
@@ -1342,16 +1341,12 @@ async function loadDashboard() {
     document.getElementById('kpi-reports').textContent = reports.length;
     document.getElementById('kpi-reports-sub').textContent = reports.length > 0 ? 'À vérifier !' : 'Aucun signalement';
 
-    // Satisfaction : note moyenne et tampons moyens
+    // Satisfaction : note moyenne
     const ratedResponses = responses.filter(r => r.rating != null);
     const avgRating = ratedResponses.length > 0
       ? (ratedResponses.reduce((sum, r) => sum + r.rating, 0) / ratedResponses.length).toFixed(1)
       : '—';
-    const avgStamps = responses.length > 0
-      ? (responses.reduce((sum, r) => sum + (r.stamps_count || 0), 0) / responses.length).toFixed(1)
-      : '—';
     document.getElementById('kpi-rating').textContent = avgRating !== '—' ? `${avgRating} ⭐` : '—';
-    document.getElementById('kpi-stamps').textContent = avgStamps;
 
     // Joueurs actifs ce mois
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
@@ -1403,8 +1398,9 @@ async function loadDashboard() {
     // Signalements récents
     document.getElementById('kpi-reports-list').innerHTML = reports.length
       ? reports.map(r => `
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #F0EDE4;">
-            <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #F0EDE4;">
+            ${r.photo_url ? `<a href="${r.photo_url}" target="_blank" rel="noopener"><img src="${r.photo_url}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="Photo du signalement"/></a>` : ''}
+            <div style="flex:1;">
               <div style="font-size:13px;font-weight:600;color:#1A2A1A;">🗺️ ${r.adventures?.title || '?'}</div>
               <div style="font-size:12px;color:#6B7280;margin-top:2px;">${(r.comment || '').substring(0,80)}${(r.comment || '').length>80?'…':''}</div>
             </div>
