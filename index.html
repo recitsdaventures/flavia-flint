@@ -1810,7 +1810,16 @@
      des écrans clairs, carte-parchemin des encadrés, ambre/terra des accents)
      plutôt que la palette plate de la maquette d'origine — demande de
      Firmin du 26/10 de rester cohérent avec le reste de l'app. */
-  @keyframes rv2-spin { to { transform: rotate(360deg); } }
+  /* Bug corrigé le 27/10 (retour Firmin : "le faisceau se déplace, il devrait
+     rester fixe derrière le badge et tourner sur lui-même") — l'animation
+     n'affectant que `transform`, elle écrasait entièrement le
+     translate(-50%,-50%) de centrage posé sur .reward-v2-rays pendant toute
+     sa durée : il fallait réintégrer ce même translate à chaque image-clé
+     pour que le cercle de rayons tourne SUR PLACE, bien centré sur le badge. */
+  @keyframes rv2-spin {
+    from { transform: translate(-50%,-50%) rotate(0deg); }
+    to   { transform: translate(-50%,-50%) rotate(360deg); }
+  }
   @keyframes rv2-pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
   .reward-v2 { align-self: stretch; margin: -16px -16px -36px -16px; display: flex; flex-direction: column; text-align: left; }
   .reward-v2-top {
@@ -2836,7 +2845,15 @@ async function supaFetch(endpoint, { method = 'GET', body, prefer } = {}) {
 
   if (!res.ok) throw new Error(await res.text());
   if (res.status === 204) return null;
-  return res.json();
+  // Corrigé le 27/10 : un POST avec Prefer: return=minimal répond 201 (pas
+  // 204) mais avec un corps VIDE — res.json() plante alors sur une chaîne
+  // vide (SyntaxError), ce qui faisait remonter une fausse erreur alors que
+  // l'écriture avait bien réussi côté base (cas vécu sur la validation des
+  // caches virtuelles : la découverte était enregistrée, mais le joueur
+  // voyait "Erreur lors de la validation, réessaie."). On lit le texte
+  // d'abord et on ne parse que s'il y a réellement un corps.
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // Un seul rafraîchissement en vol à la fois. Depuis que checkExistingSession()
@@ -4215,9 +4232,13 @@ async function attemptCacheValidation() {
   btn.textContent = 'Validation...';
 
   try {
+    // "return=minimal" ajouté le 27/10 (cf. bug corrigé le même jour dans
+    // supaFetch() : un POST réussi mais à corps vide faisait planter
+    // res.json(), ce qui faisait croire à un échec de validation alors que
+    // la découverte était bien enregistrée en base).
     await supaFetch('cache_discoveries', {
       method: 'POST',
-      prefer: 'resolution=merge-duplicates',
+      prefer: 'resolution=merge-duplicates,return=minimal',
       body: { player_id: userId, cache_id: cache.id, xp_earned: cache.xp_reward || 0 }
     });
     if (!isCacheDiscovered(cache.id)) cacheDiscoveries.push({ cache_id: cache.id });
