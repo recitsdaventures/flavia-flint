@@ -2361,7 +2361,7 @@
       </div>
       <div class="adv-immersive-counter" id="adv-immersive-counter">Étape 1 / 1</div>
     </div>
-    <div class="adv-header">
+    <div class="adv-header" id="adv-header">
       <div class="adv-header-top">
         <button class="adv-back" onclick="goBack()">← Carte</button>
         <div class="adv-title" id="adv-title">Aventure</div>
@@ -4459,6 +4459,10 @@ function stepHasGps(step) {
 //   scénario) → l'écran "story" garde sa raison d'être et reste affiché en
 //   premier, son bouton menant ensuite à la boussole comme avant
 function renderStepEntry() {
+  // Reaffiche la barre verte, masquee sur l'ecran de fin (cf. renderRewardMode)
+  const advHeaderEl = document.getElementById('adv-header');
+  if (advHeaderEl) advHeaderEl.style.display = '';
+
   const step = currentStep();
   if (!step) { renderStoryMode(); return; }
   if (currentAdv?.content_type === 'geocache_sans_boite' && currentAdv?.locations_count === 1
@@ -5527,6 +5531,9 @@ async function renderRewardMode() {
     vibrateFeedback([100, 50, 100, 50, 100]);
     soundFanfare();
   }
+
+  const advHeaderEl = document.getElementById('adv-header');
+  if (advHeaderEl) advHeaderEl.style.display = 'none';
 
   const totalHintPenalty = window._adventureHintPenalty || 0;
   const badgeImg = currentAdv?.badge_thumb_url || currentAdv?.badge_image_url || '';

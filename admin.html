@@ -566,6 +566,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('xp-validations', this)">
         <span class="nav-icon">⭐</span> Validations XP
       </button>
+      <button class="nav-item" onclick="showPage('satisfaction', this)">
+        <span class="nav-icon">📝</span> Avis joueurs
+      </button>
       <button class="nav-item" onclick="showPage('settings', this)">
         <span class="nav-icon">⚙️</span> Paramètres
       </button>
@@ -770,6 +773,16 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         <button class="btn btn-secondary btn-sm" onclick="loadXpValidations()">🔄 Actualiser</button>
       </div>
       <div id="xp-validations-list"></div>
+    </div>
+
+    <!-- ═══ PAGE : AVIS JOUEURS (étoiles + commentaire laissés en fin d'aventure) ═══ -->
+    <div id="page-satisfaction" class="page">
+      <div class="section-header">
+        <div class="section-title">Avis joueurs</div>
+        <button class="btn btn-secondary btn-sm" onclick="loadSatisfactionResponses()">🔄 Actualiser</button>
+      </div>
+      <div id="satisfaction-kpi" style="display:flex;gap:12px;margin-bottom:16px;"></div>
+      <div id="satisfaction-list"></div>
     </div>
 
     <!-- ═══ PAGE : PARAMÈTRES ═══ -->
@@ -1332,7 +1345,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'flavia-chapters':'Chapitres Flavia Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'flavia-chapters':'Chapitres Flavia Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', satisfaction:'Avis joueurs', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
@@ -1342,6 +1355,7 @@ function showPage(name, btn) {
   if (name === 'partner-qr') loadPartnerQRPage();
   if (name === 'titles') loadTitlesPage();
   if (name === 'xp-validations') loadXpValidations();
+  if (name === 'satisfaction') loadSatisfactionResponses();
   if (name === 'settings') loadAppSettings();
   if (name === 'clients') loadClientsPage();
   if (name === 'b2b') loadB2BPage();
@@ -2582,6 +2596,69 @@ async function loadXpValidations() {
             <button onclick="rejectXpRequest('${r.id}')"
               class="btn btn-danger" style="flex:1;">❌ Refuser</button>
           </div>` : ''}
+      </div>`).join('');
+
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ══════════════════════════════════════════
+// AVIS JOUEURS (étoiles + commentaire laissés en fin d'aventure,
+// table satisfaction_responses — demande de Firmin du 27/10 : pouvoir
+// relier chaque avis au joueur et à la date où il a été laissé)
+// ══════════════════════════════════════════
+function starsHtml(n) {
+  const r = Math.max(0, Math.min(5, n || 0));
+  return '★'.repeat(r) + '☆'.repeat(5 - r);
+}
+
+async function loadSatisfactionResponses() {
+  setLoading(true);
+  try {
+    const responses = await supa('GET', 'satisfaction_responses', null,
+      '?order=responded_at.desc&select=*,players(pseudo,email),adventures(title)');
+
+    const kpiEl = document.getElementById('satisfaction-kpi');
+    const rated = responses.filter(r => r.rating);
+    const avg = rated.length ? (rated.reduce((s, r) => s + r.rating, 0) / rated.length).toFixed(1) : '—';
+    kpiEl.innerHTML = `
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:14px 18px;flex:1;">
+        <div style="font-size:12px;color:#6B7280;font-weight:600;">Note moyenne</div>
+        <div style="font-size:24px;font-weight:800;">${avg} <span style="font-size:14px;color:#9CA3AF;">/5</span></div>
+      </div>
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:14px 18px;flex:1;">
+        <div style="font-size:12px;color:#6B7280;font-weight:600;">Avis reçus</div>
+        <div style="font-size:24px;font-weight:800;">${responses.length}</div>
+      </div>
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:14px 18px;flex:1;">
+        <div style="font-size:12px;color:#6B7280;font-weight:600;">Avec commentaire</div>
+        <div style="font-size:24px;font-weight:800;">${responses.filter(r => r.comment).length}</div>
+      </div>`;
+
+    const el = document.getElementById('satisfaction-list');
+
+    if (!responses.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">Aucun avis pour le moment</div></div>';
+      return;
+    }
+
+    el.innerHTML = responses.map(r => `
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${r.players?.pseudo || 'Joueur invité'}</div>
+            <div style="font-size:12px;color:#6B7280;">${r.players?.email || ''}</div>
+            <div style="font-size:13px;color:#9CA3AF;margin-top:2px;">${r.adventures?.title || 'Aventure supprimée'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px;color:#E8A020;letter-spacing:1px;">${starsHtml(r.rating)}</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:4px;">${r.responded_at ? new Date(r.responded_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
+          </div>
+        </div>
+        ${r.comment ? `<div style="background:#F9F7F4;border-radius:10px;padding:10px 12px;font-size:13px;color:#374151;margin-top:4px;">💬 ${escapeHtml(r.comment)}</div>` : ''}
       </div>`).join('');
 
   } catch(e) {
