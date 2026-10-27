@@ -2407,6 +2407,11 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="adv-immersive-quit" onclick="confirmQuitAdventure()">← Quitter</button>
         <button class="adv-immersive-back" id="adv-immersive-back-btn" onclick="goToPreviousSlide()" style="display:none;">↩︎ Revoir</button>
+        <!-- Accès réservé aux comptes role='admin' (demande de Firmin du 27/10 :
+             pouvoir sauter directement à une étape pour tester, sans tout
+             rejouer depuis le début sur les scénarios à 40+ slides) —
+             affiché/masqué dans startAdventure() selon currentPlayer.role. -->
+        <button class="adv-immersive-quit" id="adv-admin-jump-btn" onclick="openAdminStepPicker()" style="display:none;">🛠️ Étape</button>
       </div>
       <div class="adv-immersive-counter" id="adv-immersive-counter">Étape 1 / 1</div>
     </div>
@@ -2433,6 +2438,17 @@
       <div id="mode-compass" style="display:none;"></div>
       <div id="mode-enigme"  style="display:none;"></div>
       <div id="mode-reward"  style="display:none; flex-direction:column; align-items:center; text-align:center; gap:12px; padding-bottom:20px;"></div>
+    </div>
+
+    <!-- Sélecteur d'étapes réservé admin (role='admin') — voir adminJumpToStep()/openAdminStepPicker() -->
+    <div id="admin-step-picker" style="display:none;position:fixed;inset:0;background:rgba(20,30,20,0.65);z-index:3100;align-items:center;justify-content:center;">
+      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:18px;padding:18px 16px;max-width:340px;width:88%;max-height:75vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;">
+          <div style="font-size:15px;font-weight:700;color:var(--text-dark);">🛠️ Aller à l'étape (admin)</div>
+          <button onclick="closeAdminStepPicker()" style="background:none;border:none;font-size:20px;color:var(--text-mid);cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div id="admin-step-picker-list" style="overflow-y:auto;"></div>
+      </div>
     </div>
   </div>
 
@@ -4771,6 +4787,8 @@ async function startAdventure() {
   });
 
   document.getElementById('adv-title').textContent = currentAdv.title;
+  const adminJumpBtn = document.getElementById('adv-admin-jump-btn');
+  if (adminJumpBtn) adminJumpBtn.style.display = (currentPlayer?.role === 'admin') ? '' : 'none';
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   saveCurrentProgress();
   renderStepEntry();
@@ -4782,6 +4800,54 @@ async function startAdventure() {
   // Timer narratif : (re)démarrage propre du timer global de l'aventure
   stopAllTimers();
   startGlobalTimer();
+}
+
+// ══════════════════════════════════════════
+// SÉLECTEUR D'ÉTAPES — ADMIN UNIQUEMENT (27/10)
+// Permet à un compte role='admin' de sauter directement sur n'importe quelle
+// étape du scénario en cours de test, au lieu de tout rejouer depuis le début
+// à chaque fois (gênant sur les scénarios à 40+ slides). Réutilise exactement
+// le même mécanisme que la redirection "scénario B" d'un minuteur expiré
+// (handleTimerExpired) : on repositionne window._currentStepId/currentStepIndex
+// puis on redemande un rendu via renderStepEntry() — aucun nouvel état à gérer.
+// Le bouton qui ouvre ce sélecteur n'est affiché que si currentPlayer.role
+// === 'admin' (voir startAdventure()) ; ces fonctions ne font rien d'autre
+// que modifier l'affichage local, aucune donnée de progression d'un vrai
+// joueur n'est jamais touchée.
+// ══════════════════════════════════════════
+function openAdminStepPicker() {
+  if (!currentAdv?.steps?.length) return;
+  const activeId = window._currentStepId || currentAdv.steps[currentStepIndex]?.id;
+  const list = document.getElementById('admin-step-picker-list');
+  list.innerHTML = currentAdv.steps.map(s => {
+    const isCurrent = s.id === activeId;
+    const typeIcon  = stepHasGps(s) ? '📍' : '📖';
+    return `<div onclick="adminJumpToStep('${s.id}')" style="
+        display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;
+        background:${isCurrent ? 'rgba(232,160,32,0.3)' : 'rgba(255,255,255,0.45)'};margin-bottom:6px;
+      ">
+      <span style="font-weight:700;color:var(--text-dark);min-width:22px;">${s.order_num}</span>
+      <span style="flex:1;font-size:13px;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${typeIcon} ${escapeHtml(s.title || '(sans titre)')}</span>
+      ${isCurrent ? '<span style="font-size:11px;color:var(--amber);font-weight:700;flex-shrink:0;">● ici</span>' : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('admin-step-picker').style.display = 'flex';
+}
+function closeAdminStepPicker() {
+  document.getElementById('admin-step-picker').style.display = 'none';
+}
+function adminJumpToStep(stepId) {
+  if (!currentAdv?.steps?.length) return;
+  const idx = currentAdv.steps.findIndex(s => s.id === stepId);
+  if (idx < 0) return;
+  closeAdminStepPicker();
+  window._historyMode = false;
+  _geocacheUnlocked = true; // évite de retomber sur l'écran d'arrivée géocache en sautant ailleurs
+  window._currentStepId = stepId;
+  currentStepIndex = idx;
+  buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
+  stopAllTimers();
+  renderStepEntry();
 }
 
 // ══════════════════════════════════════════
