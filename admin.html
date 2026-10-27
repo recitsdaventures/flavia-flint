@@ -536,8 +536,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showAdventuresCategory('unclassified', this)">
         <span class="nav-icon">❓</span> Non classées
       </button>
-      <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showAdventuresCategory('geocache_sans_boite', this)">
-        <span class="nav-icon">📍</span> Géocaches sans boîte
+      <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showPage('caches', this)">
+        <span class="nav-icon">📍</span> Caches virtuelles
       </button>
       <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showAdventuresCategory('tresors_oublies', this)">
         <span class="nav-icon">📦</span> Trésors oubliés
@@ -553,6 +553,9 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       </button>
       <button class="nav-item" onclick="showPage('badges', this)">
         <span class="nav-icon">⬡</span> Badges
+      </button>
+      <button class="nav-item" id="nav-collections" onclick="showPage('collections', this)">
+        <span class="nav-icon">🧿</span> Collections
       </button>
       <button class="nav-item" onclick="showPage('authors', this)">
         <span class="nav-icon">✍️</span> Auteurs
@@ -724,6 +727,40 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <div id="badges-gallery"></div>
     </div>
 
+    <!-- ═══ PAGE : COLLECTIONS (caches virtuelles & collections, 27/10) ═══ -->
+    <div id="page-collections" class="page">
+      <div class="section-header">
+        <div class="section-title">Collections</div>
+        <button class="btn btn-primary btn-sm" onclick="openCollectionModal()">+ Nouvelle collection</button>
+      </div>
+      <div style="font-size:13px;color:#6B7280;margin:-10px 0 16px;">
+        Une collection regroupe des caches virtuelles autour d'une thématique
+        (patrimoine, légendes, nature...). Les seuils bronze/argent/or définissent
+        à partir de combien de découvertes un joueur obtient le badge de la collection.
+      </div>
+      <div id="collections-list"></div>
+    </div>
+
+    <!-- ═══ PAGE : CACHES VIRTUELLES (27/10) ═══ -->
+    <div id="page-caches" class="page">
+      <div class="section-header">
+        <div class="section-title">Caches virtuelles</div>
+        <button class="btn btn-primary btn-sm" onclick="openCacheModal()">+ Nouvelle cache</button>
+      </div>
+      <div style="font-size:13px;color:#6B7280;margin:-10px 0 16px;line-height:1.6;">
+        Points de découverte GPS légers (sans récit) — fusion du prototype
+        "géocache sans boîte". Rappel des 3 rayons utilisés sur la carte joueur :
+        <strong>rayon ambiant 2 km</strong> (une cache n'apparaît sur la carte,
+        hors filtre "Caches virtuelles", que si le joueur est à moins de 2 km),
+        <strong>rayon de proximité 100 m</strong> (déclenche l'anneau pulsé
+        "à proximité"), et le <strong>rayon de validation</strong> réglé ici
+        cache par cache selon la précision du lieu (ex. 5 m pour une plaque,
+        20 m pour une place) — c'est lui qui déclenche la découverte réelle.
+        Les deux premiers se règlent dans Paramètres.
+      </div>
+      <div id="caches-list"></div>
+    </div>
+
     <!-- ═══ PAGE : AUTEURS ═══ -->
     <div id="page-authors" class="page">
       <div class="section-header">
@@ -848,6 +885,24 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
         </div>
       </div>
 
+      <!-- Caches virtuelles — rayons globaux -->
+      <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;margin-bottom:20px;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;">📍 Caches virtuelles — rayons globaux</div>
+        <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px;">
+          Le 3e rayon (validation) se règle cache par cache, dans la page "Caches virtuelles".
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group" style="margin:0;">
+            <label>Rayon ambiant (m) <span class="label-hint">visibilité par défaut sur la carte</span></label>
+            <input type="number" id="setting-cache-ambient-radius" placeholder="2000" min="100" step="100"/>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Rayon de proximité (m) <span class="label-hint">déclenche l'anneau pulsé</span></label>
+            <input type="number" id="setting-cache-near-radius" placeholder="100" min="10" step="10"/>
+          </div>
+        </div>
+      </div>
+
       <!-- Code de partage -->
       <div style="background:white;border-radius:var(--r-lg);border:1px solid var(--gray-brd);padding:20px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:8px;">🔑 Codes de validation partage</div>
@@ -961,7 +1016,6 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <label>Type de contenu <span class="label-hint">(détermine le symbole sur la carte)</span></label>
           <select id="f-content-type" onchange="onContentTypeChange()">
             <option value="">— Non défini —</option>
-            <option value="geocache_sans_boite">📍 Géocache sans boîte</option>
             <option value="tresors_oublies">📦 Trésors oubliés</option>
             <option value="balade_decouverte">🚶 Balade découverte</option>
             <option value="chasse_tresor_flavia">🧭 Chasse au trésor de Flavia</option>
@@ -995,12 +1049,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
           <div style="font-size:12px;color:#8A7A5C;margin:-4px 0 8px;">Ce point place l'aventure sur la carte générale. Les trajets GPS entre les étapes se règlent séparément, dans chaque étape du scénario.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
             <div class="form-group" style="margin:0;">
-              <label style="font-size:12px;">Latitude</label>
-              <input type="text" id="f-main-lat" placeholder="43.5089"/>
+              <label style="font-size:12px;">Latitude <span class="label-hint">(colle depuis Google Maps)</span></label>
+              <input type="text" id="f-main-lat" placeholder="43.5089" onpaste="handleCoordPaste(event,'f-main-lat','f-main-lng')"/>
             </div>
             <div class="form-group" style="margin:0;">
               <label style="font-size:12px;">Longitude</label>
-              <input type="text" id="f-main-lng" placeholder="6.4558"/>
+              <input type="text" id="f-main-lng" placeholder="6.4558" onpaste="handleCoordPaste(event,'f-main-lat','f-main-lng')"/>
             </div>
             <div class="form-group" style="margin:0;">
               <label style="font-size:12px;">Rayon (m)</label>
@@ -1211,6 +1265,21 @@ function parseCoord(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Colle une paire "lat, lng" copiée depuis Google Maps (clic droit sur un
+// point → "Copier les coordonnées") directement dans l'un des deux champs —
+// sépare tout seul plutôt que d'obliger à couper/coller deux fois (demande
+// de Firmin le 27/10). Ne se déclenche que si la virgule est suivie d'un
+// espace (format Google Maps "43.53, 6.45"), pour ne pas confondre avec une
+// virgule décimale française collée seule dans un champ (ex: "43,5089").
+function handleCoordPaste(event, latId, lngId) {
+  const text = (event.clipboardData || window.clipboardData).getData('text').trim();
+  const match = text.match(/^(-?\d+(?:[.,]\d+)?)\s*,\s+(-?\d+(?:[.,]\d+)?)$/);
+  if (!match) return; // pas reconnu comme une paire : collage normal, inchangé
+  event.preventDefault();
+  document.getElementById(latId).value = match[1].replace(',', '.');
+  document.getElementById(lngId).value = match[2].replace(',', '.');
+}
+
 // Les règles de la base (RLS) exigent maintenant le token du compte admin
 // connecté pour lire/écrire les tables admin (auth.uid() doit correspondre à
 // un compte role='admin') — la clé anonyme seule ne suffit plus. On construit
@@ -1303,8 +1372,9 @@ let editingId = null;
 // physiques premium) ne rentre PAS ici : ce contenu vit dans sa propre table
 // `professor_flint_books` (déjà gérée via le formulaire "bf-*" plus bas), donc son
 // symbole (🎩) sera posé directement sur ces points-là côté carte, sans tag à choisir ici.
+// "geocache_sans_boite" retiré le 27/10 : fusionné dans le nouveau système
+// de caches virtuelles (table virtual_caches), qui remplace ce prototype.
 const CONTENT_TYPES = {
-  geocache_sans_boite:  { label: 'Géocache sans boîte',        icon: '📍' },
   tresors_oublies:      { label: 'Trésors oubliés',            icon: '📦' },
   balade_decouverte:    { label: 'Balade découverte',          icon: '🚶' },
   chasse_tresor_flavia: { label: 'Chasse au trésor de Flavia', icon: '🧭' },
@@ -1344,7 +1414,6 @@ let _advCategoryFilter = 'all';
 const ADV_CATEGORY_TITLES = {
   all: 'Aventures — Toutes',
   unclassified: 'Aventures — Non classées',
-  geocache_sans_boite: 'Aventures — Géocaches sans boîte',
   tresors_oublies: 'Aventures — Trésors oubliés',
   balade_decouverte: 'Aventures — Balades découverte',
   chasse_tresor_flavia: 'Aventures — Chasses au trésor de Flavia'
@@ -1361,7 +1430,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', authors:'Auteurs', professor:'Professeur Flint', 'flavia-chapters':'Chapitres Flavia Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', satisfaction:'Avis joueurs', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
+  const titles = { dashboard:'Tableau de bord', adventures:'Aventures', players:'Joueurs', badges:'Badges', collections:'Collections', caches:'Caches virtuelles', authors:'Auteurs', professor:'Professeur Flint', 'flavia-chapters':'Chapitres Flavia Flint', 'partner-qr':'QR Partenaires', titles:'Titres & Récompenses', 'xp-validations':'Validations XP', satisfaction:'Avis joueurs', settings:'Paramètres', clients:'Fichier Clients', b2b:'B2B Partenaires' };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'adventures') loadAdventures();
   if (name === 'dashboard') loadDashboard();
@@ -1374,6 +1443,8 @@ function showPage(name, btn) {
   if (name === 'satisfaction') loadSatisfactionResponses();
   if (name === 'players') loadPlayersPage();
   if (name === 'badges') loadBadgesPage();
+  if (name === 'collections') loadCollectionsPage();
+  if (name === 'caches') loadCachesPage();
   if (name === 'settings') loadAppSettings();
   if (name === 'clients') loadClientsPage();
   if (name === 'b2b') loadB2BPage();
@@ -2564,6 +2635,33 @@ function removeStampImage() {
   document.getElementById('stamp-upload-zone').style.display = 'flex';
 }
 
+// Helper générique d'upload immédiat (même esprit que uploadStampImage
+// ci-dessus) — réutilisé pour les badges de palier des collections et la
+// couverture des caches virtuelles (27/10), pour éviter de dupliquer 4 fois
+// la même logique upload/preview/remove.
+async function uploadSimpleImage(event, folder, hiddenId, imgId, previewId, zoneId, label) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Image trop lourde (max 5 Mo).'); return; }
+  showToast('Upload en cours…');
+  try {
+    const url = await uploadImageToStorage(file, folder);
+    document.getElementById(hiddenId).value = url;
+    document.getElementById(imgId).src = url;
+    document.getElementById(previewId).style.display = 'flex';
+    document.getElementById(zoneId).style.display = 'none';
+    showToast((label || 'Image') + ' uploadée ✓ (pense à Enregistrer)');
+  } catch (err) {
+    console.error('Erreur upload image:', err);
+    showToast('Erreur : ' + err.message, true);
+  }
+}
+function removeSimpleImage(hiddenId, previewId, zoneId) {
+  document.getElementById(hiddenId).value = '';
+  document.getElementById(previewId).style.display = 'none';
+  document.getElementById(zoneId).style.display = 'flex';
+}
+
 async function deleteChapter(id) {
   if (!confirm('Supprimer ce chapitre ?')) return;
   await supa('DELETE', 'flavia_chapters', null, `?id=eq.${id}`);
@@ -2772,6 +2870,391 @@ async function loadBadgesPage() {
 }
 
 // ══════════════════════════════════════════
+// COLLECTIONS & CACHES VIRTUELLES (27/10)
+// Fusion du prototype "géocache sans boîte" → "cache virtuelle". Les icônes
+// de collection reprennent les 9 catégories visuelles fournies par Firmin
+// (flavia-markers.js) — elles servent à l'icône de la collection (page
+// Collections, progression joueur, badges), PAS au symbole sur la carte :
+// les caches elles-mêmes utilisent un symbole générique unique + un état
+// (à découvrir / à proximité / découverte), pour éviter de multiplier les
+// pictogrammes sur la carte à mesure que de nouvelles collections arrivent.
+// ══════════════════════════════════════════
+const COLLECTION_ICON_OPTIONS = {
+  chasses:      '🧭 Chasses de Flavia',
+  exploration:  '🎩 Exploration',
+  legende:      '👻 Légendes & mystères',
+  tresor:       '🧰 Trésors oubliés',
+  patrimoine:   '🏰 Patrimoine',
+  nature:       '🌿 Nature (inclut l’eau)',
+  art:          '🖌️ Art & culture',
+  savoir_faire: '🔧 Savoir-faire'
+};
+
+let allCollections = [];
+
+async function loadCollectionsPage() {
+  setLoading(true);
+  try {
+    const [collections, caches] = await Promise.all([
+      supa('GET', 'collections', null, '?order=name.asc'),
+      supa('GET', 'virtual_caches', null, '?select=id,collection_id,status')
+    ]);
+    allCollections = collections;
+
+    const countsByCollection = {};
+    caches.forEach(c => {
+      if (!c.collection_id) return;
+      countsByCollection[c.collection_id] = (countsByCollection[c.collection_id] || 0) + 1;
+    });
+
+    const el = document.getElementById('collections-list');
+    if (!collections.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🧿</div><div class="empty-title">Aucune collection</div><div class="empty-sub">Crée ta première collection (ex : Patrimoine, Légendes...).</div></div>';
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Collection</th><th>Description</th><th>Caches</th><th>Seuils (🥉/🥈/🥇)</th><th>Statut</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${collections.map(c => `
+              <tr>
+                <td><strong>${(COLLECTION_ICON_OPTIONS[c.icon_key] || '🧿 ').split(' ')[0]} ${escapeHtml(c.name)}</strong></td>
+                <td style="font-size:12px;color:#6B7280;max-width:260px;">${escapeHtml(c.description || '')}</td>
+                <td>${countsByCollection[c.id] || 0}</td>
+                <td style="font-size:12px;">${c.badge_bronze_threshold ?? '—'} / ${c.badge_argent_threshold ?? '—'} / ${c.badge_or_threshold ?? '—'}</td>
+                <td><span class="status-pill ${c.status === 'active' ? 'status-published' : 'status-draft'}">${c.status === 'active' ? 'Active' : 'Archivée'}</span></td>
+                <td><div class="actions-cell">
+                  <button onclick="editCollection('${c.id}')" class="btn btn-secondary btn-sm">✏️ Modifier</button>
+                  <button onclick="deleteCollection('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
+                </div></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    document.getElementById('collections-list').innerHTML =
+      `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Une "ligne palier" = seuil (nb de découvertes) + badge visuel associé
+// (image uploadée immédiatement, même pattern que le tampon de chapitre —
+// fonctionne même sur une collection pas encore créée). Factorisé car répété
+// 3 fois (bronze/argent/or) dans la modale collection.
+function tierFieldHtml(tier, emoji, label, c) {
+  const threshold = c[`badge_${tier}_threshold`];
+  const imgUrl = c[`badge_${tier}_image_url`];
+  const hiddenId = `col-${tier}-badge-url`;
+  const imgId = `col-${tier}-badge-img`;
+  const previewId = `col-${tier}-badge-preview`;
+  const zoneId = `col-${tier}-badge-zone`;
+  return `
+    <div class="form-group full" style="display:flex;gap:14px;align-items:flex-end;">
+      <div style="flex:1;">
+        <label>Seuil ${emoji} ${label}</label>
+        <input type="number" id="col-${tier}" value="${threshold ?? ''}" min="1" placeholder="Ex : 3"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;margin-bottom:4px;">Badge ${emoji}</label>
+        <input type="hidden" id="${hiddenId}" value="${imgUrl || ''}"/>
+        <div id="${previewId}" style="display:${imgUrl ? 'flex' : 'none'};align-items:center;gap:6px;">
+          <img id="${imgId}" src="${imgUrl || ''}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #E8A020;"/>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="removeSimpleImage('${hiddenId}','${previewId}','${zoneId}')">✕</button>
+        </div>
+        <div id="${zoneId}" style="display:${imgUrl ? 'none' : 'block'};">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
+            📷 Ajouter
+            <input type="file" accept="image/*" style="display:none;"
+              onchange="uploadSimpleImage(event,'collection-badges','${hiddenId}','${imgId}','${previewId}','${zoneId}','Badge ${label}')">
+          </label>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openCollectionModal(data) {
+  const c = data || {};
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'collection-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h2>${c.id ? 'Modifier la collection' : 'Nouvelle collection'}</h2>
+        <button class="modal-close" onclick="document.getElementById('collection-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Nom</label>
+            <input type="text" id="col-name" value="${c.name ? escapeHtml(c.name) : ''}" placeholder="Ex : Patrimoine"/>
+          </div>
+          <div class="form-group full"><label>Description</label>
+            <input type="text" id="col-desc" value="${c.description ? escapeHtml(c.description) : ''}" placeholder="Ex : Les monuments et lieux historiques du territoire"/>
+          </div>
+          <div class="form-group"><label>Icône</label>
+            <select id="col-icon">
+              <option value="">— Choisir —</option>
+              ${Object.entries(COLLECTION_ICON_OPTIONS).map(([k, label]) =>
+                `<option value="${k}" ${c.icon_key === k ? 'selected' : ''}>${label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label>Statut</label>
+            <select id="col-status">
+              <option value="active" ${!c.status || c.status === 'active' ? 'selected' : ''}>Active</option>
+              <option value="archived" ${c.status === 'archived' ? 'selected' : ''}>Archivée</option>
+            </select>
+          </div>
+          ${tierFieldHtml('bronze', '🥉', 'Bronze', c)}
+          ${tierFieldHtml('argent', '🥈', 'Argent', c)}
+          ${tierFieldHtml('or', '🥇', 'Or', c)}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('collection-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveCollection('${c.id || ''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveCollection(id) {
+  const name = document.getElementById('col-name').value.trim();
+  if (!name) { alert('Le nom est obligatoire'); return; }
+  const data = {
+    name,
+    description: document.getElementById('col-desc').value.trim() || null,
+    icon_key: document.getElementById('col-icon').value || null,
+    status: document.getElementById('col-status').value,
+    badge_bronze_threshold: parseInt(document.getElementById('col-bronze').value) || null,
+    badge_argent_threshold: parseInt(document.getElementById('col-argent').value) || null,
+    badge_or_threshold: parseInt(document.getElementById('col-or').value) || null,
+    badge_bronze_image_url: document.getElementById('col-bronze-badge-url').value || null,
+    badge_argent_image_url: document.getElementById('col-argent-badge-url').value || null,
+    badge_or_image_url: document.getElementById('col-or-badge-url').value || null
+  };
+  try {
+    if (id) {
+      await supa('PATCH', 'collections', data, `?id=eq.${id}`);
+    } else {
+      await supa('POST', 'collections', data);
+    }
+    document.getElementById('collection-modal').remove();
+    showToast('Collection enregistrée ✓');
+    loadCollectionsPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function editCollection(id) {
+  const rows = await supa('GET', 'collections', null, `?id=eq.${id}`);
+  if (rows[0]) openCollectionModal(rows[0]);
+}
+
+async function deleteCollection(id) {
+  if (!confirm('Supprimer cette collection ? Les caches qui y sont rattachées resteront, simplement sans collection.')) return;
+  try {
+    await supa('DELETE', 'collections', null, `?id=eq.${id}`);
+    showToast('Collection supprimée');
+    loadCollectionsPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function loadCachesPage() {
+  setLoading(true);
+  try {
+    const [caches, collections] = await Promise.all([
+      supa('GET', 'virtual_caches', null, '?select=*,collections(name)&order=created_at.desc'),
+      supa('GET', 'collections', null, '?order=name.asc')
+    ]);
+    allCollections = collections;
+
+    const published = caches.filter(c => c.status === 'published').length;
+    const el = document.getElementById('caches-list');
+
+    const statsHtml = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
+        <div class="stat-card"><div class="label">Caches</div><div class="value">${caches.length}</div></div>
+        <div class="stat-card"><div class="label">Publiées</div><div class="value">${published}</div></div>
+        <div class="stat-card"><div class="label">Brouillons</div><div class="value">${caches.length - published}</div></div>
+      </div>`;
+
+    if (!caches.length) {
+      el.innerHTML = statsHtml + '<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-title">Aucune cache virtuelle</div><div class="empty-sub">Crée ta première cache — position GPS + rayon de validation.</div></div>';
+      return;
+    }
+
+    el.innerHTML = statsHtml + `
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th></th><th>Titre</th><th>Collection</th><th>Position</th><th>Rayon validation</th><th>XP</th><th>Statut</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${caches.map(c => `
+              <tr>
+                <td>${c.cover_image_url
+                  ? `<img src="${c.cover_image_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;"/>`
+                  : `<div style="width:36px;height:36px;border-radius:8px;background:#F3F4F6;"></div>`}</td>
+                <td><strong>${escapeHtml(c.title)}</strong></td>
+                <td style="font-size:12px;color:#6B7280;">${c.collections ? escapeHtml(c.collections.name) : '—'}</td>
+                <td style="font-size:12px;color:#6B7280;">${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</td>
+                <td>${c.validation_radius_m} m</td>
+                <td>${c.xp_reward} ${iconImg('compass')}</td>
+                <td><span class="status-pill ${c.status === 'published' ? 'status-published' : 'status-draft'}">${c.status === 'published' ? '✓ Publiée' : '✏️ Brouillon'}</span></td>
+                <td><div class="actions-cell">
+                  <button onclick="editCache('${c.id}')" class="btn btn-secondary btn-sm">✏️ Modifier</button>
+                  <button onclick="deleteCache('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
+                </div></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    document.getElementById('caches-list').innerHTML =
+      `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openCacheModal(data) {
+  const c = data || {};
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'cache-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h2>${c.id ? 'Modifier la cache' : 'Nouvelle cache virtuelle'}</h2>
+        <button class="modal-close" onclick="document.getElementById('cache-modal').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Titre</label>
+            <input type="text" id="cache-title" value="${c.title ? escapeHtml(c.title) : ''}" placeholder="Ex : La fontaine du Vieux Marché"/>
+          </div>
+          <div class="form-group full"><label>Description</label>
+            <input type="text" id="cache-desc" value="${c.description ? escapeHtml(c.description) : ''}" placeholder="Courte description affichée au joueur"/>
+          </div>
+          <div class="form-group full"><label>Image <span class="label-hint">(affichée sur la fiche détail côté joueur)</span></label>
+            <input type="hidden" id="cache-cover-url" value="${c.cover_image_url || ''}"/>
+            <div class="img-preview" id="cache-cover-preview" style="display:${c.cover_image_url ? 'block' : 'none'};">
+              <img id="cache-cover-img" src="${c.cover_image_url || ''}" alt=""/>
+              <button class="img-preview-remove" onclick="removeSimpleImage('cache-cover-url','cache-cover-preview','cache-cover-zone')">✕</button>
+            </div>
+            <div class="img-upload-zone" id="cache-cover-zone" style="display:${c.cover_image_url ? 'none' : 'flex'};">
+              <input type="file" accept="image/*" onchange="uploadSimpleImage(event,'caches-cover','cache-cover-url','cache-cover-img','cache-cover-preview','cache-cover-zone','Image')">
+              <div class="img-upload-icon">📷</div>
+              <div class="img-upload-label">
+                <strong>Clique pour choisir</strong> l'image de la cache
+                <span class="formats">JPG/PNG · Max 5 Mo</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group"><label>Latitude <span class="label-hint">(colle direct depuis Google Maps, ça sépare tout seul)</span></label>
+            <input type="text" id="cache-lat" value="${c.lat ?? ''}" placeholder="43.5089" onpaste="handleCoordPaste(event,'cache-lat','cache-lng')"/>
+          </div>
+          <div class="form-group"><label>Longitude</label>
+            <input type="text" id="cache-lng" value="${c.lng ?? ''}" placeholder="6.4558" onpaste="handleCoordPaste(event,'cache-lat','cache-lng')"/>
+          </div>
+          <div class="form-group"><label>Rayon de validation <span class="label-hint">(selon la précision du lieu)</span></label>
+            <select id="cache-radius">
+              <option value="5" ${c.validation_radius_m === 5 ? 'selected' : ''}>5 m — lieu très précis (plaque, fontaine...)</option>
+              <option value="10" ${!c.id || c.validation_radius_m === 10 ? 'selected' : ''}>10 m — standard</option>
+              <option value="20" ${c.validation_radius_m === 20 ? 'selected' : ''}>20 m — lieu large (place, jardin...)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Collection</label>
+            <select id="cache-collection">
+              <option value="">— Aucune —</option>
+              ${allCollections.map(col =>
+                `<option value="${col.id}" ${c.collection_id === col.id ? 'selected' : ''}>${escapeHtml(col.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label>XP à la découverte</label>
+            <input type="number" id="cache-xp" value="${c.xp_reward ?? 20}" min="0"/>
+          </div>
+          <div class="form-group"><label>Commune</label>
+            <input type="text" id="cache-commune" value="${c.commune ? escapeHtml(c.commune) : ''}" placeholder="Ex : Draguignan"/>
+          </div>
+          <div class="form-group"><label>Statut</label>
+            <select id="cache-status">
+              <option value="draft" ${!c.status || c.status === 'draft' ? 'selected' : ''}>Brouillon</option>
+              <option value="published" ${c.status === 'published' ? 'selected' : ''}>Publiée</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('cache-modal').remove()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveCache('${c.id || ''}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveCache(id) {
+  const title = document.getElementById('cache-title').value.trim();
+  const lat = parseCoord(document.getElementById('cache-lat').value);
+  const lng = parseCoord(document.getElementById('cache-lng').value);
+  if (!title) { alert('Le titre est obligatoire'); return; }
+  if (lat === null || lng === null) { alert('Latitude et longitude sont obligatoires'); return; }
+  const data = {
+    title,
+    description: document.getElementById('cache-desc').value.trim() || null,
+    cover_image_url: document.getElementById('cache-cover-url').value || null,
+    lat, lng,
+    validation_radius_m: parseInt(document.getElementById('cache-radius').value) || 10,
+    collection_id: document.getElementById('cache-collection').value || null,
+    xp_reward: parseInt(document.getElementById('cache-xp').value) || 0,
+    commune: document.getElementById('cache-commune').value.trim() || null,
+    status: document.getElementById('cache-status').value
+  };
+  try {
+    if (id) {
+      await supa('PATCH', 'virtual_caches', data, `?id=eq.${id}`);
+    } else {
+      await supa('POST', 'virtual_caches', data);
+    }
+    document.getElementById('cache-modal').remove();
+    showToast('Cache enregistrée ✓');
+    loadCachesPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+async function editCache(id) {
+  const rows = await supa('GET', 'virtual_caches', null, `?id=eq.${id}`);
+  if (rows[0]) {
+    if (!allCollections.length) {
+      allCollections = await supa('GET', 'collections', null, '?order=name.asc');
+    }
+    openCacheModal(rows[0]);
+  }
+}
+
+async function deleteCache(id) {
+  if (!confirm('Supprimer cette cache virtuelle ?')) return;
+  try {
+    await supa('DELETE', 'virtual_caches', null, `?id=eq.${id}`);
+    showToast('Cache supprimée');
+    loadCachesPage();
+  } catch(e) {
+    showToast('Erreur : ' + e.message, true);
+  }
+}
+
+// ══════════════════════════════════════════
 // JOUEURS (annuaire des comptes joueurs de l'app, table `players` — demande
 // de Firmin du 27/10 : cette page affichait un placeholder statique jamais
 // relié à Supabase, alors que le tableau de bord lui-même lit bien cette
@@ -2896,6 +3379,8 @@ async function loadAppSettings() {
     document.getElementById('setting-share-xp-percent').value = map.share_xp_percent || '20';
     document.getElementById('setting-google-xp').value        = map.google_review_xp || '150';
     document.getElementById('setting-share-codes').value      = map.share_codes || 'EXPLORATEUR2026';
+    document.getElementById('setting-cache-ambient-radius').value = map.cache_ambient_radius_m || '2000';
+    document.getElementById('setting-cache-near-radius').value    = map.cache_near_radius_m    || '100';
   } catch(e) {
     showToast('Erreur chargement paramètres', true);
   }
@@ -2909,7 +3394,9 @@ async function saveAppSettings() {
     { key: 'social_xp',          value: document.getElementById('setting-social-xp').value || '50' },
     { key: 'share_xp_percent',   value: document.getElementById('setting-share-xp-percent').value || '20' },
     { key: 'google_review_xp',   value: document.getElementById('setting-google-xp').value || '150' },
-    { key: 'share_codes',        value: document.getElementById('setting-share-codes').value || 'EXPLORATEUR2026' }
+    { key: 'share_codes',        value: document.getElementById('setting-share-codes').value || 'EXPLORATEUR2026' },
+    { key: 'cache_ambient_radius_m', value: document.getElementById('setting-cache-ambient-radius').value || '2000' },
+    { key: 'cache_near_radius_m',    value: document.getElementById('setting-cache-near-radius').value    || '100' }
   ];
 
   try {
