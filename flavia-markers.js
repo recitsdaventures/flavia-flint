@@ -33,6 +33,12 @@
   var MIXED = { label: 'Plusieurs catégories', color: '#14301F', icon: 'boussole' };
   var LOCKED_COLOR = '#7C8794';
 
+  // Caches virtuelles (27/10) : un seul symbole dédié (loupe) pour toutes les
+  // caches, quelle que soit leur collection — volontairement hors des 9
+  // catégories ci-dessus, voir FlaviaMarkers.cacheIcon().
+  var CACHE_ICON = 'loupe';
+  var CACHE_COLOR = '#6F6B14';
+
   // ── Sprite SVG des pictogrammes (injecté une seule fois) ─────────────────────────────
   var SPRITE =
     '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
@@ -45,6 +51,7 @@
     '<symbol id="ff-ic-eau" viewBox="0 0 24 24"><path d="M12 3.5C12 3.5 5.5 10.3 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10.3 12 3.5 12 3.5z"/><path d="M9 15.2a3 3 0 0 0 3 3"/></symbol>' +
     '<symbol id="ff-ic-pinceau" viewBox="0 0 24 24"><path d="M19.8 4.2 12.6 11.4" stroke-width="2.8"/><path d="M10.6 12.4C8.2 12.2 6.6 13.8 6.4 16C6.2 17.8 5.2 19 3.8 19.6C7 20.8 10.8 20 12 16.8C12.8 14.8 12.4 13.2 10.6 12.4Z" fill="currentColor"/></symbol>' +
     '<symbol id="ff-ic-outil" viewBox="0 0 24 24"><g transform="rotate(40 12 12)"><rect x="6.5" y="3" width="11" height="5" rx="1.2" fill="currentColor"/><rect x="10.8" y="8" width="2.4" height="12.5" rx="1"/></g></symbol>' +
+    '<symbol id="ff-ic-loupe" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7" stroke-width="2.4" fill="currentColor" fill-opacity=".18"/><path d="M15.8 15.8 21 21" stroke-width="3.2"/><path d="M8.5 8.9a2 2 0 1 1 3.1 1.7c-.7.5-1.1.9-1.1 1.7" stroke-width="1.7"/><circle cx="10.5" cy="14.3" r="1" fill="currentColor" stroke="none"/></symbol>' +
     '<symbol id="ff-ic-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-width="2.6"/></symbol>' +
     '<symbol id="ff-ic-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>' +
     '</defs></svg>';
@@ -88,23 +95,46 @@
     return CATEGORIES[cat] || CATEGORIES[DEFAULT_CATEGORY];
   }
 
-  function html(cat, state, count) {
-    var c = lookup(cat);
-    var color = state === 'locked' ? LOCKED_COLOR : c.color;
+  function markerSize(state) {
+    return state === 'near' ? 46 : state === 'group' ? 43 : 40;
+  }
+
+  function htmlFor(iconName, color, state, count) {
     var badge = '';
     if (state === 'done') badge = '<span class="ff-bdg ff-ok">' + svg('check') + '</span>';
     else if (state === 'locked') badge = '<span class="ff-bdg ff-lk">' + svg('lock') + '</span>';
     else if (state === 'group') badge = '<span class="ff-bdg ff-n">' + (count > 99 ? '99+' : count) + '</span>';
-    return '<div class="ff-mk ff-' + state + '" style="--c:' + color + '">' + svg(c.icon) + badge + '</div>';
+    return '<div class="ff-mk ff-' + state + '" style="--c:' + color + '">' + svg(iconName) + badge + '</div>';
+  }
+
+  function html(cat, state, count) {
+    var c = lookup(cat);
+    var color = state === 'locked' ? LOCKED_COLOR : c.color;
+    return htmlFor(c.icon, color, state, count);
   }
 
   // state : 'discover' | 'near' | 'done' | 'locked' | 'group'
   function icon(cat, state, count) {
     ensure();
-    var size = state === 'near' ? 46 : state === 'group' ? 43 : 40;
+    state = state || 'discover';
     return L.divIcon({
       className: 'ff-wrap',
-      html: html(cat, state || 'discover', count),
+      html: html(cat, state, count),
+      iconSize: [markerSize(state), markerSize(state)],
+      iconAnchor: [markerSize(state) / 2, markerSize(state) / 2]
+    });
+  }
+
+  // Symbole unique "loupe" pour toutes les caches virtuelles, indépendant de
+  // la collection — voir CACHE_ICON/CACHE_COLOR ci-dessus.
+  function cacheIcon(state, count) {
+    ensure();
+    state = state || 'discover';
+    var color = state === 'locked' ? LOCKED_COLOR : CACHE_COLOR;
+    var size = markerSize(state);
+    return L.divIcon({
+      className: 'ff-wrap',
+      html: htmlFor(CACHE_ICON, color, state, count),
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2]
     });
@@ -146,6 +176,7 @@
   global.FlaviaMarkers = {
     CATEGORIES: CATEGORIES,
     icon: icon,
+    cacheIcon: cacheIcon,
     marker: marker,
     computeState: computeState,
     clusterIcon: clusterIcon,

@@ -2332,7 +2332,7 @@
 
     <div class="map-filters" id="map-filter-bar">
       <div class="filter-pill map-filter-pill active" data-cat="all" onclick="setAdventureCategoryFilter('all')">Tous</div>
-      <div class="filter-pill map-filter-pill" data-cat="caches_virtuelles" onclick="setAdventureCategoryFilter('caches_virtuelles')">📍 Caches virtuelles</div>
+      <div class="filter-pill map-filter-pill" data-cat="caches_virtuelles" onclick="setAdventureCategoryFilter('caches_virtuelles')"><svg class="chip-ic"><use href="#ff-ic-loupe"/></svg>Caches virtuelles</div>
       <div class="filter-pill map-filter-pill" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')"><svg class="chip-ic"><use href="#ff-ic-coffre"/></svg>Trésors oubliés</div>
       <div class="filter-pill map-filter-pill" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')"><svg class="chip-ic"><use href="#ff-ic-plante"/></svg>Balades</div>
       <div class="filter-pill map-filter-pill" data-cat="chasse_tresor_flavia" onclick="setAdventureCategoryFilter('chasse_tresor_flavia')"><svg class="chip-ic"><use href="#ff-ic-boussole"/></svg>Chasses de Flavia</div>
@@ -4083,8 +4083,10 @@ function renderMapMarkers() {
       } else if (playerPos && getDistance(playerPos.lat, playerPos.lng, c.lat, c.lng) <= _cacheNearRadiusM) {
         state = 'near';
       }
-      const col = playerCollections.find(pc => pc.id === c.collection_id);
-      const marker = L.marker([c.lat, c.lng], { icon: FlaviaMarkers.icon(col?.icon_key, state) }).addTo(map);
+      // Symbole unique "loupe" (27/10, cf. loupe-marqueur.html fourni par
+      // Firmin) pour toutes les caches, indépendamment de leur collection —
+      // seul l'état (découvrir/proximité/découverte) change l'apparence.
+      const marker = L.marker([c.lat, c.lng], { icon: FlaviaMarkers.cacheIcon(state) }).addTo(map);
       marker.on('click', () => showCachePopup(c));
     });
 }
