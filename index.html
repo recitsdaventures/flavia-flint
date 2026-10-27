@@ -308,7 +308,10 @@
   .map-filters {
     position: absolute; top: 10px; left: 10px; right: 10px;
     display: flex; gap: 6px; z-index: 400;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
+  .map-filters::-webkit-scrollbar { display: none; }
+  .ff-map-marker { background: transparent !important; border: none !important; }
   .filter-pill {
     background: var(--white); border: 1px solid var(--beige-dark);
     border-radius: 20px; padding: 5px 12px;
@@ -528,7 +531,7 @@
   }
   .badge-hex {
     width: 80px; height: 80px;
-    background: var(--green-dark);
+    background: var(--white);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     display: flex; align-items: center; justify-content: center;
     font-size: 36px; margin: 8px 0;
@@ -592,7 +595,7 @@
   }
   .badge-item { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; width: 56px; }
   .badge-circle-sm {
-    width: 56px; height: 56px; background: var(--green-dark);
+    width: 56px; height: 56px; background: var(--white);
     border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center; font-size: 24px;
   }
@@ -2318,11 +2321,12 @@
   <div id="screen-map" class="screen">
     <div id="leaflet-map" style="flex:1;"></div>
 
-    <div class="map-filters">
-      <div class="filter-pill active">Tous</div>
-      <div class="filter-pill">Famille</div>
-      <div class="filter-pill">Facile</div>
-      <div class="filter-pill">Près de moi</div>
+    <div class="map-filters" id="map-filter-bar">
+      <div class="filter-pill map-filter-pill active" data-cat="all" onclick="setAdventureCategoryFilter('all')">Tous</div>
+      <div class="filter-pill map-filter-pill" data-cat="geocache_sans_boite" onclick="setAdventureCategoryFilter('geocache_sans_boite')">📍 Géocaches</div>
+      <div class="filter-pill map-filter-pill" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')">📦 Trésors oubliés</div>
+      <div class="filter-pill map-filter-pill" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')">🚶 Balades</div>
+      <div class="filter-pill map-filter-pill" data-cat="chasse_tresor_flavia" onclick="setAdventureCategoryFilter('chasse_tresor_flavia')">🧭 Chasses de Flavia</div>
     </div>
 
     <div class="adventure-popup" id="adventure-popup">
@@ -2946,7 +2950,29 @@ let hintXpPenalty    = 0;   // XP déduit par les indices demandés
 window._adventureInProgress = false; // true uniquement quand l'écran aventure est actif
 let _audioCtx        = null;
 
-const DIFF_COLORS = { 'Facile': '#3D6B3D', 'Intermédiaire': '#C4622D', 'Expert': '#7C3AED' };
+// Symbole + couleur par catégorie de contenu, pour les pastilles de la carte
+// (même taxonomie que les chips de filtre .adv-filter-bar / #adv-filter-bar).
+// Non classé = apparence historique (boussole dorée), identique à
+// chasse_tresor_flavia : aucune régression tant que Firmin n'a pas retagué
+// son contenu existant.
+const MAP_SUB_THEME_ICON = { patrimoine: '🏰', biodiversite: '🌿', arts_metiers: '🛠️', legendes: '👻' };
+function contentTypeMapMeta(adv) {
+  if (adv.content_type === 'geocache_sans_boite') return { icon: '📍', color: '#C4622D' };
+  if (adv.content_type === 'tresors_oublies')     return { icon: '📦', color: '#8B5A2B' };
+  if (adv.content_type === 'balade_decouverte')   return { icon: MAP_SUB_THEME_ICON[adv.sub_theme] || '🚶', color: '#3D7A4A' };
+  return { icon: '🧭', color: '#E8A020' }; // chasse_tresor_flavia + non classé
+}
+// Fabrique un marker Leaflet rond avec un emoji dedans (remplace les anciens
+// circleMarker à pastille unie, qui ne pouvaient pas porter de symbole).
+function emojiDivIcon(emoji, bgColor) {
+  return L.divIcon({
+    className: 'ff-map-marker',
+    html: `<div style="width:34px;height:34px;border-radius:50%;background:${bgColor};border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${emoji}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17]
+  });
+}
 
 // Rangs joueur — univers Flavia Flint (utilisés sur le profil et le classement)
 const PLAYER_RANKS = [
@@ -3696,7 +3722,11 @@ function setAdventureCategoryFilter(cat) {
   document.querySelectorAll('#adv-filter-bar .adv-filter-chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.cat === cat);
   });
+  document.querySelectorAll('#map-filter-bar .map-filter-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
   renderAdventureCards();
+  if (map) renderMapMarkers();
 }
 
 function renderAdventureCards() {
@@ -3888,35 +3918,40 @@ function updatePlayerMarker(lat, lng) {
 
 function renderMapMarkers() {
   if (!map) return;
-  map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
+  // Les pastilles emoji sont des L.Marker (icône), plus des L.CircleMarker —
+  // le marqueur joueur (updatePlayerMarker) reste un layerGroup de
+  // circleMarkers ajouté tel quel au niveau de la carte, donc ce nettoyage
+  // ne le touche jamais, qu'on filtre sur L.CircleMarker ou L.Marker.
+  map.eachLayer(l => { if (l instanceof L.Marker) map.removeLayer(l); });
   if (playerPos) updatePlayerMarker(playerPos.lat, playerPos.lng);
-  adventures.forEach(adv => {
-    // Coordonnées principales de l'aventure (saisies dans le formulaire admin) —
-    // prioritaires quel que soit le nombre de lieux, car c'est ce point qui doit
-    // créer le pin sur la carte générale. À défaut, on retombe sur les coordonnées
-    // de la première étape (comportement historique).
-    let lat, lng;
-    if (adv.main_lat && adv.main_lng) {
-      lat = adv.main_lat;
-      lng = adv.main_lng;
-    } else {
-      const firstStep = adv.steps?.[0];
-      if (!firstStep?.lat) return;
-      lat = firstStep.lat;
-      lng = firstStep.lng;
-    }
-    if (!lat || !lng) return;
-    const color = DIFF_COLORS[adv.difficulty] || '#C4622D';
-    const marker = L.circleMarker([lat, lng], {
-      radius: 14, fillColor: color, color: 'white', weight: 2.5, fillOpacity: 0.9
-    }).addTo(map);
-    marker.on('click', () => showPopup(adv));
-  });
+  adventures
+    .filter(adv => _adventureCategoryFilter === 'all' || adv.content_type === _adventureCategoryFilter)
+    .forEach(adv => {
+      // Coordonnées principales de l'aventure (saisies dans le formulaire admin) —
+      // prioritaires quel que soit le nombre de lieux, car c'est ce point qui doit
+      // créer le pin sur la carte générale. À défaut, on retombe sur les coordonnées
+      // de la première étape (comportement historique).
+      let lat, lng;
+      if (adv.main_lat && adv.main_lng) {
+        lat = adv.main_lat;
+        lng = adv.main_lng;
+      } else {
+        const firstStep = adv.steps?.[0];
+        if (!firstStep?.lat) return;
+        lat = firstStep.lat;
+        lng = firstStep.lng;
+      }
+      if (!lat || !lng) return;
+      const meta = contentTypeMapMeta(adv);
+      const marker = L.marker([lat, lng], { icon: emojiDivIcon(meta.icon, meta.color) }).addTo(map);
+      marker.on('click', () => showPopup(adv));
+    });
+  // Les livres du Professeur Flint restent hors taxonomie content_type (cf.
+  // admin) — toujours visibles, filtre de catégorie ou pas, comme sur la
+  // liste d'accueil qui ne les inclut pas non plus dans ce filtre.
   (window._professorBooks || []).forEach(book => {
     if (!book.lat) return;
-    const marker = L.circleMarker([book.lat, book.lng], {
-      radius: 14, fillColor: '#2D5A8E', color: 'white', weight: 2.5, fillOpacity: 0.9
-    }).addTo(map);
+    const marker = L.marker([book.lat, book.lng], { icon: emojiDivIcon('🎩', '#2D5A8E') }).addTo(map);
     marker.on('click', () => showBookDetail(book.id));
   });
 }
@@ -6025,7 +6060,7 @@ function groupedBadgesHtml(badges, tileFn) {
 // (openBadgeZoom) ; un badge sans image n'a rien à agrandir, donc reste inerte.
 function badgeTileHtml(b, idx) {
   const inner = `
-    <div class="badge-circle-sm" style="background:var(--green-dark);">${
+    <div class="badge-circle-sm">${
       b.imageUrl
         ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
         : (b.icon || '🏅')
@@ -8002,7 +8037,7 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, b
 // pour ne jamais mélanger les deux états ; ouvre directement le zoom sur son URL.
 function publicBadgeTileHtml(b) {
   const inner = `
-    <div class="badge-circle-sm" style="background:var(--green-dark);">${
+    <div class="badge-circle-sm">${
       b.imageUrl
         ? `<img src="${b.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"/>`
         : (b.icon || '🏅')
