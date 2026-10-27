@@ -2955,22 +2955,34 @@ let _audioCtx        = null;
 // Non classé = apparence historique (boussole dorée), identique à
 // chasse_tresor_flavia : aucune régression tant que Firmin n'a pas retagué
 // son contenu existant.
-const MAP_SUB_THEME_ICON = { patrimoine: '🏰', biodiversite: '🌿', arts_metiers: '🛠️', legendes: '👻' };
+//
+// Style épuré demandé par Firmin le 27/10 (les pastilles emoji sur rond coloré
+// "n'étaient pas très jolies") : plus de fond ni de cercle, juste le symbole en
+// contour (trait fin, sans remplissage), avec une ombre portée pour rester
+// lisible quel que soit le fond de la carte en dessous.
+const MAP_ICON_SVG = {
+  pin:        '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/>',
+  chest:      '<rect x="4" y="11" width="16" height="8" rx="1.5"/><path d="M4 11a8 5.5 0 0 1 16 0"/><path d="M12 11v8"/>',
+  footprints: '<ellipse cx="8.5" cy="7.5" rx="2.1" ry="3" transform="rotate(-18 8.5 7.5)"/><ellipse cx="15.5" cy="15.5" rx="2.1" ry="3" transform="rotate(18 15.5 15.5)"/>',
+  compass:    '<circle cx="12" cy="12" r="9"/><path d="M12 7.5l1.8 4.5-1.8 4.5-1.8-4.5z"/>',
+  tophat:     '<rect x="8" y="4" width="8" height="9" rx="1"/><rect x="4.5" y="13" width="15" height="2.5" rx="1.2"/>'
+};
 function contentTypeMapMeta(adv) {
-  if (adv.content_type === 'geocache_sans_boite') return { icon: '📍', color: '#C4622D' };
-  if (adv.content_type === 'tresors_oublies')     return { icon: '📦', color: '#8B5A2B' };
-  if (adv.content_type === 'balade_decouverte')   return { icon: MAP_SUB_THEME_ICON[adv.sub_theme] || '🚶', color: '#3D7A4A' };
-  return { icon: '🧭', color: '#E8A020' }; // chasse_tresor_flavia + non classé
+  if (adv.content_type === 'geocache_sans_boite') return { iconKey: 'pin', color: '#C4622D' };
+  if (adv.content_type === 'tresors_oublies')     return { iconKey: 'chest', color: '#8B5A2B' };
+  if (adv.content_type === 'balade_decouverte')   return { iconKey: 'footprints', color: '#3D7A4A' };
+  return { iconKey: 'compass', color: '#E8A020' }; // chasse_tresor_flavia + non classé
 }
-// Fabrique un marker Leaflet rond avec un emoji dedans (remplace les anciens
-// circleMarker à pastille unie, qui ne pouvaient pas porter de symbole).
-function emojiDivIcon(emoji, bgColor) {
+// Fabrique un marker Leaflet avec un symbole en contour, sans fond (remplace
+// les anciennes pastilles emoji sur rond coloré).
+function mapMarkerIcon(iconKey, color) {
+  const inner = MAP_ICON_SVG[iconKey] || MAP_ICON_SVG.compass;
   return L.divIcon({
     className: 'ff-map-marker',
-    html: `<div style="width:34px;height:34px;border-radius:50%;background:${bgColor};border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${emoji}</div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -17]
+    html: `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 1px 1px rgba(255,255,255,.9)) drop-shadow(0 1px 2.5px rgba(0,0,0,.45));">${inner}</svg>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15]
   });
 }
 
@@ -3943,7 +3955,7 @@ function renderMapMarkers() {
       }
       if (!lat || !lng) return;
       const meta = contentTypeMapMeta(adv);
-      const marker = L.marker([lat, lng], { icon: emojiDivIcon(meta.icon, meta.color) }).addTo(map);
+      const marker = L.marker([lat, lng], { icon: mapMarkerIcon(meta.iconKey, meta.color) }).addTo(map);
       marker.on('click', () => showPopup(adv));
     });
   // Les livres du Professeur Flint restent hors taxonomie content_type (cf.
@@ -3951,7 +3963,7 @@ function renderMapMarkers() {
   // liste d'accueil qui ne les inclut pas non plus dans ce filtre.
   (window._professorBooks || []).forEach(book => {
     if (!book.lat) return;
-    const marker = L.marker([book.lat, book.lng], { icon: emojiDivIcon('🎩', '#2D5A8E') }).addTo(map);
+    const marker = L.marker([book.lat, book.lng], { icon: mapMarkerIcon('tophat', '#2D5A8E') }).addTo(map);
     marker.on('click', () => showBookDetail(book.id));
   });
 }

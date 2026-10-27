@@ -3622,7 +3622,12 @@ function openModal(id) {
     document.getElementById('modal-title').textContent = 'Nouvelle aventure';
     ['f-title','f-desc','f-location','f-duration'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-diff').value = 'Facile';
-    document.getElementById('f-content-type').value = Object.prototype.hasOwnProperty.call(CONTENT_TYPES, _advCategoryFilter) ? _advCategoryFilter : '';
+    // Par defaut (hors filtre categorie precis), une nouvelle aventure est une
+    // chasse au tresor de Flavia — c'etait l'unique categorie avant l'ajout de
+    // cette taxonomie le 25/10, donc le defaut historique plutot que 'non classee'
+    // (demande de Firmin du 27/10, suite aux 10 aventures existantes restees
+    // non classees faute de ce defaut).
+    document.getElementById('f-content-type').value = Object.prototype.hasOwnProperty.call(CONTENT_TYPES, _advCategoryFilter) ? _advCategoryFilter : 'chasse_tresor_flavia';
     document.getElementById('f-sub-theme').value = '';
     onContentTypeChange();
     document.getElementById('f-age').value = '5–12 ans';
