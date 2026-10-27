@@ -2390,16 +2390,30 @@
     <!-- Popup de confirmation après découverte d'une cache (progression collection + badge éventuel) -->
     <div id="cache-success-overlay" style="display:none;position:fixed;inset:0;background:rgba(20,30,20,0.6);z-index:3000;align-items:center;justify-content:center;">
       <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:18px;padding:24px 20px;max-width:300px;width:88%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.35);">
-        <div style="font-size:34px;margin-bottom:6px;">📍</div>
+        <div style="width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:#6F6B14;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(111,107,20,0.4);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ff-ic-loupe"/></svg>
+        </div>
         <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Cache découverte !</div>
         <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;" id="cache-success-xp"></div>
         <div id="cache-success-collection" style="display:none;background:rgba(255,255,255,0.5);border-radius:12px;padding:12px;margin-bottom:14px;">
           <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;" id="cache-success-collection-name"></div>
           <div style="font-size:12px;color:var(--text-mid);" id="cache-success-collection-progress"></div>
         </div>
-        <div id="cache-success-badge" style="display:none;margin-bottom:14px;">
-          <img id="cache-success-badge-img" src="" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--amber);display:none;"/>
-          <div style="font-size:13px;font-weight:700;color:var(--amber);margin-top:6px;" id="cache-success-badge-label"></div>
+        <!-- Palier de collection nouvellement débloqué — présentation plus marquante
+             (27/10, retour Firmin : "c'est une étape importante") : on réutilise les
+             rayons tournants/halo/animation pop déjà en place sur l'écran de fin
+             d'aventure (.reward-v2-rays/.reward-v2-glow/.reward-v2-badge) plutôt que
+             de dupliquer ce traitement, tailles réduites pour tenir dans ce popup. -->
+        <div id="cache-success-badge" style="display:none;margin:4px 0 16px;">
+          <div style="position:relative;width:190px;height:190px;margin:0 auto;display:flex;align-items:center;justify-content:center;">
+            <div class="reward-v2-rays" aria-hidden="true" style="width:190px;height:190px;"></div>
+            <div class="reward-v2-glow" aria-hidden="true" style="width:130px;height:130px;"></div>
+            <div class="reward-v2-badge" style="width:92px;height:92px;margin-top:0;">
+              <img id="cache-success-badge-img" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none;"/>
+            </div>
+          </div>
+          <div style="font-family:'Cinzel',Georgia,serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-top:6px;">Nouveau badge débloqué</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-top:2px;" id="cache-success-badge-label"></div>
         </div>
         <button class="popup-btn" onclick="closeCacheSuccessPopup()">Continuer</button>
       </div>
@@ -4319,7 +4333,7 @@ async function showCacheDiscoverySuccess(cache) {
         if (!newlyEarned) newlyEarned = tier; // le plus haut palier nouvellement obtenu, pour l'affichage
       }
       if (newlyEarned) {
-        document.getElementById('cache-success-badge-label').textContent = `Badge débloqué : ${newlyEarned.label} !`;
+        document.getElementById('cache-success-badge-label').textContent = newlyEarned.label;
         const badgeImg = document.getElementById('cache-success-badge-img');
         if (newlyEarned.img) { badgeImg.src = newlyEarned.img; badgeImg.style.display = 'block'; }
         else { badgeImg.style.display = 'none'; }
@@ -6466,13 +6480,14 @@ let _allScenarioBadges = [];
 // aligné sur la taxonomie de contenu ajoutée côté admin). "aventure_prof_flint" vient
 // des livrets physiques (book_participations), pas de la table adventures — les deux
 // univers sont réunis ici uniquement pour l'affichage.
-const BADGE_CATEGORY_ORDER = ['histoire_flavia', 'chasse_tresor_flavia', 'aventure_prof_flint', 'balade_decouverte', 'tresors_oublies', 'geocache_sans_boite', 'autres'];
+const BADGE_CATEGORY_ORDER = ['histoire_flavia', 'chasse_tresor_flavia', 'aventure_prof_flint', 'balade_decouverte', 'tresors_oublies', 'caches_virtuelles', 'geocache_sans_boite', 'autres'];
 const BADGE_CATEGORY_LABELS = {
   histoire_flavia:      '📖 Histoire de Flavia Flint',
   chasse_tresor_flavia: '🧭 Chasses aux trésors de Flavia',
   aventure_prof_flint:  '🎩 Les aventures du Professeur Flint',
   balade_decouverte:    '🚶 Balades découverte',
   tresors_oublies:      '📦 Trésors oubliés',
+  caches_virtuelles:    '🔍 Caches virtuelles',
   geocache_sans_boite:  '📍 Géocaches sans boîte',
   autres:               '🏅 Autres badges'
 };
@@ -6594,7 +6609,8 @@ async function loadProfile() {
       scenarioCompletions,
       readChapters,
       partnerBadges,
-      bookCompletions
+      bookCompletions,
+      collectionBadges
     ] = await Promise.all([
       supaFetch(`players?id=eq.${playerId}`),
       supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
@@ -6617,6 +6633,11 @@ async function loadProfile() {
       // table adventures.
       supaFetch(`book_participations?player_id=eq.${playerId}&status=eq.completed&select=*,professor_flint_books(title,cover_image_url,cover_thumb_url,emoji)&order=completed_at.desc`)
         .catch(e => { console.error('Erreur chargement livrets Professeur Flint terminés:', e); return []; }),
+      // Badges de palier des collections de caches virtuelles (27/10) — manquaient
+      // totalement de la grille de badges du profil jusqu'ici (uniquement
+      // enregistrés en base, jamais affichés) : retour de Firmin du 27/10.
+      supaFetch(`player_collection_badges?player_id=eq.${playerId}&select=*,collections(name,icon_key,badge_bronze_image_url,badge_argent_image_url,badge_or_image_url)&order=earned_at.desc`)
+        .catch(e => { console.error('Erreur chargement badges de collection:', e); return []; }),
       checkAndAwardTitles()
     ]);
 
@@ -6712,10 +6733,22 @@ async function loadProfile() {
       label: c.professor_flint_books?.title || 'Livret Professeur Flint',
       category: 'aventure_prof_flint'
     }));
+    // Badges de palier (bronze/argent/or) des collections de caches virtuelles —
+    // collectionBadges vient du Promise.all ci-dessus, aucune requête ici.
+    const COLLECTION_TIER_LABEL = { bronze: 'Palier Bronze', argent: 'Palier Argent', or: 'Palier Or' };
+    const COLLECTION_TIER_IMG_KEY = { bronze: 'badge_bronze_image_url', argent: 'badge_argent_image_url', or: 'badge_or_image_url' };
+    const collectionBadgeEntries = (collectionBadges || []).map(b => ({
+      date: b.earned_at ? new Date(b.earned_at) : new Date(0),
+      imageUrl: b.collections?.[COLLECTION_TIER_IMG_KEY[b.tier]] || '',
+      icon: '🔍',
+      label: `${b.collections?.name || 'Collection'} — ${COLLECTION_TIER_LABEL[b.tier] || b.tier}`,
+      category: 'caches_virtuelles'
+    }));
+
     // Du plus récent au plus ancien, toutes sources de badges confondues — cet ordre
     // sert à la rangée de prévisualisation (profile-badges-grid) ; la fenêtre "Tous mes
     // badges" les réorganise ensuite par catégorie (cf. groupedBadgesHtml).
-    const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries]
+    const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries, ...collectionBadgeEntries]
       .sort((a, b) => b.date - a.date);
 
     document.getElementById('profile-stat-badges').textContent = allBadgeEntries.length;
@@ -8334,7 +8367,7 @@ async function openPlayerProfile(playerId) {
   overlay.addEventListener('click', e => { if (e.target === overlay) closePlayerProfile(); });
 
   try {
-    const [players, allPlayers, completions, readChapters, bookCompletions] = await Promise.all([
+    const [players, allPlayers, completions, readChapters, bookCompletions, collectionBadges] = await Promise.all([
       supaFetch(`players_public?id=eq.${playerId}&select=id,pseudo,avatar_emoji,total_xp,team_name,city,bio`),
       supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
       supaFetch(`adventure_completions?player_id=eq.${playerId}&select=*,adventures(title,badge_name,badge_image_url,badge_thumb_url,content_type,sub_theme)&order=completed_at.desc`)
@@ -8342,14 +8375,19 @@ async function openPlayerProfile(playerId) {
       supaFetch(`player_unlocked_chapters?player_id=eq.${playerId}&has_been_read=eq.true&select=chapter_id,unlocked_at,flavia_chapters(title,stamp_icon,stamp_text,stamp_image_url)&order=unlocked_at.desc`)
         .catch(e => { console.error('Erreur chargement chapitres du joueur:', e); return []; }),
       supaFetch(`book_participations?player_id=eq.${playerId}&status=eq.completed&select=*,professor_flint_books(title,cover_image_url,cover_thumb_url,emoji)&order=completed_at.desc`)
-        .catch(e => { console.error('Erreur chargement livrets Professeur Flint du joueur:', e); return []; })
+        .catch(e => { console.error('Erreur chargement livrets Professeur Flint du joueur:', e); return []; }),
+      // Badges de palier des collections de caches virtuelles — ajouté le 27/10 en
+      // même temps que sur son propre profil (loadProfile), pour que ces badges
+      // soient aussi visibles sur le profil public consulté par les autres joueurs.
+      supaFetch(`player_collection_badges?player_id=eq.${playerId}&select=*,collections(name,icon_key,badge_bronze_image_url,badge_argent_image_url,badge_or_image_url)&order=earned_at.desc`)
+        .catch(e => { console.error('Erreur chargement badges de collection du joueur:', e); return []; })
     ]);
     const player = players[0];
     if (!player) {
       renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Ce profil est introuvable.</div>');
       return;
     }
-    renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions));
+    renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions, collectionBadges));
   } catch (e) {
     console.error('Erreur chargement profil joueur:', e);
     renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Impossible de charger ce profil pour le moment.</div>');
@@ -8372,7 +8410,7 @@ function closePlayerProfile() {
   }
 }
 
-function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions) {
+function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions, collectionBadges) {
   const xp      = player.total_xp || 0;
   const rank    = allPlayers.findIndex(p => p.id === player.id) + 1;
   const cityLine = player.city ? `<div class="player-profile-sub">📍 ${escapeHtml(player.city)}</div>` : '';
@@ -8412,7 +8450,14 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, b
     label: c.professor_flint_books?.title || 'Livret Professeur Flint',
     category: 'aventure_prof_flint'
   }));
-  const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries].sort((a, b) => b.date - a.date);
+  const collectionBadgeEntries = (collectionBadges || []).map(b => ({
+    date: b.earned_at ? new Date(b.earned_at) : new Date(0),
+    imageUrl: b.collections?.[{ bronze: 'badge_bronze_image_url', argent: 'badge_argent_image_url', or: 'badge_or_image_url' }[b.tier]] || '',
+    icon: '🔍',
+    label: `${b.collections?.name || 'Collection'} — ${{ bronze: 'Palier Bronze', argent: 'Palier Argent', or: 'Palier Or' }[b.tier] || b.tier}`,
+    category: 'caches_virtuelles'
+  }));
+  const allBadgeEntries = [...scenarioBadgeEntries, ...chapterBadgeEntries, ...bookBadgeEntries, ...collectionBadgeEntries].sort((a, b) => b.date - a.date);
 
   // Regroupées par catégorie, du plus prestigieux au plus simple (même classement
   // que sur son propre profil — demande Firmin 25/10).
