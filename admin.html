@@ -115,6 +115,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   background: white; border-radius: var(--r-md); border: 1px solid var(--gray-brd);
   padding: 16px 20px;
 }
+.stat-card.clickable {
+  cursor: pointer; transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.stat-card.clickable:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10); transform: translateY(-1px); border-color: var(--green-dark);
+}
 .stat-card .label { font-size: 12px; color: var(--gray-txt); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .stat-card .value { font-size: 28px; font-weight: 800; color: var(--text); }
 .stat-card .sub { font-size: 12px; color: var(--gray-txt); margin-top: 3px; }
@@ -521,10 +527,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       </div>
     </div>
     <nav class="sidebar-nav">
-      <button class="nav-item active" onclick="showPage('dashboard', this)">
+      <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard', this)">
         <span class="nav-icon">📊</span> Tableau de bord
       </button>
-      <button class="nav-item" onclick="showAdventuresCategory('all', this)">
+      <button class="nav-item" id="nav-adventures-all" onclick="showAdventuresCategory('all', this)">
         <span class="nav-icon">🗺️</span> Aventures
       </button>
       <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showAdventuresCategory('unclassified', this)">
@@ -542,7 +548,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" style="padding-left:34px;font-size:12.5px;" onclick="showAdventuresCategory('chasse_tresor_flavia', this)">
         <span class="nav-icon">🧭</span> Chasses de Flavia
       </button>
-      <button class="nav-item" onclick="showPage('players', this)">
+      <button class="nav-item" id="nav-players" onclick="showPage('players', this)">
         <span class="nav-icon">👥</span> Joueurs
       </button>
       <button class="nav-item" onclick="showPage('badges', this)">
@@ -557,7 +563,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('flavia-chapters', this)">
         <span class="nav-icon"><img src="icon-book.webp" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/></span> Chapitres Flavia
       </button>
-      <button class="nav-item" onclick="showPage('partner-qr', this)">
+      <button class="nav-item" id="nav-partner-qr" onclick="showPage('partner-qr', this)">
         <span class="nav-icon">🏅</span> QR Partenaires
       </button>
       <button class="nav-item" onclick="showPage('titles', this)">
@@ -566,7 +572,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <button class="nav-item" onclick="showPage('xp-validations', this)">
         <span class="nav-icon">⭐</span> Validations XP
       </button>
-      <button class="nav-item" onclick="showPage('satisfaction', this)">
+      <button class="nav-item" id="nav-satisfaction" onclick="showPage('satisfaction', this)">
         <span class="nav-icon">📝</span> Avis joueurs
       </button>
       <button class="nav-item" onclick="showPage('settings', this)">
@@ -630,15 +636,15 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
       <!-- KPI Cards -->
       <div class="stats-grid" id="kpi-grid">
-        <div class="stat-card"><div class="label">Joueurs total</div><div class="value" id="kpi-total-players">…</div><div class="sub" id="kpi-players-growth"></div></div>
-        <div class="stat-card"><div class="label">Joueurs actifs</div><div class="value" id="kpi-active-players">…</div><div class="sub">Ce mois</div></div>
-        <div class="stat-card"><div class="label">Parties lancées</div><div class="value" id="kpi-launches">…</div><div class="sub" id="kpi-launches-sub"></div></div>
-        <div class="stat-card"><div class="label">Parties terminées</div><div class="value" id="kpi-completions">…</div><div class="sub" id="kpi-completion-rate"></div></div>
-        <div class="stat-card"><div class="label">Taux de complétion</div><div class="value" id="kpi-rate">…</div><div class="sub">Lancées → Terminées</div></div>
-        <div class="stat-card"><div class="label">QR codes scannés</div><div class="value" id="kpi-qr">…</div><div class="sub">Validations terrain</div></div>
-        <div class="stat-card"><div class="label">XP total distribué</div><div class="value" id="kpi-xp">…</div><div class="sub">Points gagnés</div></div>
-        <div class="stat-card"><div class="label">Boîtes signalées</div><div class="value" id="kpi-reports">…</div><div class="sub" id="kpi-reports-sub"></div></div>
-        <div class="stat-card"><div class="label">Note moyenne</div><div class="value" id="kpi-rating">…</div><div class="sub">Sur 5 étoiles</div></div>
+        <div class="stat-card clickable" onclick="dashGoTo('players')" title="Voir les joueurs"><div class="label">Joueurs total</div><div class="value" id="kpi-total-players">…</div><div class="sub" id="kpi-players-growth"></div></div>
+        <div class="stat-card clickable" onclick="dashGoTo('players')" title="Voir les joueurs"><div class="label">Joueurs actifs</div><div class="value" id="kpi-active-players">…</div><div class="sub">Ce mois</div></div>
+        <div class="stat-card clickable" onclick="dashGoToAdventures()" title="Voir les aventures"><div class="label">Parties lancées</div><div class="value" id="kpi-launches">…</div><div class="sub" id="kpi-launches-sub"></div></div>
+        <div class="stat-card clickable" onclick="dashGoToAdventures()" title="Voir les aventures"><div class="label">Parties terminées</div><div class="value" id="kpi-completions">…</div><div class="sub" id="kpi-completion-rate"></div></div>
+        <div class="stat-card clickable" onclick="dashGoToAdventures()" title="Voir les aventures"><div class="label">Taux de complétion</div><div class="value" id="kpi-rate">…</div><div class="sub">Lancées → Terminées</div></div>
+        <div class="stat-card clickable" onclick="dashGoTo('partner-qr')" title="Voir les QR partenaires"><div class="label">QR codes scannés</div><div class="value" id="kpi-qr">…</div><div class="sub">Validations terrain</div></div>
+        <div class="stat-card clickable" onclick="dashGoTo('players')" title="Voir les joueurs"><div class="label">XP total distribué</div><div class="value" id="kpi-xp">…</div><div class="sub">Points gagnés</div></div>
+        <div class="stat-card clickable" onclick="dashScrollToReports()" title="Voir les signalements"><div class="label">Boîtes signalées</div><div class="value" id="kpi-reports">…</div><div class="sub" id="kpi-reports-sub"></div></div>
+        <div class="stat-card clickable" onclick="dashGoTo('satisfaction')" title="Voir les avis joueurs"><div class="label">Note moyenne</div><div class="value" id="kpi-rating">…</div><div class="sub">Sur 5 étoiles</div></div>
       </div>
 
       <!-- Graphique croissance joueurs -->
@@ -692,11 +698,14 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 
     <!-- ═══ PAGE : JOUEURS ═══ -->
     <div id="page-players" class="page">
-      <div class="empty-state">
-        <div class="empty-icon">👥</div>
-        <div class="empty-title">Aucun joueur inscrit pour l'instant</div>
-        <div class="empty-sub">Les joueurs apparaîtront ici dès qu'ils activeront leur carte d'aventurier.<br>Cette section sera connectée à Supabase à la prochaine étape.</div>
+      <div class="section-header">
+        <div class="section-title">Joueurs</div>
+        <input type="text" id="players-search" placeholder="🔍 Pseudo ou ville..." oninput="renderPlayersTable()"
+          style="padding:9px 14px;border:1px solid var(--gray-brd);border-radius:var(--r-md);font-size:13px;width:240px;box-sizing:border-box;">
+        <button class="btn btn-secondary btn-sm" onclick="loadPlayersPage()">🔄 Actualiser</button>
       </div>
+      <div id="players-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;"></div>
+      <div id="players-table"></div>
     </div>
 
     <!-- ═══ PAGE : BADGES ═══ -->
@@ -1356,9 +1365,27 @@ function showPage(name, btn) {
   if (name === 'titles') loadTitlesPage();
   if (name === 'xp-validations') loadXpValidations();
   if (name === 'satisfaction') loadSatisfactionResponses();
+  if (name === 'players') loadPlayersPage();
   if (name === 'settings') loadAppSettings();
   if (name === 'clients') loadClientsPage();
   if (name === 'b2b') loadB2BPage();
+}
+
+// ── Raccourcis cliquables depuis les cartes KPI du tableau de bord
+// (demande de Firmin du 27/10 : pouvoir cliquer dessus pour aller directement
+// voir le detail — qui a note, quand, etc.) ──
+function dashGoTo(pageName) {
+  showPage(pageName, document.getElementById('nav-' + pageName));
+}
+function dashGoToAdventures() {
+  showAdventuresCategory('all', document.getElementById('nav-adventures-all'));
+}
+function dashScrollToReports() {
+  showPage('dashboard', document.getElementById('nav-dashboard'));
+  setTimeout(() => {
+    const el = document.getElementById('kpi-reports-list');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 30);
 }
 
 // ══════════════════════════════════════════
@@ -1390,6 +1417,7 @@ async function loadDashboard() {
     const completionsSince = since ? `&completed_at=gte.${since}` : '';
     const reportsSince    = since ? `&reported_at=gte.${since}`  : '';
     const responsesSince  = since ? `&responded_at=gte.${since}` : '';
+    const scansSince      = since ? `&scanned_at=gte.${since}`   : '';
 
     // Charger toutes les données en parallèle
     const [
@@ -1400,7 +1428,8 @@ async function loadDashboard() {
       reports,
       recentPlayers,
       cities,
-      responses
+      responses,
+      qrScans
     ] = await Promise.all([
       supa('GET', 'players', null, '?select=id,created_at,total_xp,city'),
       supa('GET', 'players', null, `?select=id,created_at${playersSince}`),
@@ -1409,7 +1438,8 @@ async function loadDashboard() {
       supa('GET', 'box_reports', null, `?select=*,adventures(title)${reportsSince}&order=reported_at.desc&limit=5`),
       supa('GET', 'players', null, '?select=pseudo,avatar_emoji,city,total_xp,created_at&order=created_at.desc&limit=10'),
       supa('GET', 'players', null, '?select=city&city=not.is.null'),
-      supa('GET', 'satisfaction_responses', null, `?select=rating${responsesSince}`)
+      supa('GET', 'satisfaction_responses', null, `?select=rating${responsesSince}`),
+      supa('GET', 'player_partner_badges', null, `?select=id${scansSince}`)
     ]);
 
     // KPI simples
@@ -1426,7 +1456,7 @@ async function loadDashboard() {
     const totalXp = completions.reduce((sum, c) => sum + (c.total_xp_earned || 0), 0);
     document.getElementById('kpi-xp').textContent = totalXp.toLocaleString();
 
-    document.getElementById('kpi-qr').textContent = responses.length;
+    document.getElementById('kpi-qr').textContent = qrScans.length;
 
     document.getElementById('kpi-reports').textContent = reports.length;
     document.getElementById('kpi-reports-sub').textContent = reports.length > 0 ? 'À vérifier !' : 'Aucun signalement';
@@ -2666,6 +2696,80 @@ async function loadSatisfactionResponses() {
   } finally {
     setLoading(false);
   }
+}
+
+// ══════════════════════════════════════════
+// JOUEURS (annuaire des comptes joueurs de l'app, table `players` — demande
+// de Firmin du 27/10 : cette page affichait un placeholder statique jamais
+// relié à Supabase, alors que le tableau de bord lui-même lit bien cette
+// table)
+// ══════════════════════════════════════════
+let allPlayersDirectory = [];
+
+async function loadPlayersPage() {
+  setLoading(true);
+  try {
+    const [players, completions] = await Promise.all([
+      supa('GET', 'players', null,
+        '?select=id,pseudo,email,avatar_emoji,city,country,total_xp,compass_balance,team_name,team_size,created_at&order=created_at.desc'),
+      supa('GET', 'adventure_completions', null, '?select=player_id')
+    ]);
+
+    const countMap = {};
+    (completions || []).forEach(c => { countMap[c.player_id] = (countMap[c.player_id] || 0) + 1; });
+    allPlayersDirectory = (players || []).map(p => ({ ...p, completions: countMap[p.id] || 0 }));
+
+    const totalXp = allPlayersDirectory.reduce((s, p) => s + (p.total_xp || 0), 0);
+    const totalCompletions = allPlayersDirectory.reduce((s, p) => s + p.completions, 0);
+    const withTeam = allPlayersDirectory.filter(p => p.team_name).length;
+
+    document.getElementById('players-stats').innerHTML = `
+      <div class="stat-card"><div class="label">Joueurs inscrits</div><div class="value">${allPlayersDirectory.length}</div></div>
+      <div class="stat-card"><div class="label">XP cumulé</div><div class="value">${totalXp.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="label">Aventures terminées</div><div class="value">${totalCompletions}</div></div>
+      <div class="stat-card"><div class="label">Avec équipe renseignée</div><div class="value">${withTeam}</div></div>`;
+
+    renderPlayersTable();
+  } catch(e) {
+    showToast('Erreur chargement joueurs : ' + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderPlayersTable() {
+  const q = (document.getElementById('players-search')?.value || '').toLowerCase().trim();
+  const filtered = q
+    ? allPlayersDirectory.filter(p =>
+        (p.pseudo || '').toLowerCase().includes(q) || (p.city || '').toLowerCase().includes(q))
+    : allPlayersDirectory;
+
+  const el = document.getElementById('players-table');
+  if (!filtered.length) {
+    el.innerHTML = allPlayersDirectory.length
+      ? '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Aucun résultat</div></div>'
+      : '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Aucun joueur inscrit pour l\'instant</div><div class="empty-sub">Les joueurs apparaîtront ici dès qu\'ils créeront un compte dans l\'app.</div></div>';
+    return;
+  }
+
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th></th><th>Pseudo</th><th>Équipe</th><th>Ville</th>
+      <th>Aventures terminées</th><th>XP</th><th>Boussoles</th><th>Inscrit le</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${filtered.map(p => `
+      <tr>
+        <td><div style="width:32px;height:32px;border-radius:50%;background:#2D4A2D;overflow:hidden;">${avatarImgTag(p.avatar_emoji)}</div></td>
+        <td><strong>${escapeHtml(p.pseudo || 'Anonyme')}</strong></td>
+        <td>${p.team_name ? `${escapeHtml(p.team_name)}${p.team_size ? ' (' + p.team_size + ')' : ''}` : '—'}</td>
+        <td>${escapeHtml(p.city || '—')}${p.country ? `, ${escapeHtml(p.country)}` : ''}</td>
+        <td><strong>${p.completions}</strong></td>
+        <td>${(p.total_xp || 0).toLocaleString()}</td>
+        <td>🧭 ${p.compass_balance || 0}</td>
+        <td style="font-size:12px;color:#9CA3AF;">${p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+        <td><div class="actions-cell">${p.email ? `<a href="mailto:${escapeHtml(p.email)}" class="btn btn-secondary btn-sm">✉️</a>` : ''}</div></td>
+      </tr>`).join('')}
+    </tbody></table>`;
 }
 
 async function approveXpRequest(requestId, playerId, xpReward) {
