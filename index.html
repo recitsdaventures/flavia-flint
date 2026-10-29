@@ -36,6 +36,10 @@
      bandeau de progression, fiche de lieu) ; le pin sur la carte reste la
      loupe neutre de flavia-markers.js, inchangee. -->
 <script defer src="flavia-collections.js"></script>
+<!-- Popup de validation d'une cache virtuelle (progression + niveau de
+     collection), fourni par Firmin le 29/10 - remplace l'ancien overlay
+     #cache-success-overlay (emoji + paliers bronze/argent/or uniquement). -->
+<script defer src="flavia-cache-popup.js"></script>
 <!-- Bouton Legende carte + fenetres synthese/detail (29/10) - 4 vraies
      categories de contenu (Echos du Patrimoine / Coffres caches / Les
      Enquetes de Flavia / Les Chasses de Flavia), reutilise les pictos
@@ -68,7 +72,7 @@
     --amber:        #E8A020;
     --text-dark:    #1A2A1A;
     --text-mid:     #4A5A4A;
-    --text-light:   #7A8A7A;
+    --text-light:   #374151;
     --white:        #FFFFFF;
     --radius-sm:    8px;
     --radius-md:    14px;
@@ -760,7 +764,7 @@
   }
   .rank-item.me     { border-color: var(--terra); background: #FFF7F4; }
   .rank-item.gold   .rank-num { color: #F59E0B; }
-  .rank-item.silver .rank-num { color: #9CA3AF; }
+  .rank-item.silver .rank-num { color: #374151; }
   .rank-item.bronze .rank-num { color: #B45309; }
 
   .rank-num    { font-size: 16px; font-weight: 800; color: var(--text-mid); min-width: 28px; text-align: center; }
@@ -1452,7 +1456,7 @@
     position: absolute; top: 10px; right: 10px;
     background: none; border: 1px solid var(--beige-dark);
     border-radius: 20px; padding: 3px 10px;
-    font-size: 11px; color: #9CA3AF; cursor: pointer; font-family: inherit;
+    font-size: 11px; color: #374151; cursor: pointer; font-family: inherit;
   }
 
   .c0-text {
@@ -1506,7 +1510,7 @@
     text-align: left;
   }
   .c0-choice-btn:active { background: var(--beige-mid); border-color: var(--terra); }
-  .c0-choice-arrow { color: #9CA3AF; flex-shrink: 0; }
+  .c0-choice-arrow { color: #374151; flex-shrink: 0; }
 
   /* ── CARNET D'AVENTURE (même présentation que le Chapitre 0, appliquée aux
      étapes de récit/énigme des scénarios d'aventure — hors mode boussole GPS) ──
@@ -1716,7 +1720,7 @@
     animation: popupAppear 0.4s cubic-bezier(0.68,-0.55,0.265,1.55) forwards;
   }
   .stamp-popup-label {
-    font-size: 12px; font-weight: 700; color: #9CA3AF;
+    font-size: 12px; font-weight: 700; color: #374151;
     text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;
   }
   .stamp-container {
@@ -2406,38 +2410,6 @@
       <div id="cache-popup-content"></div>
     </div>
 
-    <!-- Popup de confirmation après découverte d'une cache (progression collection + badge éventuel) -->
-    <div id="cache-success-overlay" style="display:none;position:fixed;inset:0;background:rgba(20,30,20,0.6);z-index:3000;align-items:center;justify-content:center;">
-      <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:18px;padding:24px 20px;max-width:300px;width:88%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.35);">
-        <div style="width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:#6F6B14;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(111,107,20,0.4);">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ff-ic-loupe"/></svg>
-        </div>
-        <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Cache découverte !</div>
-        <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;" id="cache-success-xp"></div>
-        <div id="cache-success-collection" style="display:none;background:rgba(255,255,255,0.5);border-radius:12px;padding:12px;margin-bottom:14px;">
-          <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;" id="cache-success-collection-name"></div>
-          <div style="font-size:12px;color:var(--text-mid);" id="cache-success-collection-progress"></div>
-        </div>
-        <!-- Palier de collection nouvellement débloqué — présentation plus marquante
-             (27/10, retour Firmin : "c'est une étape importante") : on réutilise les
-             rayons tournants/halo/animation pop déjà en place sur l'écran de fin
-             d'aventure (.reward-v2-rays/.reward-v2-glow/.reward-v2-badge) plutôt que
-             de dupliquer ce traitement, tailles réduites pour tenir dans ce popup. -->
-        <div id="cache-success-badge" style="display:none;margin:4px 0 16px;">
-          <div style="position:relative;width:190px;height:190px;margin:0 auto;display:flex;align-items:center;justify-content:center;">
-            <div class="reward-v2-rays" aria-hidden="true" style="width:190px;height:190px;"></div>
-            <div class="reward-v2-glow" aria-hidden="true" style="width:130px;height:130px;"></div>
-            <div class="reward-v2-badge" style="width:92px;height:92px;margin-top:0;">
-              <img id="cache-success-badge-img" src="" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:none;"/>
-            </div>
-          </div>
-          <div style="font-family:'Cinzel',Georgia,serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-top:6px;">Nouveau badge débloqué</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-top:2px;" id="cache-success-badge-label"></div>
-        </div>
-        <button class="popup-btn" onclick="closeCacheSuccessPopup()">Continuer</button>
-      </div>
-    </div>
-
     <button class="map-fab" onclick="locateMe()">📍</button>
   </div>
 
@@ -2641,7 +2613,7 @@
     <div id="qr-result-msg" style="padding:16px;text-align:center;background:#F5EDD8 url('parchment-tile.webp') repeat;display:none;flex-shrink:0;">
       <div style="font-size:24px;margin-bottom:8px;">✅</div>
       <div style="font-weight:700;color:#1A2A1A;">QR code validé !</div>
-      <div style="font-size:13px;color:#6B7280;margin-top:4px;">Redirection vers le questionnaire...</div>
+      <div style="font-size:13px;color:#374151;margin-top:4px;">Redirection vers le questionnaire...</div>
     </div>
   </div>
 
@@ -2683,7 +2655,7 @@
     </div>
     <!-- Contenu -->
     <div style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;" id="flavia-story-content">
-      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
+      <div style="text-align:center;padding:20px;color:#374151;">⏳ Chargement...</div>
     </div>
   </div>
 
@@ -2701,7 +2673,7 @@
       <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:20px;margin-bottom:8px;">✍️</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Programme Auteurs Flavia Flint</div>
-        <div style="font-size:13px;color:#6B7280;line-height:1.6;">
+        <div style="font-size:13px;color:#374151;line-height:1.6;">
           Tu es passionné d'histoire locale, guide touristique, enseignant ou expert du patrimoine ?
           Rejoins notre équipe d'auteurs certifiés et crée des aventures pour les familles de ta région.
         </div>
@@ -2713,19 +2685,19 @@
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;">🛠️</span>
-            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Accès à l'interface de création</div><div style="font-size:12px;color:#9CA3AF;">Crée tes scénarios directement dans notre outil</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Accès à l'interface de création</div><div style="font-size:12px;color:#374151;">Crée tes scénarios directement dans notre outil</div></div>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;">💰</span>
-            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Rémunération à la vente</div><div style="font-size:12px;color:#9CA3AF;">Tu es rémunéré à chaque scénario vendu à une commune</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Rémunération à la vente</div><div style="font-size:12px;color:#374151;">Tu es rémunéré à chaque scénario vendu à une commune</div></div>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;">🏛️</span>
-            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Valorise ton expertise</div><div style="font-size:12px;color:#9CA3AF;">Partage ta passion du patrimoine avec des milliers de familles</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Valorise ton expertise</div><div style="font-size:12px;color:#374151;">Partage ta passion du patrimoine avec des milliers de familles</div></div>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <span style="font-size:18px;">✅</span>
-            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Validation editoriale</div><div style="font-size:12px;color:#9CA3AF;">Chaque scénario est relu et validé avant publication</div></div>
+            <div><div style="font-size:13px;font-weight:600;color:#1A2A1A;">Validation editoriale</div><div style="font-size:12px;color:#374151;">Chaque scénario est relu et validé avant publication</div></div>
           </div>
         </div>
       </div>
@@ -2762,7 +2734,7 @@
       <div id="author-request-success" style="display:none;background:#ECFDF5;border:2px solid #059669;border-radius:14px;padding:20px;text-align:center;">
         <div style="font-size:32px;margin-bottom:8px;">✅</div>
         <div style="font-size:16px;font-weight:700;color:#065F46;margin-bottom:6px;">Candidature envoyée !</div>
-        <div style="font-size:13px;color:#6B7280;">Nous étudions ta candidature et te répondons sous 48h.</div>
+        <div style="font-size:13px;color:#374151;">Nous étudions ta candidature et te répondons sous 48h.</div>
       </div>
     </div>
   </div>
@@ -2776,7 +2748,7 @@
       <span style="color:white;font-weight:700;flex:1;"><img src="icon-book.webp" alt="" style="width:1em;height:1em;object-fit:contain;vertical-align:-0.15em;display:inline-block;"/> Livre Professeur Flint</span>
     </div>
     <div id="book-detail-content" style="flex:1;overflow-y:auto;padding:16px;background:#F5EDD8 url('parchment-tile.webp') repeat;">
-      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
+      <div style="text-align:center;padding:20px;color:#374151;">⏳ Chargement...</div>
     </div>
   </div>
 
@@ -3972,7 +3944,7 @@ function renderAdventureCards() {
           <!-- Résumé -->
           <div style="
             font-size:13px;
-            color:#6B7280;
+            color:#374151;
             line-height:1.4;
             margin-bottom:8px;
             display:-webkit-box;
@@ -4087,6 +4059,18 @@ function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   renderMapMarkers();
   if (playerPos) { map.setView([playerPos.lat, playerPos.lng], 13); updatePlayerMarker(playerPos.lat, playerPos.lng); }
+  // Réaffichage des caches visibles à l'écran (29/10, retour Firmin : "quand
+  // on dézoome on ne voit plus les caches, la carte paraît vide") — les
+  // caches sont maintenant filtrées sur la zone visible de la carte plutôt
+  // que sur la distance au joueur (voir renderMapMarkers()), donc il faut
+  // relancer le rendu à chaque déplacement/zoom pour révéler ce qui entre
+  // dans le cadre. Debounce 200ms pour ne pas redessiner à chaque frame
+  // intermédiaire d'un geste de pan/zoom.
+  let _mapMoveTimer = null;
+  map.on('moveend zoomend', () => {
+    clearTimeout(_mapMoveTimer);
+    _mapMoveTimer = setTimeout(renderMapMarkers, 200);
+  });
 }
 
 function updatePlayerMarker(lat, lng) {
@@ -4152,12 +4136,19 @@ function renderMapMarkers() {
     });
   }
 
-  // Caches virtuelles — modèle à 3 rayons (audit du 27/10) :
-  //  - rayon ambiant (_cacheAmbientRadiusM, réglage global) : visibilité par
-  //    défaut sur la carte "Tous les scénarios", seulement autour du joueur ;
+  // Caches virtuelles (modèle révisé le 29/10, suite au retour "la carte
+  // paraît vide dès qu'on dézoome") :
+  //  - visibilité par défaut sur la carte "Tous les scénarios" : toute cache
+  //    dans la zone actuellement visible à l'écran (map.getBounds()), plutôt
+  //    qu'un rayon fixe autour du joueur — zoomer/dézoomer ou se déplacer
+  //    sur la carte révèle donc naturellement plus (ou moins) de caches,
+  //    toujours regroupées via le cluster si elles sont proches ;
+  //    _cacheAmbientRadiusM (réglage admin) n'est plus utilisé par ce filtre
+  //    depuis ce changement — à nettoyer côté admin si Firmin confirme ;
   //  - filtre "Caches virtuelles" activé : toutes les caches, sans limite de
-  //    distance (vue exploration complète) ;
-  //  - rayon de proximité (_cacheNearRadiusM) : état visuel "near" (pulsé) ;
+  //    zone (vue exploration complète) ;
+  //  - rayon de proximité (_cacheNearRadiusM) : état visuel "near" (pulsé),
+  //    inchangé, reste basé sur la position réelle du joueur ;
   //  - rayon de validation (par cache, cache.validation_radius_m) : pas encore
   //    utilisé ici, c'est la logique de découverte GPS (étape suivante) qui
   //    s'en servira pour passer l'état à "done".
@@ -4184,12 +4175,12 @@ function renderMapMarkers() {
     cacheClusterGroup.clearLayers();
   }
 
+  const _mapViewBounds = map.getBounds();
   virtualCaches
     .filter(c => {
       if (specificAdventureFilterActive) return false; // vue dediee a une autre categorie : pas de caches
-      if (cachesFilterActive) return true;
-      if (!playerPos) return false; // on ne connaît pas encore la position : pas d'affichage ambiant possible
-      return getDistance(playerPos.lat, playerPos.lng, c.lat, c.lng) <= _cacheAmbientRadiusM;
+      if (cachesFilterActive) return true; // vue exploration complete : aucune limite de zone
+      return _mapViewBounds.contains([c.lat, c.lng]); // visible a l'ecran, quelle que soit la distance au joueur
     })
     .forEach(c => {
       let state = 'discover';
@@ -4289,7 +4280,7 @@ function renderCachePopupCard() {
   const statusHtml = discovered
     ? `<div style="font-size:12.5px;font-weight:600;color:${CACHE_MARKER_COLOR};margin-bottom:10px;">✓ Déjà découverte</div>`
     : (!playerPos
-        ? `<div style="font-size:12.5px;font-weight:600;color:#9CA3AF;margin-bottom:10px;">Active la géolocalisation pour pouvoir valider.</div>`
+        ? `<div style="font-size:12.5px;font-weight:600;color:#374151;margin-bottom:10px;">Active la géolocalisation pour pouvoir valider.</div>`
         : `<div style="font-size:12.5px;font-weight:600;color:${canValidate ? '#15803D' : '#9CA3AF'};margin-bottom:10px;">${canValidate ? '📍 Tu y es !' : `Encore ${remaining} m pour pouvoir valider`}</div>`);
   const btnLabel = discovered ? '✓ Déjà découverte' : (!playerPos ? '🔍 Fouiller la zone' : (canValidate ? '🔍 Fouiller la zone' : `🔍 Rapproche-toi (${remaining} m)`));
   const btnDisabled = discovered || !playerPos || !canValidate;
@@ -4363,71 +4354,63 @@ const COLLECTION_ICON_EMOJI = {
   patrimoine: '🏰', nature: '🌿', art: '🖌️', savoir_faire: '🔧'
 };
 
+// Popup de validation d'une cache (29/10) : delegue l'affichage a
+// FlaviaCachePopup.show() (medaille + niveau 1-5 + barre de progression),
+// fourni par Firmin. Les paliers bronze/argent/or restent calcules et
+// ecrits ici (player_collection_badges, logique inchangee) - ce systeme est
+// independant du niveau 1-5 du nouveau popup, donc un palier nouvellement
+// debloque est signale par un toast pour ne pas perdre l'info.
 async function showCacheDiscoverySuccess(cache) {
-  document.getElementById('cache-success-xp').textContent =
-    cache.xp_reward ? `+${cache.xp_reward} XP` : 'Découverte enregistrée';
-
-  const colWrap   = document.getElementById('cache-success-collection');
-  const badgeWrap = document.getElementById('cache-success-badge');
-  colWrap.style.display   = 'none';
-  badgeWrap.style.display = 'none';
-
   const col = playerCollections.find(c => c.id === cache.collection_id);
-  if (col && currentPlayer?.id) {
-    try {
-      const userId = currentPlayer.id;
-      // On recompte à partir de la base plutôt que du cache mémoire local,
-      // pour être sûr d'afficher un chiffre exact même si plusieurs appareils
-      // du même joueur découvrent des caches en parallèle.
-      const discoveries = await supaFetch(`cache_discoveries?player_id=eq.${userId}&select=cache_id`);
-      cacheDiscoveries = discoveries || [];
-      const discoveredIds = new Set(cacheDiscoveries.map(d => d.cache_id));
-      const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
-      const total = collectionCaches.length;
-      const count = collectionCaches.filter(c => discoveredIds.has(c.id)).length;
+  const flaviaKey = col ? FLAVIA_COLLECTION_KEY_BY_NAME[col.name] : null;
+  const fallback = () => showToast(cache.xp_reward ? `Cache découverte ! +${cache.xp_reward} XP` : 'Cache découverte !');
 
-      document.getElementById('cache-success-collection-name').textContent =
-        (COLLECTION_ICON_EMOJI[col.icon_key] || '🧿') + ' ' + col.name;
-      document.getElementById('cache-success-collection-progress').textContent =
-        `${count} / ${total} découvertes`;
-      colWrap.style.display = 'block';
+  if (!flaviaKey || !currentPlayer?.id) { fallback(); return; }
 
-      const tiers = [
-        { key: 'or',     threshold: col.badge_or_threshold,     img: col.badge_or_image_url,     label: '🥇 Palier Or' },
-        { key: 'argent', threshold: col.badge_argent_threshold, img: col.badge_argent_image_url, label: '🥈 Palier Argent' },
-        { key: 'bronze', threshold: col.badge_bronze_threshold, img: col.badge_bronze_image_url, label: '🥉 Palier Bronze' }
-      ];
-      let newlyEarned = null;
-      for (const tier of tiers) {
-        if (!tier.threshold || count < tier.threshold) continue;
-        const already = await supaFetch(
-          `player_collection_badges?player_id=eq.${userId}&collection_id=eq.${col.id}&tier=eq.${tier.key}&select=id`
-        );
-        if (already.length) continue;
-        await supaFetch('player_collection_badges', {
-          method: 'POST',
-          prefer: 'resolution=merge-duplicates',
-          body: { player_id: userId, collection_id: col.id, tier: tier.key }
-        });
-        if (!newlyEarned) newlyEarned = tier; // le plus haut palier nouvellement obtenu, pour l'affichage
-      }
-      if (newlyEarned) {
-        document.getElementById('cache-success-badge-label').textContent = newlyEarned.label;
-        const badgeImg = document.getElementById('cache-success-badge-img');
-        if (newlyEarned.img) { badgeImg.src = newlyEarned.img; badgeImg.style.display = 'block'; }
-        else { badgeImg.style.display = 'none'; }
-        badgeWrap.style.display = 'block';
-      }
-    } catch (e) {
-      console.error('Erreur calcul progression collection:', e);
+  const userId = currentPlayer.id;
+  try {
+    // On recompte à partir de la base plutôt que du cache mémoire local,
+    // pour être sûr d'afficher un chiffre exact même si plusieurs appareils
+    // du même joueur découvrent des caches en parallèle.
+    const discoveries = await supaFetch(`cache_discoveries?player_id=eq.${userId}&select=cache_id`);
+    cacheDiscoveries = discoveries || [];
+    const discoveredIds = new Set(cacheDiscoveries.map(d => d.cache_id));
+    const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
+    const total = collectionCaches.length;
+    const after = collectionCaches.filter(c => discoveredIds.has(c.id)).length;
+    if (!total) { fallback(); return; }
+
+    const tiers = [
+      { key: 'or',     threshold: col.badge_or_threshold,     label: '🥇 Palier Or' },
+      { key: 'argent', threshold: col.badge_argent_threshold, label: '🥈 Palier Argent' },
+      { key: 'bronze', threshold: col.badge_bronze_threshold, label: '🥉 Palier Bronze' }
+    ];
+    let newlyEarned = null;
+    for (const tier of tiers) {
+      if (!tier.threshold || after < tier.threshold) continue;
+      const already = await supaFetch(
+        `player_collection_badges?player_id=eq.${userId}&collection_id=eq.${col.id}&tier=eq.${tier.key}&select=id`
+      );
+      if (already.length) continue;
+      await supaFetch('player_collection_badges', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates',
+        body: { player_id: userId, collection_id: col.id, tier: tier.key }
+      });
+      if (!newlyEarned) newlyEarned = tier; // le plus haut palier nouvellement obtenu, pour l'affichage
     }
+    if (newlyEarned) showToast(newlyEarned.label + ' débloqué !');
+
+    FlaviaCachePopup.show({
+      collection: flaviaKey,
+      doneBefore: Math.max(0, after - 1),
+      total,
+      xp: cache.xp_reward || 0
+    });
+  } catch (e) {
+    console.error('Erreur calcul progression collection:', e);
+    fallback();
   }
-
-  document.getElementById('cache-success-overlay').style.display = 'flex';
-}
-
-function closeCacheSuccessPopup() {
-  document.getElementById('cache-success-overlay').style.display = 'none';
 }
 
 function showPopup(adv) {
@@ -4461,7 +4444,7 @@ async function showBookDetail(bookId) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (!book) { content.innerHTML = '<div class="adv-card-empty">Livre introuvable.</div>'; return; }
   currentBook = book;
-  content.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>';
+  content.innerHTML = '<div style="text-align:center;padding:20px;color:#374151;">⏳ Chargement...</div>';
 
   let participation = null;
   if (currentPlayer?.id && !isGuest()) {
@@ -4483,20 +4466,20 @@ async function showBookDetail(bookId) {
 
   let actionHtml = '';
   if (isGuest()) {
-    actionHtml = `<div style="text-align:center;padding:14px;color:#6B7280;font-size:13px;">Connecte-toi pour participer à ce livre.</div>`;
+    actionHtml = `<div style="text-align:center;padding:14px;color:#374151;font-size:13px;">Connecte-toi pour participer à ce livre.</div>`;
   } else if (!participation || participation.status === 'completed') {
     actionHtml = participation?.status === 'completed'
       ? `<div style="background:#ECFDF5;border:2px solid #059669;border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;">
            <div style="font-size:24px;margin-bottom:6px;">✅</div>
            <div style="font-weight:700;color:#065F46;">Livre terminé !</div>
-           <div style="font-size:13px;color:#6B7280;margin-top:4px;">+${participation.xp_earned || 0} XP gagnés</div>
+           <div style="font-size:13px;color:#374151;margin-top:4px;">+${participation.xp_earned || 0} XP gagnés</div>
          </div>
          <button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Rejouer — Scanner le QR de départ</button>`
       : `<button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Scanner le QR de départ</button>`;
   } else {
     actionHtml = `
       <div style="background:#FFF7F4;border:2px solid #C4622D;border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;">
-        <div style="font-size:13px;color:#6B7280;">Participation en cours${participation.team_name ? ' — équipe ' + participation.team_name : ''}</div>
+        <div style="font-size:13px;color:#374151;">Participation en cours${participation.team_name ? ' — équipe ' + participation.team_name : ''}</div>
       </div>
       <button class="btn-primary" onclick="openBookScanner('${book.id}')" style="width:100%;">📷 Scanner le QR de fin</button>`;
   }
@@ -4504,8 +4487,8 @@ async function showBookDetail(bookId) {
   content.innerHTML = `
     ${coverHtml}
     <div style="font-size:19px;font-weight:800;color:#1A2A1A;margin-bottom:8px;">${book.title}</div>
-    <div style="font-size:14px;color:#6B7280;line-height:1.6;margin-bottom:14px;">${book.description || ''}</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;color:#6B7280;">
+    <div style="font-size:14px;color:#374151;line-height:1.6;margin-bottom:14px;">${book.description || ''}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;color:#374151;">
       <span>⏱ ${book.duration || ''}</span>
       <span>📍 ${book.location || ''}</span>
       <span>⭐ ${book.xp_reward || 0} XP</span>
@@ -6213,7 +6196,7 @@ async function showFinalReward() {
     <div style="background:#FFF7F4;border:1px solid #FECACA;border-radius:14px;padding:14px;margin:12px 0;">
       <div style="text-align:center;margin-bottom:12px;">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;">📸 Partage ton aventure !</div>
-        <div style="font-size:12px;color:#9CA3AF;margin-top:3px;">Gagne +${shareXp} XP en partageant sur les réseaux</div>
+        <div style="font-size:12px;color:#374151;margin-top:3px;">Gagne +${shareXp} XP en partageant sur les réseaux</div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
         <button onclick="shareToInstagram(${shareXp})" style="
@@ -6248,7 +6231,7 @@ async function showFinalReward() {
     <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin:16px 0;text-align:center;">
       <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
       <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
-      <div style="font-size:13px;color:#6B7280;margin-top:6px;">${attempts} essai${attempts > 1 ? 's' : ''} raté${attempts > 1 ? 's' : ''}</div>
+      <div style="font-size:13px;color:#374151;margin-top:6px;">${attempts} essai${attempts > 1 ? 's' : ''} raté${attempts > 1 ? 's' : ''}</div>
     </div>
     ${shareSection}
     <div style="margin-top:8px;width:100%;">
@@ -6340,7 +6323,7 @@ async function markAsShared(xpAmount) {
       <div style="text-align:center;padding:8px;">
         <div style="font-size:20px;margin-bottom:4px;">🎉</div>
         <div style="font-size:14px;font-weight:700;color:#059669;">+${xp} XP ajoutés !</div>
-        <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Merci de partager l'aventure !</div>
+        <div style="font-size:12px;color:#374151;margin-top:2px;">Merci de partager l'aventure !</div>
       </div>`;
   }
   showToast(`🎉 +${xp} XP pour le partage !`);
@@ -6622,7 +6605,7 @@ function renderScenarioBadges(badges) {
   if (!grid) return;
   if (!badges.length) {
     grid.className = 'badges-row';
-    grid.innerHTML = '<div style="color:#9CA3AF; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
+    grid.innerHTML = '<div style="color:#374151; font-size:13px; padding:10px 0;">Aucun badge encore — lance une aventure !</div>';
     return;
   }
   const visible = badges.length > BADGE_ROW_LIMIT ? badges.slice(0, BADGE_ROW_LIMIT - 1) : badges;
@@ -6845,7 +6828,7 @@ async function loadProfile() {
               <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 3px 10px rgba(58,32,10,0.16);">
                 <div style="font-size:32px;margin-bottom:4px;">🏅</div>
                 <div style="font-size:11px;font-weight:700;color:#1A2A1A;line-height:1.2;">${b.partner_qr_codes?.badge_name || '?'}</div>
-                <div style="font-size:10px;color:#9CA3AF;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
+                <div style="font-size:10px;color:#374151;margin-top:2px;">${b.partner_qr_codes?.partner_name || ''}</div>
               </div>`).join('')}
           </div>
         </div>` : '';
@@ -6868,13 +6851,13 @@ async function loadProfile() {
             ">
               <div style="flex:1;">
                 <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${t.titles?.name || ''}</div>
-                <div style="font-size:11px;color:#9CA3AF;">${t.titles?.description || ''}</div>
+                <div style="font-size:11px;color:#374151;">${t.titles?.description || ''}</div>
               </div>
               ${t.is_equipped
                 ? `<span style="font-size:11px;background:#C4622D;color:white;border-radius:20px;padding:3px 10px;font-weight:600;">Équipé</span>`
                 : `<button onclick="equipTitle('${t.id}')" style="
                     font-size:11px;background:none;border:1px solid #D4C5A9;
-                    border-radius:20px;padding:3px 10px;cursor:pointer;color:#6B7280;">
+                    border-radius:20px;padding:3px 10px;cursor:pointer;color:#374151;">
                     Équiper
                   </button>`
               }
@@ -6883,7 +6866,7 @@ async function loadProfile() {
       </div>` : `
       <div style="margin:16px 0;">
         <div class="section-title" style="margin-bottom:12px;">🎖️ Mes Titres</div>
-        <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;box-shadow:0 3px 10px rgba(58,32,10,0.16);">
+        <div style="padding:16px;color:#374151;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;box-shadow:0 3px 10px rgba(58,32,10,0.16);">
           Termine des aventures pour débloquer tes premiers titres !
         </div>
       </div>`;
@@ -6917,12 +6900,12 @@ async function loadProfile() {
           <div style="font-size:13px;font-weight:700;color:var(--text-dark);">
             ${getRankIcon(xp)} ${getRankName(xp)}
           </div>
-          ${nextRank ? `<div style="font-size:11px;color:#9CA3AF;">→ ${getRankIcon(nextRank.min)} ${getRankName(nextRank.min)} (${nextRank.min} XP)</div>` : '<div style="font-size:11px;color:#E8A020;">Rang maximum !</div>'}
+          ${nextRank ? `<div style="font-size:11px;color:#374151;">→ ${getRankIcon(nextRank.min)} ${getRankName(nextRank.min)} (${nextRank.min} XP)</div>` : '<div style="font-size:11px;color:#E8A020;">Rang maximum !</div>'}
         </div>
         <div style="height:8px;background:#F0EDE4;border-radius:4px;overflow:hidden;">
           <div style="height:100%;width:${rankProgress}%;background:linear-gradient(90deg,#C4622D,#E8A020);border-radius:4px;transition:width 0.5s ease;"></div>
         </div>
-        <div style="font-size:11px;color:#9CA3AF;margin-top:4px;text-align:right;">${rankProgress}%</div>
+        <div style="font-size:11px;color:#374151;margin-top:4px;text-align:right;">${rankProgress}%</div>
       </div>`;
 
     // Solde de boussoles (monnaie de l'Histoire de Flavia Flint)
@@ -6964,11 +6947,11 @@ async function loadProfile() {
               </div>
               <div style="text-align:right;">
                 <div style="font-size:13px;font-weight:700;color:var(--green-dark);">⏱ ${mins}:${String(secs).padStart(2,'0')}</div>
-                <div style="font-size:11px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+                <div style="font-size:11px;color:#374151;">${c.total_xp_earned || 0} XP</div>
               </div>
             </div>`;
         }).join('')
-      : '<div style="color:#9CA3AF;font-size:13px;padding:10px 0;">Aucune aventure terminée encore.</div>';
+      : '<div style="color:#374151;font-size:13px;padding:10px 0;">Aucune aventure terminée encore.</div>';
 
     // XP bonus réseaux sociaux
     document.getElementById('profile-social-xp-section').innerHTML = renderSocialXpSectionHtml();
@@ -7052,14 +7035,14 @@ async function showAllTitles() {
       </div>
 
       <div style="padding:16px;">
-        <p style="font-size:13px;color:#6B7280;margin-bottom:20px;line-height:1.5;">
+        <p style="font-size:13px;color:#374151;margin-bottom:20px;line-height:1.5;">
           Débloque des titres en progressant dans tes aventures.
           Équipe ton titre préféré pour l'afficher sous ton pseudo !
         </p>
 
         ${titles.length ? Object.entries(grouped).map(([cat, items]) => `
           <div style="margin-bottom:20px;">
-            <div style="font-size:12px;font-weight:700;color:#6B7280;
+            <div style="font-size:12px;font-weight:700;color:#374151;
               text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;
               padding-bottom:6px;border-bottom:1px solid #D4C5A9;">
               ${categories[cat] || cat}
@@ -7084,9 +7067,9 @@ async function showAllTitles() {
                       ${t.name}
                       ${owned ? '<span style="font-size:11px;color:#C4622D;font-weight:600;margin-left:6px;">✓ Débloqué</span>' : ''}
                     </div>
-                    <div style="font-size:12px;color:#6B7280;margin-top:2px;">${t.description || ''}</div>
+                    <div style="font-size:12px;color:#374151;margin-top:2px;">${t.description || ''}</div>
                   </div>
-                  <div style="font-size:11px;font-weight:600;color:#9CA3AF;
+                  <div style="font-size:11px;font-weight:600;color:#374151;
                     background:#F5EDD8;border-radius:20px;padding:3px 10px;
                     white-space:nowrap;">
                     Niv. ${t.level ?? '—'}
@@ -7094,7 +7077,7 @@ async function showAllTitles() {
                 </div>`;
             }).join('')}
           </div>`).join('') : `
-          <div style="padding:16px;color:#9CA3AF;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;">
+          <div style="padding:16px;color:#374151;font-size:13px;text-align:center;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:12px;">
             Aucun titre disponible pour le moment.
           </div>`}
       </div>
@@ -7179,15 +7162,15 @@ function renderBioSectionHtml(player) {
         <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F0EDE4;">
           <span style="font-size:11px;font-weight:600;color:#C4622D;min-width:80px;">${m.role || ''}</span>
           <span style="font-size:13px;font-weight:600;color:#1A2A1A;">${m.name || ''}</span>
-          ${m.age ? `<span style="font-size:11px;color:#9CA3AF;margin-left:auto;">${m.age} ans</span>` : ''}
+          ${m.age ? `<span style="font-size:11px;color:#374151;margin-left:auto;">${m.age} ans</span>` : ''}
         </div>`).join('')
-    : '<div style="font-size:13px;color:#9CA3AF;font-style:italic;">Aucun équipage défini</div>';
+    : '<div style="font-size:13px;color:#374151;font-style:italic;">Aucun équipage défini</div>';
 
   return `
     <div style="margin:16px 16px 0;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;">Mon profil public</div>
-        <button onclick="toggleEditProfile()" id="btn-edit-profile" style="background:none;border:1px solid #D4C5A9;border-radius:8px;padding:5px 12px;font-size:12px;color:#6B7280;cursor:pointer;">
+        <div style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;">Mon profil public</div>
+        <button onclick="toggleEditProfile()" id="btn-edit-profile" style="background:none;border:1px solid #D4C5A9;border-radius:8px;padding:5px 12px;font-size:12px;color:#374151;cursor:pointer;">
           ✏️ Modifier
         </button>
       </div>
@@ -7198,16 +7181,16 @@ function renderBioSectionHtml(player) {
           <div style="display:flex;gap:10px;align-items:center;">
             <span style="font-size:16px;">👥</span>
             <div>
-              <div style="font-size:11px;color:#9CA3AF;">Équipe</div>
+              <div style="font-size:11px;color:#374151;">Équipe</div>
               <div style="font-size:14px;font-weight:600;color:#1A2A1A;" id="profile-team-name">${player.team_name || 'Pas encore défini'}</div>
             </div>
           </div>
           <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
-            <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">Bio</div>
+            <div style="font-size:11px;color:#374151;margin-bottom:4px;">Bio</div>
             <div style="font-size:13px;color:#4A5A4A;line-height:1.5;font-style:${bio ? 'normal' : 'italic'};" id="profile-bio">${bio ? escapeHtml(bio) : 'Ajoute une présentation pour les autres aventuriers...'}</div>
           </div>
           <div style="border-top:1px solid #F0EDE4;padding-top:10px;">
-            <div style="font-size:11px;color:#9CA3AF;margin-bottom:4px;">🏴‍☠️ Équipage</div>
+            <div style="font-size:11px;color:#374151;margin-bottom:4px;">🏴‍☠️ Équipage</div>
             <div id="profile-crew-view">${crewHtml}</div>
           </div>
         </div>
@@ -7225,21 +7208,21 @@ function renderBioSectionHtml(player) {
           <div>
             <label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;">
               🏴‍☠️ Mon équipage
-              <span style="font-weight:400;color:#9CA3AF;"> (max 6 membres)</span>
+              <span style="font-weight:400;color:#374151;"> (max 6 membres)</span>
             </label>
             <div id="crew-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
             <button type="button" onclick="addCrewMember()" style="
               width:100%;padding:10px;background:none;
               border:1.5px dashed #D4C5A9;border-radius:10px;
-              font-size:13px;color:#9CA3AF;cursor:pointer;">
+              font-size:13px;color:#374151;cursor:pointer;">
               + Ajouter un membre
             </button>
           </div>
           <div>
-            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Bio publique <span style="font-weight:400;color:#9CA3AF;">(visible par tous)</span></label>
+            <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Bio publique <span style="font-weight:400;color:#374151;">(visible par tous)</span></label>
             <textarea id="edit-bio" maxlength="150" oninput="updateBioCharCount()" placeholder="Présente-toi aux autres aventuriers ! D'où viens-tu, qu'est-ce qui te passionne..."
               style="width:100%;padding:10px 12px;border:1.5px solid #D4C5A9;border-radius:10px;font-size:13px;resize:none;height:80px;box-sizing:border-box;font-family:inherit;">${bio}</textarea>
-            <div style="font-size:11px;color:#9CA3AF;text-align:right;margin-top:2px;" id="bio-char-count">${bioLength}/150</div>
+            <div style="font-size:11px;color:#374151;text-align:right;margin-top:2px;" id="bio-char-count">${bioLength}/150</div>
           </div>
           <div>
             <label style="font-size:12px;font-weight:600;color:#1A2A1A;display:block;margin-bottom:4px;">Pseudo</label>
@@ -7250,7 +7233,7 @@ function renderBioSectionHtml(player) {
             <button onclick="saveProfileEdits()" style="flex:1;padding:12px;background:#C4622D;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
               ✓ Sauvegarder
             </button>
-            <button onclick="toggleEditProfile()" style="padding:12px 16px;background:none;border:1px solid #D4C5A9;border-radius:10px;font-size:14px;cursor:pointer;color:#6B7280;">
+            <button onclick="toggleEditProfile()" style="padding:12px 16px;background:none;border:1px solid #D4C5A9;border-radius:10px;font-size:14px;cursor:pointer;color:#374151;">
               Annuler
             </button>
           </div>
@@ -7348,7 +7331,7 @@ async function loadSocialLinks() {
 function renderSocialXpSectionHtml() {
   return `
 <div style="margin:0 16px 16px;">
-  <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+  <div style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
     🎁 Gagner des XP bonus
   </div>
 
@@ -7358,7 +7341,7 @@ function renderSocialXpSectionHtml() {
       <span style="font-size:24px;">📸</span>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Suis-nous sur Instagram</div>
-        <div style="font-size:12px;color:#9CA3AF;">+50 XP · Une seule fois</div>
+        <div style="font-size:12px;color:#374151;">+50 XP · Une seule fois</div>
       </div>
       <span style="font-size:14px;font-weight:800;color:#E8A020;">+50 XP</span>
     </div>
@@ -7384,7 +7367,7 @@ function renderSocialXpSectionHtml() {
       <span style="font-size:24px;">👍</span>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Aime notre page Facebook</div>
-        <div style="font-size:12px;color:#9CA3AF;">+50 XP · Une seule fois</div>
+        <div style="font-size:12px;color:#374151;">+50 XP · Une seule fois</div>
       </div>
       <span style="font-size:14px;font-weight:800;color:#E8A020;">+50 XP</span>
     </div>
@@ -7410,7 +7393,7 @@ function renderSocialXpSectionHtml() {
       <span style="font-size:24px;">⭐</span>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:700;color:#1A2A1A;">Laisse un avis Google</div>
-        <div style="font-size:12px;color:#9CA3AF;">+150 XP · Validation manuelle sous 48h</div>
+        <div style="font-size:12px;color:#374151;">+150 XP · Validation manuelle sous 48h</div>
       </div>
       <span style="font-size:14px;font-weight:800;color:#E8A020;">+150 XP</span>
     </div>
@@ -7435,7 +7418,7 @@ function renderSocialXpSectionHtml() {
       <div style="border:2px dashed #D4C5A9;border-radius:10px;padding:14px;text-align:center;cursor:pointer;position:relative;">
         <input type="file" accept="image/*" onchange="handleGoogleReviewUpload(event)"
           style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"/>
-        <div id="google-review-preview" style="font-size:13px;color:#9CA3AF;">
+        <div id="google-review-preview" style="font-size:13px;color:#374151;">
           📸 Clique pour choisir une image
         </div>
       </div>
@@ -7740,7 +7723,7 @@ function showAuthorStatusMessage(icon, title, sub) {
       <div style="background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border-radius:14px;padding:24px;text-align:center;border:1px solid rgba(120,74,28,0.18);box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
         <div style="font-size:32px;margin-bottom:8px;">${icon}</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">${title}</div>
-        <div style="font-size:13px;color:#6B7280;">${sub}</div>
+        <div style="font-size:13px;color:#374151;">${sub}</div>
       </div>`;
   }
 }
@@ -7809,7 +7792,7 @@ function buildRankingEmptyState() {
         <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">
           Sois le premier !
         </div>
-        <div style="font-size:13px;color:#9CA3AF;line-height:1.5;max-width:260px;margin:0 auto;">
+        <div style="font-size:13px;color:#374151;line-height:1.5;max-width:260px;margin:0 auto;">
           Le classement se remplira au fur et à mesure que les aventuriers terminent leurs quêtes.
         </div>
       </div>
@@ -7853,7 +7836,7 @@ async function loadRanking(tab = 'general') {
         color:#1A2A1A;outline:none;box-sizing:border-box;"/>
     </div>
     <div id="ranking-rows">
-      <div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>
+      <div style="text-align:center;padding:20px;color:#374151;">⏳ Chargement...</div>
     </div>
     <div id="ranking-pagination" style="display:flex;gap:8px;justify-content:center;padding:12px 0;"></div>`;
 
@@ -7919,10 +7902,10 @@ async function loadFriendsRanking() {
           <div style="text-align:center;padding:30px 20px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
             <div style="font-size:40px;margin-bottom:12px;">👥</div>
             <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Aucun ami encore</div>
-            <div style="font-size:13px;color:#6B7280;line-height:1.5;">
+            <div style="font-size:13px;color:#374151;line-height:1.5;">
               Recherche le pseudo d'un aventurier<br/>pour le comparer à toi !
             </div>
-          </div>` : '<div style="text-align:center;color:#9CA3AF;padding:20px;">Chargement...</div>'}
+          </div>` : '<div style="text-align:center;color:#374151;padding:20px;">Chargement...</div>'}
       </div>
     </div>`;
   console.log('[loadFriendsRanking] HTML injecté dans #ranking-list-content (', contentEl.innerHTML.length, 'caractères)');
@@ -7942,7 +7925,7 @@ async function searchAndAddFriend() {
   if (!pseudo) return;
 
   const resultEl = document.getElementById('friend-search-result');
-  resultEl.innerHTML = '<div style="font-size:13px;color:#9CA3AF;">Recherche...</div>';
+  resultEl.innerHTML = '<div style="font-size:13px;color:#374151;">Recherche...</div>';
 
   try {
     const players = await supaFetch(
@@ -7959,7 +7942,7 @@ async function searchAndAddFriend() {
         <div style="width:36px;height:36px;border-radius:50%;background:#2D4A2D;overflow:hidden;display:flex;align-items:center;justify-content:center;">${avatarImgTag(p.avatar_emoji)}</div>
         <div style="flex:1;">
           <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${p.pseudo}</div>
-          <div style="font-size:12px;color:#6B7280;">${p.city || ''} · ${p.total_xp || 0} XP</div>
+          <div style="font-size:12px;color:#374151;">${p.city || ''} · ${p.total_xp || 0} XP</div>
         </div>
         <button onclick="addFriend('${p.id}','${(p.pseudo || '').replace(/'/g,"\\'")}')" style="
           padding:7px 12px;background:#C4622D;color:white;
@@ -8047,15 +8030,15 @@ async function loadFriendsScores(friendIds, userId) {
             <div style="font-size:15px;font-weight:${isMe?'700':'600'};color:${isMe?'#C4622D':'#1A2A1A'};">
               ${isMe ? '⭐ Toi' : p.pseudo}
             </div>
-            <div style="font-size:12px;color:#9CA3AF;">${p.city || ''}</div>
+            <div style="font-size:12px;color:#374151;">${p.city || ''}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:16px;font-weight:800;color:#E8A020;">${p.total_xp || 0}</div>
-            <div style="font-size:10px;color:#9CA3AF;">XP</div>
+            <div style="font-size:10px;color:#374151;">XP</div>
           </div>
           ${!isMe ? `
             <button onclick="removeFriend('${p.id}')" style="
-              background:none;border:none;color:#9CA3AF;
+              background:none;border:none;color:#374151;
               font-size:16px;cursor:pointer;padding:4px;">✕</button>` : ''}
         </div>`;
     }).join('');
@@ -8113,7 +8096,7 @@ async function loadScenarioRanking() {
         <div style="text-align:center;padding:30px 20px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:40px;margin-bottom:12px;">🏁</div>
           <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:6px;">Qui est le plus rapide ?</div>
-          <div style="font-size:13px;color:#6B7280;">Sélectionne un scénario pour voir le classement chrono.</div>
+          <div style="font-size:13px;color:#374151;">Sélectionne un scénario pour voir le classement chrono.</div>
         </div>
       </div>
     </div>`;
@@ -8126,7 +8109,7 @@ async function loadScenarioLeaderboard(adventureId) {
 
   const listEl = document.getElementById('scenario-leaderboard');
   if (!listEl) { console.error('[loadScenarioLeaderboard] #scenario-leaderboard introuvable dans le DOM.'); return; }
-  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">Chargement...</div>';
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#374151;">Chargement...</div>';
 
   try {
     const query = `adventure_completions?adventure_id=eq.${adventureId}&select=*&order=total_duration_seconds.asc&limit=20`;
@@ -8163,7 +8146,7 @@ async function loadScenarioLeaderboard(adventureId) {
         <div style="text-align:center;padding:30px;background:#E9D4A3 url('card-parchment.webp') repeat;background-size:200px 200px;border:1px solid rgba(120,74,28,0.18);border-radius:16px;box-shadow:0 5px 16px rgba(58,32,10,0.20), 0 1.5px 4px rgba(58,32,10,0.14);">
           <div style="font-size:36px;margin-bottom:10px;">⏳</div>
           <div style="font-size:15px;font-weight:700;color:#1A2A1A;">Aucune complétion encore</div>
-          <div style="font-size:13px;color:#6B7280;margin-top:4px;">Sois le premier à terminer ce scénario !</div>
+          <div style="font-size:13px;color:#374151;margin-top:4px;">Sois le premier à terminer ce scénario !</div>
         </div>`;
       return;
     }
@@ -8190,11 +8173,11 @@ async function loadScenarioLeaderboard(adventureId) {
           </div>
           <div style="flex:1;">
             <div style="font-size:15px;font-weight:600;color:#1A2A1A;">${c.players?.pseudo || 'Aventurier'}</div>
-            <div style="font-size:12px;color:#9CA3AF;">${c.players?.city || ''}</div>
+            <div style="font-size:12px;color:#374151;">${c.players?.city || ''}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:17px;font-weight:800;color:#2D4A2D;">⏱ ${timeStr}</div>
-            <div style="font-size:10px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+            <div style="font-size:10px;color:#374151;">${c.total_xp_earned || 0} XP</div>
           </div>
         </div>`;
     }).join('');
@@ -8216,7 +8199,7 @@ async function renderRankingRows(userId) {
   const paginationEl = document.getElementById('ranking-pagination');
   if (!rowsEl) return;
 
-  rowsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9CA3AF;">⏳ Chargement...</div>';
+  rowsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#374151;">⏳ Chargement...</div>';
 
   try {
     // Fetch tous les joueurs triés par XP
@@ -8237,7 +8220,7 @@ async function renderRankingRows(userId) {
             <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">
               Aucun joueur trouvé
             </div>
-            <div style="font-size:13px;color:#9CA3AF;line-height:1.5;">
+            <div style="font-size:13px;color:#374151;line-height:1.5;">
               Essaie un autre nom
             </div>
           </div>`;
@@ -8285,7 +8268,7 @@ async function renderRankingRows(userId) {
           padding:8px 16px;background:white;border:1px solid #D4C5A9;
           border-radius:8px;cursor:pointer;font-size:13px;color:#1A2A1A;">← Préc.</button>`;
       }
-      paginationHtml += `<span style="padding:8px 12px;font-size:13px;color:#6B7280;">
+      paginationHtml += `<span style="padding:8px 12px;font-size:13px;color:#374151;">
         Page ${rankingPage + 1} / ${totalPages}
       </span>`;
       if (rankingPage < totalPages - 1) {
@@ -8320,7 +8303,7 @@ async function renderAdventureRankings() {
 
     el.innerHTML = `
       <div style="margin-top:16px;padding-top:16px;border-top:1px solid #E5D9C0;">
-        <div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:uppercase;
+        <div style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;
           letter-spacing:1px;margin-bottom:12px;">🏆 Classements par aventure</div>
         ${advs.map(adv => `
           <div style="display:flex;align-items:center;justify-content:space-between;
@@ -8379,7 +8362,7 @@ function renderRankRow(player, isMe) {
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">
           ${player.team_name ? `🏴‍☠️ ${player.team_name}` : (player.pseudo || 'Aventurier')}${isMe ? ' <span style="color:var(--terra);font-size:11px;">← Toi</span>' : ''}
         </div>
-        <div style="font-size:11px;color:#9CA3AF;">${player.team_name ? `${player.pseudo || 'Aventurier'} · ${player.subvalue || ''}` : (player.subvalue || '')}</div>
+        <div style="font-size:11px;color:#374151;">${player.team_name ? `${player.pseudo || 'Aventurier'} · ${player.subvalue || ''}` : (player.subvalue || '')}</div>
       </div>
       <div style="font-size:14px;font-weight:800;color:var(--amber);white-space:nowrap;">${player.value}</div>
     </div>`;
@@ -8439,7 +8422,7 @@ async function openPlayerProfile(playerId) {
   overlay.innerHTML = `
     <div class="player-profile-card">
       <button type="button" class="player-profile-close" onclick="closePlayerProfile()">✕</button>
-      <div style="padding:60px 20px;text-align:center;color:#9CA3AF;">⏳ Chargement du profil…</div>
+      <div style="padding:60px 20px;text-align:center;color:#374151;">⏳ Chargement du profil…</div>
     </div>`;
   document.body.appendChild(overlay);
   document.body.style.overflow = 'hidden';
@@ -8463,13 +8446,13 @@ async function openPlayerProfile(playerId) {
     ]);
     const player = players[0];
     if (!player) {
-      renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Ce profil est introuvable.</div>');
+      renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#374151;">Ce profil est introuvable.</div>');
       return;
     }
     renderPlayerProfileOverlay(buildPlayerProfileHtml(player, allPlayers, completions, readChapters, bookCompletions, collectionBadges));
   } catch (e) {
     console.error('Erreur chargement profil joueur:', e);
-    renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#9CA3AF;">Impossible de charger ce profil pour le moment.</div>');
+    renderPlayerProfileOverlay('<div style="padding:40px 20px;text-align:center;color:#374151;">Impossible de charger ce profil pour le moment.</div>');
   }
 }
 
@@ -8542,7 +8525,7 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, b
   // que sur son propre profil — demande Firmin 25/10).
   const badgesHtml = allBadgeEntries.length
     ? groupedBadgesHtml(allBadgeEntries, publicBadgeTileHtml)
-    : '<div style="color:#9CA3AF;font-size:13px;padding:6px 0;">Aucun badge encore.</div>';
+    : '<div style="color:#374151;font-size:13px;padding:6px 0;">Aucun badge encore.</div>';
 
   const history = (completions || []).slice(0, 5);
   const historyHtml = history.length
@@ -8555,11 +8538,11 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, b
             <span style="font-size:13px;font-weight:600;color:var(--text-dark);">${escapeHtml(c.adventures?.title || 'Aventure')}</span>
             <div style="text-align:right;">
               <div style="font-size:13px;font-weight:700;color:var(--green-dark);">⏱ ${mins}:${String(secs).padStart(2,'0')}</div>
-              <div style="font-size:11px;color:#9CA3AF;">${c.total_xp_earned || 0} XP</div>
+              <div style="font-size:11px;color:#374151;">${c.total_xp_earned || 0} XP</div>
             </div>
           </div>`;
       }).join('')
-    : '<div style="color:#9CA3AF;font-size:13px;padding:6px 0;">Aucune aventure terminée encore.</div>';
+    : '<div style="color:#374151;font-size:13px;padding:6px 0;">Aucune aventure terminée encore.</div>';
 
   const bioHtml = player.bio
     ? `<div style="font-size:13px;color:#4A5A4A;line-height:1.5;">${escapeHtml(player.bio)}</div>`
@@ -8576,15 +8559,15 @@ function buildPlayerProfileHtml(player, allPlayers, completions, readChapters, b
       <div class="player-profile-stats">
         <div class="player-profile-stat">
           <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${uniqueCompletions.length}</div>
-          <div style="font-size:10px;color:#9CA3AF;">Scénarios</div>
+          <div style="font-size:10px;color:#374151;">Scénarios</div>
         </div>
         <div class="player-profile-stat">
           <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${xp.toLocaleString('fr')}</div>
-          <div style="font-size:10px;color:#9CA3AF;">Points XP</div>
+          <div style="font-size:10px;color:#374151;">Points XP</div>
         </div>
         <div class="player-profile-stat">
           <div style="font-size:18px;font-weight:800;color:var(--green-dark);">${rank ? '#' + rank : '–'}</div>
-          <div style="font-size:10px;color:#9CA3AF;">Rang mondial</div>
+          <div style="font-size:10px;color:#374151;">Rang mondial</div>
         </div>
       </div>
       ${bioHtml ? `<div class="section-title" style="margin-bottom:8px;">Bio</div>${bioHtml}<div style="height:16px;"></div>` : ''}
@@ -8652,7 +8635,7 @@ async function loadFlaviaStory() {
       <div style="text-align:center;padding:40px 20px;">
         <div style="font-size:48px;margin-bottom:12px;">${iconImg('book')}</div>
         <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">Connecte-toi pour accéder à l'histoire</div>
-        <div style="font-size:13px;color:#9CA3AF;margin-bottom:20px;">Termine des aventures pour gagner des ${iconImg('compass')} boussoles et débloquer les chapitres</div>
+        <div style="font-size:13px;color:#374151;margin-bottom:20px;">Termine des aventures pour gagner des ${iconImg('compass')} boussoles et débloquer les chapitres</div>
         <button onclick="goToScreen('auth',null)" style="background:#C4622D;color:white;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;">Se connecter</button>
       </div>`;
     return;
@@ -8693,7 +8676,7 @@ async function loadFlaviaStory() {
             <span style="font-size:24px;">${hasBeenRead ? '✅' : iconImg('book')}</span>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:700;color:#1A2A1A;">${ch.title}</div>
-              ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#9CA3AF;">Appuie pour relire</div>'}
+              ${!hasBeenRead ? '<div style="font-size:11px;background:#E8A020;color:white;border-radius:10px;padding:2px 8px;display:inline-block;margin-top:3px;">Nouveau</div>' : '<div style="font-size:11px;color:#374151;">Appuie pour relire</div>'}
             </div>
             <span style="color:#C4622D;font-size:18px;">›</span>
           </div>`;
@@ -8711,7 +8694,7 @@ async function loadFlaviaStory() {
             <span style="font-size:24px;">${iconImg('lock')}</span>
             <div style="flex:1;">
               <div style="font-size:14px;font-weight:700;color:${canAfford ? '#1A2A1A' : '#9CA3AF'};">${ch.title}</div>
-              <div style="font-size:12px;color:#9CA3AF;">Coût : ${iconImg('compass')} ${ch.unlock_cost} boussoles</div>
+              <div style="font-size:12px;color:#374151;">Coût : ${iconImg('compass')} ${ch.unlock_cost} boussoles</div>
             </div>
           </div>
           ${canAfford
@@ -8788,7 +8771,7 @@ async function readChapter(chapterId) {
         <div style="text-align:center;padding:40px 20px;">
           <div style="font-size:48px;margin-bottom:12px;">⏳</div>
           <div style="font-size:16px;font-weight:700;color:#1A2A1A;margin-bottom:8px;">${chapter.title}</div>
-          <div style="font-size:13px;color:#9CA3AF;line-height:1.6;">Ce chapitre arrive bientôt...<br>Tes boussoles sont conservées !</div>
+          <div style="font-size:13px;color:#374151;line-height:1.6;">Ce chapitre arrive bientôt...<br>Tes boussoles sont conservées !</div>
           <button onclick="loadFlaviaStory()" style="margin-top:20px;background:#C4622D;color:white;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">← Retour aux chapitres</button>
         </div>`;
       return;
@@ -9138,11 +9121,11 @@ function showPartnerBadgeResult(partnerQR, alreadyCollected) {
       ${alreadyCollected
         ? `<div style="font-size:40px;margin-bottom:12px;">✅</div>
            <div style="font-size:18px;font-weight:800;color:#1A2A1A;margin-bottom:8px;">Déjà collecté !</div>
-           <div style="font-size:13px;color:#6B7280;">Tu as déjà ce badge dans ta collection.</div>`
+           <div style="font-size:13px;color:#374151;">Tu as déjà ce badge dans ta collection.</div>`
         : `<div style="font-size:56px;margin-bottom:12px;">🏅</div>
            <div style="font-size:11px;font-weight:700;color:#C4622D;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Nouveau badge collector !</div>
            <div style="font-size:20px;font-weight:800;color:#1A2A1A;margin-bottom:6px;">${partnerQR.badge_name}</div>
-           <div style="font-size:13px;color:#6B7280;margin-bottom:12px;">${partnerQR.partner_name}</div>
+           <div style="font-size:13px;color:#374151;margin-bottom:12px;">${partnerQR.partner_name}</div>
            <div style="background:#2D4A2D;color:white;border-radius:20px;padding:6px 16px;display:inline-block;font-size:13px;font-weight:700;margin-bottom:16px;">
              +${partnerQR.xp_reward} XP
            </div>`
@@ -9221,7 +9204,7 @@ function showBookStartForm(book) {
           ${[1,2,3,4,5,6].map(n => `
             <button type="button" onclick="selectBookTeamSize(${n})" id="book-team-size-btn-${n}" style="
               flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;
-              border:2px solid #D4C5A9;background:white;color:#6B7280;
+              border:2px solid #D4C5A9;background:white;color:#374151;
             ">${n}${n === 6 ? '+' : ''}</button>`).join('')}
         </div>
       </div>

@@ -79,7 +79,7 @@
 .fl-ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}\n\
 .fl-ov{position:fixed;inset:0;z-index:5000;background:rgba(15,36,23,.5);display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}\n\
 .fl-ov.fl-open{display:flex}\n\
-.fl-sheet{position:relative;width:100%;max-width:420px;max-height:100%;background:#F4EEDC;border-radius:20px;box-shadow:0 12px 34px rgba(10,20,10,.5);display:flex;flex-direction:column;overflow:hidden;font-family:\'Nunito Sans\',system-ui,sans-serif}\n\
+.fl-sheet{position:relative;width:100%;max-width:420px;max-height:100%;background:#E9D4A3 url(\'card-parchment.webp\') repeat;background-size:200px 200px;border-radius:20px;box-shadow:0 12px 34px rgba(10,20,10,.5);display:flex;flex-direction:column;overflow:hidden;font-family:\'Nunito Sans\',system-ui,sans-serif}\n\
 .fl-hd{padding:20px 18px 12px;position:relative}\n\
 .fl-hd.fl-line{border-bottom:1px solid #E2D7B8}\n\
 .fl-t{font:600 22px/1.1 Fraunces,Georgia,serif;color:#2B2616;margin:0}\n\

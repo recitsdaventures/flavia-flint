@@ -52,7 +52,7 @@
 .fc-bn{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:18px;line-height:1.1}\n\
 .fc-bp{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}\n\
 .fc-pb{flex:1;height:6px;border-radius:3px;background:rgba(0,0,0,.32);overflow:hidden}.fc-pb i{display:block;height:100%;background:#F4C542}\n\
-.fc-card{position:relative;border-radius:18px;background:#F4EEDC;box-shadow:0 10px 30px rgba(20,30,15,.45);overflow:hidden;font-family:\'Nunito Sans\',system-ui,sans-serif}\n\
+.fc-card{position:relative;border-radius:18px;background:#E9D4A3 url(\'card-parchment.webp\') repeat;background-size:200px 200px;box-shadow:0 10px 30px rgba(20,30,15,.45);overflow:hidden;font-family:\'Nunito Sans\',system-ui,sans-serif}\n\
 .fc-x{position:absolute;right:10px;top:10px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.28);color:#fff;font:600 18px/1 sans-serif;cursor:pointer}\n\
 .fc-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px}\n\
 .fc-title{font:600 24px/1.1 Fraunces,Georgia,serif;color:#2B2616}\n\
