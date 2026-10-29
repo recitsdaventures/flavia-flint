@@ -2891,6 +2891,8 @@ const COLLECTION_ICON_OPTIONS = {
 };
 
 let allCollections = [];
+let allCaches = [];
+let cacheCommuneFilter = 'all';
 
 async function loadCollectionsPage() {
   setLoading(true);
@@ -3076,54 +3078,119 @@ async function loadCachesPage() {
       supa('GET', 'collections', null, '?order=name.asc')
     ]);
     allCollections = collections;
-
-    const published = caches.filter(c => c.status === 'published').length;
-    const el = document.getElementById('caches-list');
-
-    const statsHtml = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
-        <div class="stat-card"><div class="label">Caches</div><div class="value">${caches.length}</div></div>
-        <div class="stat-card"><div class="label">Publiées</div><div class="value">${published}</div></div>
-        <div class="stat-card"><div class="label">Brouillons</div><div class="value">${caches.length - published}</div></div>
-      </div>`;
-
-    if (!caches.length) {
-      el.innerHTML = statsHtml + '<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-title">Aucune cache virtuelle</div><div class="empty-sub">Crée ta première cache — position GPS + rayon de validation.</div></div>';
-      return;
+    allCaches = caches;
+    // Si la commune sélectionnée a disparu (ex. après suppression de la
+    // dernière cache de cette commune), on retombe sur "Toutes les communes"
+    // plutôt que d'afficher un filtre vide sans explication.
+    if (cacheCommuneFilter !== 'all' && !allCaches.some(c => (c.commune || '—') === cacheCommuneFilter)) {
+      cacheCommuneFilter = 'all';
     }
-
-    el.innerHTML = statsHtml + `
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th></th><th>Titre</th><th>Collection</th><th>Position</th><th>Rayon validation</th><th>XP</th><th>Statut</th><th>Actions</th>
-          </tr></thead>
-          <tbody>
-            ${caches.map(c => `
-              <tr>
-                <td>${c.cover_image_url
-                  ? `<img src="${c.cover_image_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;"/>`
-                  : `<div style="width:36px;height:36px;border-radius:8px;background:#F3F4F6;"></div>`}</td>
-                <td><strong>${escapeHtml(c.title)}</strong></td>
-                <td style="font-size:12px;color:#6B7280;">${c.collections ? escapeHtml(c.collections.name) : '—'}</td>
-                <td style="font-size:12px;color:#6B7280;">${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</td>
-                <td>${c.validation_radius_m} m</td>
-                <td>${c.xp_reward} ${iconImg('compass')}</td>
-                <td><span class="status-pill ${c.status === 'published' ? 'status-published' : 'status-draft'}">${c.status === 'published' ? '✓ Publiée' : '✏️ Brouillon'}</span></td>
-                <td><div class="actions-cell">
-                  <button onclick="editCache('${c.id}')" class="btn btn-secondary btn-sm">✏️ Modifier</button>
-                  <button onclick="deleteCache('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
-                </div></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    renderCachesList();
   } catch(e) {
     document.getElementById('caches-list').innerHTML =
       `<div style="color:var(--danger);text-align:center;padding:20px;">Erreur : ${e.message}</div>`;
   } finally {
     setLoading(false);
   }
+}
+
+function onCacheCommuneFilterChange(value) {
+  cacheCommuneFilter = value;
+  renderCachesList();
+}
+
+// Regroupement par commune (29/10, demande Firmin) : filtre déroulant +
+// tableau trié/regroupé par commune, pour naviguer/éditer plus vite pendant
+// sa passe de vérification des coordonnées GPS commune par commune.
+function renderCachesList() {
+  const el = document.getElementById('caches-list');
+  const caches = allCaches;
+  const published = caches.filter(c => c.status === 'published').length;
+
+  const statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
+      <div class="stat-card"><div class="label">Caches</div><div class="value">${caches.length}</div></div>
+      <div class="stat-card"><div class="label">Publiées</div><div class="value">${published}</div></div>
+      <div class="stat-card"><div class="label">Brouillons</div><div class="value">${caches.length - published}</div></div>
+    </div>`;
+
+  if (!caches.length) {
+    el.innerHTML = statsHtml + '<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-title">Aucune cache virtuelle</div><div class="empty-sub">Crée ta première cache — position GPS + rayon de validation.</div></div>';
+    return;
+  }
+
+  // Liste des communes (comptées sur l'ensemble des caches, pas sur le
+  // filtre en cours, pour pouvoir changer de commune sans repasser par "Toutes").
+  const communeCounts = {};
+  caches.forEach(c => {
+    const commune = c.commune || '—';
+    communeCounts[commune] = (communeCounts[commune] || 0) + 1;
+  });
+  const communes = Object.keys(communeCounts).sort((a, b) => a.localeCompare(b, 'fr'));
+
+  const filterHtml = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <label for="cache-commune-select" style="font-size:13px;font-weight:600;color:#374151;">Commune</label>
+      <select id="cache-commune-select" onchange="onCacheCommuneFilterChange(this.value)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--gray-brd);font-size:13px;min-width:220px;">
+        <option value="all" ${cacheCommuneFilter === 'all' ? 'selected' : ''}>Toutes les communes (${caches.length})</option>
+        ${communes.map(commune => `<option value="${escapeHtml(commune)}" ${cacheCommuneFilter === commune ? 'selected' : ''}>${escapeHtml(commune)} (${communeCounts[commune]})</option>`).join('')}
+      </select>
+    </div>`;
+
+  const filtered = cacheCommuneFilter === 'all'
+    ? caches
+    : caches.filter(c => (c.commune || '—') === cacheCommuneFilter);
+
+  const sorted = [...filtered].sort((a, b) => {
+    const ca = a.commune || '—', cb = b.commune || '—';
+    if (ca !== cb) return ca.localeCompare(cb, 'fr');
+    return (a.title || '').localeCompare(b.title || '', 'fr');
+  });
+
+  let rowsHtml = '';
+  let currentCommune = null;
+  sorted.forEach(c => {
+    const commune = c.commune || '—';
+    if (commune !== currentCommune) {
+      currentCommune = commune;
+      const pubCount = caches.filter(x => (x.commune || '—') === commune && x.status === 'published').length;
+      rowsHtml += `
+        <tr class="commune-group-row">
+          <td colspan="8" style="background:#F3F4F6;font-weight:700;font-size:13px;padding:10px 12px;color:#1A2A1A;">
+            📍 ${escapeHtml(commune)}
+            <span style="font-weight:400;color:#6B7280;">(${communeCounts[commune]} caches, ${pubCount} publiée${pubCount > 1 ? 's' : ''})</span>
+          </td>
+        </tr>`;
+    }
+    rowsHtml += `
+      <tr>
+        <td>${c.cover_image_url
+          ? `<img src="${c.cover_image_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;"/>`
+          : `<div style="width:36px;height:36px;border-radius:8px;background:#F3F4F6;"></div>`}</td>
+        <td><strong>${escapeHtml(c.title)}</strong></td>
+        <td style="font-size:12px;color:#6B7280;">${c.collections ? escapeHtml(c.collections.name) : '—'}</td>
+        <td style="font-size:12px;color:#6B7280;">${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</td>
+        <td>${c.validation_radius_m} m</td>
+        <td>${c.xp_reward} ${iconImg('compass')}</td>
+        <td><span class="status-pill ${c.status === 'published' ? 'status-published' : 'status-draft'}">${c.status === 'published' ? '✓ Publiée' : '✏️ Brouillon'}</span></td>
+        <td><div class="actions-cell">
+          <button onclick="editCache('${c.id}')" class="btn btn-secondary btn-sm">✏️ Modifier</button>
+          <button onclick="deleteCache('${c.id}')" class="btn btn-danger btn-sm">🗑️</button>
+        </div></td>
+      </tr>`;
+  });
+
+  el.innerHTML = statsHtml + filterHtml + `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th></th><th>Titre</th><th>Collection</th><th>Position</th><th>Rayon validation</th><th>XP</th><th>Statut</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function openCacheModal(data) {

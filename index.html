@@ -36,6 +36,11 @@
      bandeau de progression, fiche de lieu) ; le pin sur la carte reste la
      loupe neutre de flavia-markers.js, inchangee. -->
 <script defer src="flavia-collections.js"></script>
+<!-- Bouton Legende carte + fenetres synthese/detail (29/10) - 4 vraies
+     categories de contenu (Echos du Patrimoine / Coffres caches / Les
+     Enquetes de Flavia / Les Chasses de Flavia), reutilise les pictos
+     #ff-ic-* deja injectes par flavia-markers.js. -->
+<script defer src="flavia-legend.js"></script>
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json"/>
 <meta name="theme-color" content="#2D4A2D"/>
@@ -2277,8 +2282,8 @@
       </div>
       <div class="adv-filter-bar" id="adv-filter-bar">
         <button type="button" class="adv-filter-chip active" data-cat="all" onclick="setAdventureCategoryFilter('all')">Tous</button>
-        <button type="button" class="adv-filter-chip" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')"><svg class="chip-ic"><use href="#ff-ic-coffre"/></svg>Trésors oubliés</button>
-        <button type="button" class="adv-filter-chip" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')"><svg class="chip-ic"><use href="#ff-ic-plante"/></svg>Balades découverte</button>
+        <button type="button" class="adv-filter-chip" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')"><svg class="chip-ic"><use href="#ff-ic-coffre"/></svg>Coffres cachés</button>
+        <button type="button" class="adv-filter-chip" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')"><svg class="chip-ic"><use href="#ff-ic-plante"/></svg>Enquêtes de Flavia</button>
         <button type="button" class="adv-filter-chip" data-cat="chasse_tresor_flavia" onclick="setAdventureCategoryFilter('chasse_tresor_flavia')"><svg class="chip-ic"><use href="#ff-ic-boussole"/></svg>Chasses de Flavia</button>
       </div>
       <div class="home-adv-list">
@@ -2367,9 +2372,9 @@
 
     <div class="map-filters" id="map-filter-bar">
       <div class="filter-pill map-filter-pill active" data-cat="all" onclick="setAdventureCategoryFilter('all')">Tous</div>
-      <div class="filter-pill map-filter-pill" data-cat="caches_virtuelles" onclick="setAdventureCategoryFilter('caches_virtuelles')"><svg class="chip-ic"><use href="#ff-ic-loupe"/></svg>Caches virtuelles</div>
-      <div class="filter-pill map-filter-pill" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')"><svg class="chip-ic"><use href="#ff-ic-coffre"/></svg>Trésors oubliés</div>
-      <div class="filter-pill map-filter-pill" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')"><svg class="chip-ic"><use href="#ff-ic-plante"/></svg>Balades</div>
+      <div class="filter-pill map-filter-pill" data-cat="caches_virtuelles" onclick="setAdventureCategoryFilter('caches_virtuelles')"><svg class="chip-ic"><use href="#ff-ic-loupe"/></svg>Échos du Patrimoine</div>
+      <div class="filter-pill map-filter-pill" data-cat="tresors_oublies" onclick="setAdventureCategoryFilter('tresors_oublies')"><svg class="chip-ic"><use href="#ff-ic-coffre"/></svg>Coffres cachés</div>
+      <div class="filter-pill map-filter-pill" data-cat="balade_decouverte" onclick="setAdventureCategoryFilter('balade_decouverte')"><svg class="chip-ic"><use href="#ff-ic-plante"/></svg>Enquêtes</div>
       <div class="filter-pill map-filter-pill" data-cat="chasse_tresor_flavia" onclick="setAdventureCategoryFilter('chasse_tresor_flavia')"><svg class="chip-ic"><use href="#ff-ic-boussole"/></svg>Chasses de Flavia</div>
     </div>
 
@@ -3123,6 +3128,7 @@ function getPlayerRank(xp) {
 window.addEventListener('DOMContentLoaded', () => {
   FlaviaMarkers.ensure(); // injecte le sprite SVG + styles (nécessaire pour les <use> des puces de filtre)
   FlaviaCollections.mount(); // injecte styles + symboles des médailles/bandeaux de collection
+  FlaviaLegend.mount(document.getElementById('screen-map')); // bouton Légende (bas gauche de la carte)
   if (!checkRecoveryHash()) checkExistingSession();
 });
 
@@ -4105,6 +4111,13 @@ function renderMapMarkers() {
   // caches — on masque les aventures narratives et les livres pour ne pas
   // mélanger les deux familles de contenu dans ce mode.
   const cachesFilterActive = _adventureCategoryFilter === 'caches_virtuelles';
+  // Un filtre de categorie d'aventure precis (tresors oublies, balades,
+  // chasses de Flavia) ne doit montrer QUE cette categorie - les caches
+  // virtuelles ne doivent pas apparaitre en arriere-plan dans ces vues
+  // (bug du 29/10 : le cluster de caches restait visible meme filtre sur
+  // une autre categorie, car son rendu n'etait pas conditionne par
+  // _adventureCategoryFilter).
+  const specificAdventureFilterActive = !cachesFilterActive && _adventureCategoryFilter !== 'all';
 
   if (!cachesFilterActive) {
     adventures
@@ -4173,6 +4186,7 @@ function renderMapMarkers() {
 
   virtualCaches
     .filter(c => {
+      if (specificAdventureFilterActive) return false; // vue dediee a une autre categorie : pas de caches
       if (cachesFilterActive) return true;
       if (!playerPos) return false; // on ne connaît pas encore la position : pas d'affichage ambiant possible
       return getDistance(playerPos.lat, playerPos.lng, c.lat, c.lng) <= _cacheAmbientRadiusM;
@@ -6548,11 +6562,11 @@ let _allScenarioBadges = [];
 const BADGE_CATEGORY_ORDER = ['histoire_flavia', 'chasse_tresor_flavia', 'aventure_prof_flint', 'balade_decouverte', 'tresors_oublies', 'caches_virtuelles', 'geocache_sans_boite', 'autres'];
 const BADGE_CATEGORY_LABELS = {
   histoire_flavia:      '📖 Histoire de Flavia Flint',
-  chasse_tresor_flavia: '🧭 Chasses aux trésors de Flavia',
+  chasse_tresor_flavia: '🧭 Les Chasses de Flavia',
   aventure_prof_flint:  '🎩 Les aventures du Professeur Flint',
-  balade_decouverte:    '🚶 Balades découverte',
-  tresors_oublies:      '📦 Trésors oubliés',
-  caches_virtuelles:    '🔍 Caches virtuelles',
+  balade_decouverte:    '🚶 Les Enquêtes de Flavia',
+  tresors_oublies:      '📦 Coffres cachés',
+  caches_virtuelles:    '🔍 Échos du Patrimoine',
   geocache_sans_boite:  '📍 Géocaches sans boîte',
   autres:               '🏅 Autres badges'
 };
