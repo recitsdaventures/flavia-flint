@@ -19,11 +19,23 @@
      print → all) pour la même raison, sans bloquer le premier rendu. -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'"/>
 <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/></noscript>
+<!-- Leaflet.markercluster (29/10) : regroupe les caches virtuelles entre
+     elles sur la carte pour alleger l'affichage, sans toucher aux pins
+     aventures/livres qui restent individuels. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" media="print" onload="this.media='all'"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/></noscript>
 <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <!-- Symboles de carte (9 catégories x 5 états), fournis par Firmin le 27/10 —
      remplace les anciens pictogrammes maison (MAP_ICON_SVG / cacheMarkerIcon). -->
 <script defer src="flavia-markers.js"></script>
+<!-- Medailles/bandeaux/fiches de collection (caches virtuelles), fournis par
+     Firmin le 29/10 - rendu des 10 collections (medaille de rang 1-5,
+     bandeau de progression, fiche de lieu) ; le pin sur la carte reste la
+     loupe neutre de flavia-markers.js, inchangee. -->
+<script defer src="flavia-collections.js"></script>
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json"/>
 <meta name="theme-color" content="#2D4A2D"/>
@@ -37,7 +49,7 @@
      deux, un aller-retour réseau de moins au premier chargement. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@500;700&family=Cinzel:wght@600;700&family=Figtree:wght@400;600;700&family=Playfair+Display:wght@600;700;800&family=Roboto:wght@400;500;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@500;700&family=Cinzel:wght@600;700&family=Figtree:wght@400;600;700&family=Fraunces:wght@600;700&family=Nunito+Sans:wght@400;700&family=Playfair+Display:wght@600;700;800&family=Roboto:wght@400;500;700&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --green-dark:   #2D4A2D;
@@ -350,6 +362,20 @@
     z-index: 500; display: none; animation: slideUp 0.2s ease;
   }
   .adventure-popup.show { display: block; }
+  /* Badge de regroupement des caches virtuelles (29/10, Leaflet.markercluster) */
+  .cache-cluster-icon { background: transparent; border: none; }
+  .cache-cluster-badge {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #3F5B3A; color: #F3E9CF; border: 2.5px solid #F3E9CF;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 14px/1 'Nunito Sans', system-ui, sans-serif;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+  }
+  /* La fiche de cache virtuelle (29/10) delegue tout son habillage visuel a
+     flavia-collections.js (.fc-card a deja fond, ombre, coins arrondis) - on
+     retire ici le double cadre (parchemin + padding) herite de .adventure-popup,
+     sans toucher #adventure-popup (aventures classiques). */
+  #cache-popup { background: none; border: none; padding: 0; box-shadow: none; border-radius: 0; }
   @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
@@ -2372,19 +2398,7 @@
     <!-- Fiche détail d'une cache virtuelle (27/10) — même carte que les aventures,
          mais bouton d'action gated par la position GPS plutôt qu'un simple lien. -->
     <div class="adventure-popup" id="cache-popup">
-      <div id="cache-popup-cover-wrap" style="display:none;margin:-14px -14px 10px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;overflow:hidden;background:var(--beige-mid);">
-        <img id="cache-popup-cover-img" src="" alt="" style="width:100%;height:auto;max-height:200px;object-fit:cover;display:block;"/>
-      </div>
-      <div class="popup-header">
-        <div class="popup-title" id="cache-popup-title">Cache</div>
-        <button class="popup-close" onclick="closeCachePopup()">✕</button>
-      </div>
-      <div class="popup-tags" id="cache-popup-collection-wrap" style="display:none;">
-        <span class="tag tag-type" id="cache-popup-collection"></span>
-      </div>
-      <div class="popup-desc" id="cache-popup-desc" style="display:none;-webkit-line-clamp:3;"></div>
-      <div style="font-size:12.5px;font-weight:600;margin-bottom:10px;" id="cache-popup-status"></div>
-      <button class="popup-btn" id="cache-popup-btn" onclick="attemptCacheValidation()">🔍 Fouiller la zone</button>
+      <div id="cache-popup-content"></div>
     </div>
 
     <!-- Popup de confirmation après découverte d'une cache (progression collection + badge éventuel) -->
@@ -3000,6 +3014,7 @@ let currentBook         = null;
 let currentBookParticipation = null;
 let selectedBookTeamSize = 0;
 let map              = null;
+let cacheClusterGroup = null; // Leaflet.markercluster (29/10) : regroupe les pins de caches virtuelles
 let playerMarker     = null;
 let playerPos        = null;
 let geoWatcher       = null;
@@ -3068,6 +3083,21 @@ function advMarkerCategory(adv) {
 // Couleur utilisée pour le texte "✓ Déjà découverte" côté fiche de cache —
 // indépendante de la catégorie de la cache (teinte caches virtuelles fixe).
 const CACHE_MARKER_COLOR = '#0F766E';
+// Cle interne flavia-collections.js pour chacune des 10 collections de caches
+// virtuelles (import du 27/10, cf. Supabase) - association par nom exact,
+// independante de icon_key (taxonomie partagee avec les aventures/livres).
+const FLAVIA_COLLECTION_KEY_BY_NAME = {
+  'Sur la Route des Pèlerins': 'pelerins',
+  'Sur les Pas des Chevaliers': 'chevaliers',
+  "Les Vestiges de l'Empire": 'empire',
+  "L'Énigme des Premiers Hommes": 'premiers',
+  'Les Sources Cachées': 'sources',
+  'Les Noms Gravés': 'noms',
+  'Les Portes du Savoir': 'savoir',
+  "Les Terres d'Exploration": 'terres',
+  "L'Énigme des Statues": 'statues',
+  'Les Inventions Oubliées': 'inventions'
+};
 function isCacheDiscovered(cacheId) {
   return cacheDiscoveries.some(d => d.cache_id === cacheId);
 }
@@ -3092,6 +3122,7 @@ function getPlayerRank(xp) {
 // Routing initial — appelé après définition de toutes les fonctions
 window.addEventListener('DOMContentLoaded', () => {
   FlaviaMarkers.ensure(); // injecte le sprite SVG + styles (nécessaire pour les <use> des puces de filtre)
+  FlaviaCollections.mount(); // injecte styles + symboles des médailles/bandeaux de collection
   if (!checkRecoveryHash()) checkExistingSession();
 });
 
@@ -4117,6 +4148,29 @@ function renderMapMarkers() {
   //  - rayon de validation (par cache, cache.validation_radius_m) : pas encore
   //    utilisé ici, c'est la logique de découverte GPS (étape suivante) qui
   //    s'en servira pour passer l'état à "done".
+  // Regroupement (29/10) : les caches vont dans un unique
+  // L.markerClusterGroup plutôt que directement sur la carte, pour que les
+  // pins proches se replient en un seul badge chiffré tant qu'on ne zoome
+  // pas assez — la carte reste lisible même avec les 171 caches chargées.
+  // Les pins aventures/livres ci-dessus restent, eux, individuels (pas de
+  // clustering) pour ne pas diluer les catégories prioritaires.
+  if (!cacheClusterGroup) {
+    cacheClusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 55,
+      disableClusteringAtZoom: 17,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      iconCreateFunction: cluster => L.divIcon({
+        html: `<div class="cache-cluster-badge">${cluster.getChildCount()}</div>`,
+        className: 'cache-cluster-icon',
+        iconSize: [36, 36]
+      })
+    });
+    map.addLayer(cacheClusterGroup);
+  } else {
+    cacheClusterGroup.clearLayers();
+  }
+
   virtualCaches
     .filter(c => {
       if (cachesFilterActive) return true;
@@ -4133,8 +4187,9 @@ function renderMapMarkers() {
       // Symbole unique "loupe" (27/10, cf. loupe-marqueur.html fourni par
       // Firmin) pour toutes les caches, indépendamment de leur collection —
       // seul l'état (découvrir/proximité/découverte) change l'apparence.
-      const marker = L.marker([c.lat, c.lng], { icon: FlaviaMarkers.cacheIcon(state) }).addTo(map);
+      const marker = L.marker([c.lat, c.lng], { icon: FlaviaMarkers.cacheIcon(state) });
       marker.on('click', () => showCachePopup(c));
+      cacheClusterGroup.addLayer(marker);
     });
 }
 
@@ -4153,35 +4208,14 @@ function showCachePopup(cache) {
   document.getElementById('adventure-popup')?.classList.remove('show');
   _cachePopupCache = cache;
 
-  document.getElementById('cache-popup-title').textContent = cache.title || '';
-
-  const coverWrap = document.getElementById('cache-popup-cover-wrap');
-  const coverImg  = document.getElementById('cache-popup-cover-img');
-  if (cache.cover_image_url) { coverImg.src = cache.cover_image_url; coverWrap.style.display = 'block'; }
-  else { coverWrap.style.display = 'none'; coverImg.src = ''; }
-
-  const colWrap = document.getElementById('cache-popup-collection-wrap');
-  const col = playerCollections.find(c => c.id === cache.collection_id);
-  if (col) {
-    document.getElementById('cache-popup-collection').textContent =
-      (COLLECTION_ICON_EMOJI[col.icon_key] || '🧿') + ' ' + col.name;
-    colWrap.style.display = 'flex';
-  } else {
-    colWrap.style.display = 'none';
-  }
-
-  const descEl = document.getElementById('cache-popup-desc');
-  if (cache.description) { descEl.textContent = cache.description; descEl.style.display = 'block'; }
-  else { descEl.style.display = 'none'; }
-
-  updateCachePopupState();
+  renderCachePopupCard();
   document.getElementById('cache-popup').classList.add('show');
 
   if (_cachePopupInterval) clearInterval(_cachePopupInterval);
-  // Tant que la fiche est ouverte, on réévalue la distance régulièrement pour
+  // Tant que la fiche est ouverte, on régénère la carte régulièrement pour
   // que le bouton se débloque sans que le joueur ait à rouvrir la fiche en
   // marchant (même esprit que le rafraîchissement de la carte elle-même).
-  _cachePopupInterval = setInterval(updateCachePopupState, 3000);
+  _cachePopupInterval = setInterval(renderCachePopupCard, 3000);
 }
 
 function closeCachePopup() {
@@ -4190,43 +4224,75 @@ function closeCachePopup() {
   _cachePopupCache = null;
 }
 
-function updateCachePopupState() {
+// Fiche de lieu (29/10) habillée par flavia-collections.js (médaille de rang +
+// bandeau de progression + carte). Repli sur un rendu minimal (même esprit que
+// l'ancienne fiche) si la cache appartient à une collection non référencée
+// dans FLAVIA_COLLECTION_KEY_BY_NAME (ex. "Patrimoine de l'eau", antérieure à
+// l'import du 27/10 et pas encore habillée par ce système de médailles).
+function renderCachePopupCard() {
   const cache = _cachePopupCache;
   if (!cache) return;
-  const statusEl = document.getElementById('cache-popup-status');
-  const btn      = document.getElementById('cache-popup-btn');
+  const content = document.getElementById('cache-popup-content');
+  const col = playerCollections.find(c => c.id === cache.collection_id);
+  const flaviaKey = col ? FLAVIA_COLLECTION_KEY_BY_NAME[col.name] : null;
 
-  if (isCacheDiscovered(cache.id)) {
-    statusEl.textContent = '✓ Déjà découverte';
-    statusEl.style.color = CACHE_MARKER_COLOR;
-    btn.textContent = '✓ Déjà découverte';
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
+  const discovered = isCacheDiscovered(cache.id);
+  let canValidate = false, remaining = null;
+  if (!discovered && playerPos) {
+    const d = getDistance(playerPos.lat, playerPos.lng, cache.lat, cache.lng);
+    canValidate = d <= cache.validation_radius_m;
+    remaining = Math.max(1, Math.round(d - cache.validation_radius_m));
+  }
+
+  if (flaviaKey) {
+    const discoveredIds = new Set(cacheDiscoveries.map(d => d.cache_id));
+    const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
+    const total = collectionCaches.length;
+    const done  = collectionCaches.filter(c => discoveredIds.has(c.id)).length;
+    const level = Math.max(1, FlaviaCollections.levelFor(done, total));
+    content.innerHTML = FlaviaCollections.card({
+      collection: flaviaKey, level, done, total,
+      title: cache.title || '', tag: col.name, description: cache.description || '',
+      distance: remaining, canValidate
+    });
+    content.querySelector('[data-fc-close]')?.addEventListener('click', closeCachePopup);
+    const ctaBtn = content.querySelector('[data-fc-cta]');
+    if (ctaBtn) {
+      if (discovered) {
+        ctaBtn.textContent = '✓ Déjà découverte';
+        ctaBtn.disabled = true;
+      } else if (!playerPos) {
+        ctaBtn.textContent = 'Active la géolocalisation';
+        ctaBtn.disabled = true;
+      } else {
+        ctaBtn.disabled = !canValidate;
+        ctaBtn.addEventListener('click', attemptCacheValidation);
+      }
+    }
     return;
   }
-  if (!playerPos) {
-    statusEl.textContent = 'Active la géolocalisation pour pouvoir valider.';
-    statusEl.style.color = '#9CA3AF';
-    btn.textContent = '🔍 Fouiller la zone';
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
-    return;
-  }
-  const d = getDistance(playerPos.lat, playerPos.lng, cache.lat, cache.lng);
-  if (d <= cache.validation_radius_m) {
-    statusEl.textContent = '📍 Tu y es !';
-    statusEl.style.color = '#15803D';
-    btn.textContent = '🔍 Fouiller la zone';
-    btn.disabled = false;
-    btn.style.opacity = '1';
-  } else {
-    const remaining = Math.max(1, Math.round(d - cache.validation_radius_m));
-    statusEl.textContent = `Encore ${remaining} m pour pouvoir valider`;
-    statusEl.style.color = '#9CA3AF';
-    btn.textContent = `🔍 Rapproche-toi (${remaining} m)`;
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
-  }
+
+  const statusHtml = discovered
+    ? `<div style="font-size:12.5px;font-weight:600;color:${CACHE_MARKER_COLOR};margin-bottom:10px;">✓ Déjà découverte</div>`
+    : (!playerPos
+        ? `<div style="font-size:12.5px;font-weight:600;color:#9CA3AF;margin-bottom:10px;">Active la géolocalisation pour pouvoir valider.</div>`
+        : `<div style="font-size:12.5px;font-weight:600;color:${canValidate ? '#15803D' : '#9CA3AF'};margin-bottom:10px;">${canValidate ? '📍 Tu y es !' : `Encore ${remaining} m pour pouvoir valider`}</div>`);
+  const btnLabel = discovered ? '✓ Déjà découverte' : (!playerPos ? '🔍 Fouiller la zone' : (canValidate ? '🔍 Fouiller la zone' : `🔍 Rapproche-toi (${remaining} m)`));
+  const btnDisabled = discovered || !playerPos || !canValidate;
+  content.innerHTML = `
+    ${cache.cover_image_url ? `<div style="margin:-14px -14px 10px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;overflow:hidden;background:var(--beige-mid);"><img src="${cache.cover_image_url}" alt="" style="width:100%;height:auto;max-height:200px;object-fit:cover;display:block;"/></div>` : ''}
+    <div class="popup-header">
+      <div class="popup-title">${(cache.title || '').replace(/</g,'&lt;')}</div>
+      <button class="popup-close" data-fc-close>✕</button>
+    </div>
+    ${col ? `<div class="popup-tags"><span class="tag tag-type">${(COLLECTION_ICON_EMOJI[col.icon_key] || '🧿')} ${col.name.replace(/</g,'&lt;')}</span></div>` : ''}
+    ${cache.description ? `<div class="popup-desc" style="-webkit-line-clamp:3;">${cache.description.replace(/</g,'&lt;')}</div>` : ''}
+    ${statusHtml}
+    <button class="popup-btn" data-fc-cta ${btnDisabled ? 'disabled style="opacity:0.6;"' : ''}>${btnLabel}</button>
+  `;
+  content.querySelector('[data-fc-close]')?.addEventListener('click', closeCachePopup);
+  const fallbackBtn = content.querySelector('[data-fc-cta]');
+  if (fallbackBtn && !btnDisabled) fallbackBtn.addEventListener('click', attemptCacheValidation);
 }
 
 async function attemptCacheValidation() {
@@ -4238,12 +4304,11 @@ async function attemptCacheValidation() {
   // On revérifie la distance au clic (pas seulement à l'affichage) — le
   // bouton est désactivé hors rayon, mais une double sécurité ne coûte rien.
   const d = getDistance(playerPos.lat, playerPos.lng, cache.lat, cache.lng);
-  if (d > cache.validation_radius_m) { updateCachePopupState(); return; }
+  if (d > cache.validation_radius_m) { renderCachePopupCard(); return; }
 
   const userId = currentPlayer.id;
-  const btn = document.getElementById('cache-popup-btn');
-  btn.disabled = true;
-  btn.textContent = 'Validation...';
+  const btn = document.querySelector('#cache-popup-content [data-fc-cta]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Validation...'; }
 
   try {
     // "return=minimal" ajouté le 27/10 (cf. bug corrigé le même jour dans
@@ -4272,7 +4337,7 @@ async function attemptCacheValidation() {
   } catch (e) {
     console.error('Erreur validation cache:', e);
     showToast('Erreur lors de la validation, réessaie.');
-    updateCachePopupState();
+    renderCachePopupCard();
   }
 }
 
