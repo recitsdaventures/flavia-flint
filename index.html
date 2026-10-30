@@ -2526,6 +2526,10 @@
             <td style="padding:6px 0; color:var(--text-mid);">Rang mondial</td>
             <td style="text-align:right; font-weight:700; color:var(--terra);" id="profile-tbl-rank">–</td>
           </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Km parcourus ce mois-ci</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-distance">–</td>
+          </tr>
         </table>
       </div>
 
@@ -2995,6 +2999,14 @@ let cacheClusterGroup = null; // Leaflet.markercluster (29/10) : regroupe les pi
 let playerMarker     = null;
 let playerPos        = null;
 let geoWatcher       = null;
+// Distance marchée (30/10) : accumulée à partir du flux GPS global (startGlobalGPS,
+// toujours actif app ouverte, scénario ou simple balade carte confondus) plutôt que
+// d'un watcher spécifique à un scénario — couvre aussi bien "je fais une chasse" que
+// "je me balade pour choper des Échos du Patrimoine" sans session formelle.
+let _distLastPos     = null; // {lat, lng, t} dernier point GPS retenu pour le calcul
+let _distPendingM    = 0;    // mètres accumulés pas encore envoyés au serveur
+let _distFlushInFlight = false;
+let _distFlushTimer  = null;
 // Caches virtuelles (fusion du prototype "géocache sans boîte", 27/10) — chargées
 // une fois comme `adventures`, avec les découvertes du joueur courant pour l'état
 // "done", et les deux réglages globaux (rayon ambiant / rayon de proximité) mis en
@@ -4538,11 +4550,55 @@ function startGlobalGPS() {
       if (map && document.getElementById('screen-map')?.classList.contains('active')) {
         renderMapMarkers();
       }
+      accumulateWalkedDistance(pos);
     },
     () => {},
     { enableHighAccuracy: true, maximumAge: 5000 }
   );
+  if (!_distFlushTimer) _distFlushTimer = setInterval(flushDistanceToServer, 30000);
 }
+
+// Distance marchée (30/10) — voir déclaration des variables plus haut. Filtre le
+// bruit GPS (positions imprécises ou micro-sauts à l'arrêt) et les sauts aberrants
+// (vitesse max plausible ~10 m/s = 36 km/h, généreux pour couvrir un rattrapage de
+// plusieurs points d'un coup) avant de comptabiliser quoi que ce soit.
+function accumulateWalkedDistance(pos) {
+  if (isGuest() || !currentPlayer?.id) return;
+  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+  const now = pos.timestamp || Date.now();
+  if (typeof accuracy === 'number' && accuracy > 50) return; // position trop imprécise, on ignore ce point
+  if (_distLastPos) {
+    const dtS = Math.max(0.001, (now - _distLastPos.t) / 1000);
+    const deltaM = getDistance(_distLastPos.lat, _distLastPos.lng, lat, lng);
+    const maxPlausibleM = dtS * 10;
+    if (deltaM >= 5 && deltaM <= maxPlausibleM) {
+      _distPendingM += deltaM;
+      if (_distPendingM >= 25) flushDistanceToServer();
+    }
+  }
+  _distLastPos = { lat, lng, t: now };
+}
+
+async function flushDistanceToServer() {
+  if (_distFlushInFlight || _distPendingM < 1 || isGuest() || !currentPlayer?.id) return;
+  const toSend = _distPendingM;
+  _distPendingM = 0;
+  _distFlushInFlight = true;
+  try {
+    await supaFetch('rpc/increment_player_distance', { method: 'POST', body: { delta_m: toSend } });
+  } catch (e) {
+    console.error('Erreur enregistrement distance parcourue:', e);
+    _distPendingM += toSend; // on retentera au prochain flush plutôt que de perdre ces mètres
+  } finally {
+    _distFlushInFlight = false;
+  }
+}
+
+// Meilleur effort pour ne pas perdre les derniers mètres accumulés quand le
+// joueur quitte/masque l'app (fetch non attendu : on ne peut pas bloquer un
+// pagehide, mais la requête part quand même la plupart du temps).
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushDistanceToServer(); });
+window.addEventListener('pagehide', () => { flushDistanceToServer(); });
 
 // ══════════════════════════════════════════
 // SAUVEGARDE LOCALE DE PROGRESSION (reprise en cas de sortie accidentelle)
@@ -6672,7 +6728,8 @@ async function loadProfile() {
       readChapters,
       partnerBadges,
       bookCompletions,
-      collectionBadges
+      collectionBadges,
+      distanceRows
     ] = await Promise.all([
       supaFetch(`players?id=eq.${playerId}`),
       supaFetch('players_public?select=id,total_xp&order=total_xp.desc'),
@@ -6700,6 +6757,10 @@ async function loadProfile() {
       // enregistrés en base, jamais affichés) : retour de Firmin du 27/10.
       supaFetch(`player_collection_badges?player_id=eq.${playerId}&select=*,collections(name,icon_key,badge_bronze_image_url,badge_argent_image_url,badge_or_image_url)&order=earned_at.desc`)
         .catch(e => { console.error('Erreur chargement badges de collection:', e); return []; }),
+      // Distance marchée ce mois-ci (30/10) : sommée côté client (1 ligne par jour
+      // max ~31 lignes/mois, pas besoin d'une RPC d'agrégation pour ça).
+      supaFetch(`player_distance_log?player_id=eq.${playerId}&date=gte.${new Date().toISOString().slice(0,7)}-01&select=distance_m`)
+        .catch(e => { console.error('Erreur chargement distance parcourue:', e); return []; }),
       checkAndAwardTitles()
     ]);
 
@@ -6752,6 +6813,9 @@ async function loadProfile() {
     document.getElementById('profile-tbl-scenarios').textContent = uniqueAdvIds.size;
     document.getElementById('profile-tbl-xp').textContent        = xpFmt;
     document.getElementById('profile-tbl-rank').textContent      = rank ? '#' + rank : '–';
+
+    const distanceKm = (distanceRows || []).reduce((sum, r) => sum + Number(r.distance_m || 0), 0) / 1000;
+    document.getElementById('profile-tbl-distance').textContent = distanceKm > 0 ? distanceKm.toFixed(1) + ' km' : '0 km';
 
     // Grille badges — un badge par scénario terminé (image du badge si définie, sinon 🏅)
     // + un tampon par chapitre de l'histoire de Flavia Flint effectivement lu.
