@@ -2530,6 +2530,18 @@
             <td style="padding:6px 0; color:var(--text-mid);">Km parcourus ce mois-ci</td>
             <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-distance">–</td>
           </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Km parcourus au total</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-distance-total">–</td>
+          </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Pas estimés ce mois-ci</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-steps">–</td>
+          </tr>
+          <tr style="border-top:1px solid var(--beige-mid);">
+            <td style="padding:6px 0; color:var(--text-mid);">Pas estimés au total</td>
+            <td style="text-align:right; font-weight:700; color:var(--text-dark);" id="profile-tbl-steps-total">–</td>
+          </tr>
         </table>
       </div>
 
@@ -6757,9 +6769,11 @@ async function loadProfile() {
       // enregistrés en base, jamais affichés) : retour de Firmin du 27/10.
       supaFetch(`player_collection_badges?player_id=eq.${playerId}&select=*,collections(name,icon_key,badge_bronze_image_url,badge_argent_image_url,badge_or_image_url)&order=earned_at.desc`)
         .catch(e => { console.error('Erreur chargement badges de collection:', e); return []; }),
-      // Distance marchée ce mois-ci (30/10) : sommée côté client (1 ligne par jour
-      // max ~31 lignes/mois, pas besoin d'une RPC d'agrégation pour ça).
-      supaFetch(`player_distance_log?player_id=eq.${playerId}&date=gte.${new Date().toISOString().slice(0,7)}-01&select=distance_m`)
+      // Distance marchée (30/10) : tout l'historique remonté en une requête (date +
+      // distance_m, un petit nombre de lignes même après des mois d'usage), puis
+      // sommes "ce mois-ci" et "total depuis la création du compte" calculées
+      // côté client à partir du même jeu de lignes plutôt que deux requêtes.
+      supaFetch(`player_distance_log?player_id=eq.${playerId}&select=date,distance_m`)
         .catch(e => { console.error('Erreur chargement distance parcourue:', e); return []; }),
       checkAndAwardTitles()
     ]);
@@ -6814,8 +6828,22 @@ async function loadProfile() {
     document.getElementById('profile-tbl-xp').textContent        = xpFmt;
     document.getElementById('profile-tbl-rank').textContent      = rank ? '#' + rank : '–';
 
-    const distanceKm = (distanceRows || []).reduce((sum, r) => sum + Number(r.distance_m || 0), 0) / 1000;
-    document.getElementById('profile-tbl-distance').textContent = distanceKm > 0 ? distanceKm.toFixed(1) + ' km' : '0 km';
+    const currentMonthPrefix = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const distanceTotalM = (distanceRows || []).reduce((sum, r) => sum + Number(r.distance_m || 0), 0);
+    const distanceMonthM = (distanceRows || [])
+      .filter(r => (r.date || '').startsWith(currentMonthPrefix))
+      .reduce((sum, r) => sum + Number(r.distance_m || 0), 0);
+    document.getElementById('profile-tbl-distance').textContent       = distanceMonthM > 0 ? (distanceMonthM / 1000).toFixed(1) + ' km' : '0 km';
+    document.getElementById('profile-tbl-distance-total').textContent = distanceTotalM > 0 ? (distanceTotalM / 1000).toFixed(1) + ' km' : '0 km';
+
+    // Pas estimés : approximation à partir de la distance GPS (longueur de pas moyenne ~0.75m).
+    // Ce n'est pas un vrai podomètre (pas de capteur de mouvement) — juste une conversion lisible
+    // de la distance déjà mesurée, pour l'aspect "activité santé ludique".
+    const STEP_LENGTH_M = 0.75;
+    const stepsMonth = Math.round(distanceMonthM / STEP_LENGTH_M);
+    const stepsTotal = Math.round(distanceTotalM / STEP_LENGTH_M);
+    document.getElementById('profile-tbl-steps').textContent       = stepsMonth > 0 ? stepsMonth.toLocaleString('fr-FR') + ' pas' : '0 pas';
+    document.getElementById('profile-tbl-steps-total').textContent = stepsTotal > 0 ? stepsTotal.toLocaleString('fr-FR') + ' pas' : '0 pas';
 
     // Grille badges — un badge par scénario terminé (image du badge si définie, sinon 🏅)
     // + un tampon par chapitre de l'histoire de Flavia Flint effectivement lu.
