@@ -3125,7 +3125,9 @@ window.addEventListener('DOMContentLoaded', () => {
   FlaviaMarkers.ensure(); // injecte le sprite SVG + styles (nécessaire pour les <use> des puces de filtre)
   FlaviaCollections.mount(); // injecte styles + symboles des médailles/bandeaux de collection
   FlaviaLegend.mount(document.getElementById('screen-map')); // bouton Légende (bas gauche de la carte)
-  if (!checkRecoveryHash()) checkExistingSession();
+  if (!checkRecoveryHash()) {
+    checkOAuthHash().then(handled => { if (!handled) checkExistingSession(); });
+  }
 });
 
 async function loadCurrentPlayer(user) {
@@ -3204,9 +3206,12 @@ function showAuthTab(tab) {
 }
 
 function handleGoogleAuth() {
-  const loginVisible = document.getElementById('auth-login').style.display !== 'none';
-  const errEl = document.getElementById(loginVisible ? 'login-error' : 'signup-error');
-  if (errEl) errEl.textContent = 'La connexion Google arrive bientôt !';
+  // Redirige vers l'endpoint OAuth de Supabase (GoTrue), qui redirige lui-même
+  // vers Google puis renvoie le joueur ici avec #access_token=...&refresh_token=...
+  // dans le hash (intercepté par checkOAuthHash() au chargement de la page —
+  // même mécanisme que le lien de récupération de mot de passe).
+  const redirectTo = window.location.origin + window.location.pathname;
+  window.location.href = `${SUPA_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
 }
 
 // Échappe un texte avant de l'injecter dans du HTML — utilisé pour le contenu
@@ -3584,6 +3589,52 @@ async function forgotPassword() {
 // s'est jamais affiché, ex. spam, boîte pleine, ou limite d'envoi Supabase
 // atteinte au moment de l'inscription) — endpoint GoTrue dédié à ça, distinct
 // de /recover (mot de passe) et de /signup (créerait un doublon de compte).
+// Connexion Google : après acceptation côté Google, Supabase redirige vers
+// l'app avec #access_token=...&refresh_token=... dans le hash (sans
+// type=recovery, ce qui la distingue du cas ci-dessous). On récupère le
+// profil utilisateur avec ce token puis on rejoue exactement la fin de
+// handleLogin() pour entrer dans l'app normalement.
+async function checkOAuthHash() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('access_token') || hash.includes('type=recovery')) return false;
+  const params = new URLSearchParams(hash.slice(1));
+  const access_token  = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+  if (!access_token) return false;
+
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  try {
+    const res  = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + access_token }
+    });
+    const user = await res.json();
+    if (!res.ok) throw new Error(user.msg || user.error_description || 'Connexion Google impossible.');
+
+    localStorage.setItem('ff_access_token', access_token);
+    if (refresh_token) localStorage.setItem('ff_refresh_token', refresh_token);
+    localStorage.setItem('ff_user', JSON.stringify(user));
+    if (typeof gtag === 'function') gtag('event', 'login', { method: 'google' });
+
+    await loadCurrentPlayer(user);
+    document.getElementById('app').classList.remove('auth-mode');
+    if (deferredPrompt) showInstallButton();
+    await loadAdventures();
+    setTimeout(() => {
+      goToScreen('home', document.getElementById('nav-home'));
+    }, 500);
+    startGlobalGPS();
+  } catch (e) {
+    console.error('Erreur connexion Google:', e);
+    document.getElementById('app').classList.add('auth-mode');
+    goToScreen('auth', null);
+    showAuthTab('login');
+    const errEl = document.getElementById('login-error');
+    if (errEl) { errEl.textContent = 'La connexion Google a échoué, réessaie.'; errEl.style.display = 'block'; }
+  }
+  return true;
+}
+
 // Récupération de mot de passe : le lien reçu par email redirige vers l'app
 // avec #access_token=...&refresh_token=...&type=recovery dans le hash. Sans
 // cette interception, le joueur atterrissait silencieusement sur l'accueil
