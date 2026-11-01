@@ -4867,7 +4867,11 @@ function renderPanelBody() {
         <div id="panel-qr-preview-section" style="display:none;margin-top:10px;background:white;padding:16px;border-radius:12px;border:1px solid #E2E8E2;text-align:center;">
           <div id="panel-qr-display"></div>
           <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide cette étape quand le joueur le scanne dans l'app</div>
-          <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <label for="panel-qr-copies" style="font-size:12px;color:#4A5A4A;">Exemplaires (40×40mm) :</label>
+            <input type="number" id="panel-qr-copies" value="6" min="1" max="24" style="width:56px;padding:6px;border:1px solid #D4C5A9;border-radius:8px;text-align:center;font-size:13px;">
+          </div>
+          <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer la planche (recto QR + verso logo)</button>
         </div>
       </div>
       <div style="margin:0 0 10px;">
@@ -5954,18 +5958,25 @@ function generateQRForStep() {
   generateQRCode(value);
 }
 
-// Impression QR code recto/verso (30/10) : une page A4 avec juste le QR
-// centré (recto, à coller/scotcher sur la boîte), et une deuxième page avec
-// le titre de l'aventure + la marque Récits d'Aventures (verso — permet au
-// joueur de vérifier que c'est bien le bon QR code, pas un remplacé par
-// quelqu'un d'autre). Le QR affiché à l'écran (200px) est régénéré ici en
-// plus haute résolution (600px) pour rester net une fois imprimé en grand.
+// Impression QR code en planche (31/10) : une planche A4 recto avec N QR
+// identiques de 40×40mm pile (pour rentrer dans les boîtes de géocaching),
+// disposés en grille avec repères de découpe, et une planche verso avec juste
+// le logo Récits d'Aventures à la même taille et à la même position de
+// grille — plus de titre/texte au verso, un seul logo suffit maintenant.
+// Le verso est VOLONTAIREMENT en miroir horizontal par rapport au recto : un
+// retournement papier "bord long" (le réglage recto-verso par défaut de la
+// plupart des imprimantes) inverse l'ordre gauche-droite des cases, donc sans
+// ce miroir chaque logo tomberait derrière le mauvais QR code une fois
+// imprimé. Si l'imprimante est réglée sur "bord court", dis-le-moi, le miroir
+// devra être retiré.
+const QR_CELL_MM = 40;
+const QR_GRID_COLS = 2;
+
 function printQRCode() {
   const canvas = document.querySelector('#panel-qr-display canvas');
   if (!canvas) return;
-  const advTitle  = document.getElementById('f-title').value || 'Aventure';
-  const stepLabel = document.getElementById('panel-id-label')?.textContent || '';
-  const qrText    = (document.getElementById('panel-answer')?.value || '').trim();
+  const qrText = (document.getElementById('panel-answer')?.value || '').trim();
+  const copies = Math.max(1, Math.min(24, parseInt(document.getElementById('panel-qr-copies')?.value) || 6));
 
   const hiResHolder = document.createElement('div');
   hiResHolder.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
@@ -5978,36 +5989,62 @@ function printQRCode() {
   const qrDataUrl = hiResCanvas ? hiResCanvas.toDataURL() : canvas.toDataURL();
   document.body.removeChild(hiResHolder);
 
+  const logoUrl = window.location.origin + '/logo.png';
+  const rows = Math.ceil(copies / QR_GRID_COLS);
+
+  // Construit les deux grilles (recto QR, verso logo en miroir colonne par ligne)
+  const rectoCells = [];
+  const versoCells = [];
+  for (let r = 0; r < rows; r++) {
+    const rectoRow = [];
+    const versoRow = [];
+    for (let c = 0; c < QR_GRID_COLS; c++) {
+      const i = r * QR_GRID_COLS + c;
+      rectoRow.push(i < copies ? `<div class="cell"><img src="${qrDataUrl}" alt=""/></div>` : '<div class="cell cell-empty"></div>');
+    }
+    // Miroir horizontal pour le verso : on inverse l'ordre des colonnes de cette ligne.
+    for (let c = QR_GRID_COLS - 1; c >= 0; c--) {
+      const i = r * QR_GRID_COLS + c;
+      versoRow.push(i < copies ? `<div class="cell"><img class="logo" src="${logoUrl}" alt=""/></div>` : '<div class="cell cell-empty"></div>');
+    }
+    rectoCells.push(`<div class="row">${rectoRow.join('')}</div>`);
+    versoCells.push(`<div class="row">${versoRow.join('')}</div>`);
+  }
+
   const win = window.open('');
   win.document.write(`
     <html>
     <head>
-      <title>QR — ${advTitle}</title>
+      <title>Planche QR codes</title>
       <style>
-        @page { size: A4; margin: 0; }
+        @page { size: A4; margin: 15mm; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: Georgia, 'Times New Roman', serif; }
-        .page {
-          width: 210mm; height: 297mm;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          page-break-after: always;
-          text-align: center;
-        }
+        .page { page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .qr-page img { width: 300px; height: 300px; }
-        .back-page h2 { font-size: 28px; color: #1A2A1A; margin: 0 0 10px; max-width: 160mm; }
-        .back-page .subtitle { font-size: 15px; color: #666; margin: 0 0 50px; }
-        .back-page .brand { font-size: 13px; color: #999; margin-top: 60px; letter-spacing: 0.5px; }
+        .grid { display: flex; flex-direction: column; gap: 6mm; align-items: center; }
+        .row { display: flex; gap: 6mm; }
+        .cell {
+          width: ${QR_CELL_MM}mm; height: ${QR_CELL_MM}mm;
+          border: 1px dashed #AAA;
+          display: flex; align-items: center; justify-content: center;
+          padding: 3mm;
+        }
+        .cell-empty { border: none; }
+        .cell img { width: 100%; height: 100%; object-fit: contain; }
+        .cell img.logo { width: 80%; height: 80%; }
+        .no-print { text-align: center; font-size: 13px; color: #666; margin-bottom: 8mm; }
+        @media print { .no-print { display: none; } }
       </style>
     </head>
     <body>
-      <div class="page qr-page">
-        <img src="${qrDataUrl}" />
+      <div class="page">
+        <div class="no-print">Planche 1/2 — RECTO (QR codes) — ${copies} exemplaire(s) de ${QR_CELL_MM}×${QR_CELL_MM}mm</div>
+        <div class="grid">${rectoCells.join('')}</div>
       </div>
-      <div class="page back-page">
-        <h2>${advTitle}</h2>
-        ${stepLabel ? `<div class="subtitle">${stepLabel}</div>` : ''}
-        <div class="brand">Récits d'Aventures — recitsdaventures.com</div>
+      <div class="page">
+        <div class="no-print">Planche 2/2 — VERSO (logo) — imprime recto-verso, retournement bord long</div>
+        <div class="grid">${versoCells.join('')}</div>
       </div>
     </body>
     </html>
