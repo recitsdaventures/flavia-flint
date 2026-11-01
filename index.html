@@ -1562,7 +1562,7 @@
      navigateur — désactivé globalement via user-scalable=no sur cette PWA). */
   #image-lightbox {
     position: fixed; inset: 0; z-index: 20000;
-    background: rgba(10,10,10,0.94);
+    background: rgba(20,36,26,0.94);
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
   }
@@ -1586,6 +1586,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #lightbox-img.lightbox-wrong-flash { filter: brightness(0.6) saturate(2) sepia(1) hue-rotate(-50deg); }
+  #lightbox-img.lightbox-img-badge { background: var(--white); border-radius: 20px; padding: 20px; box-sizing: border-box; }
 
   /* Barre overlay du mode immersif — remplace la barre-titre/quitter habituelle
      pendant qu'un scénario est en cours (cf. enableImmersiveMode()) */
@@ -6013,7 +6014,7 @@ function openImageLightbox(url, opts) {
   overlay.id = 'image-lightbox';
   overlay.innerHTML = `
     <button type="button" class="lightbox-close" onclick="closeImageLightbox()">✕</button>
-    <div class="lightbox-stage"><img id="lightbox-img" src="${url}" alt=""/></div>
+    <div class="lightbox-stage"><img id="lightbox-img" class="${opts.badge ? 'lightbox-img-badge' : ''}" src="${url}" alt=""/></div>
     ${opts.caption ? `<div class="lightbox-caption">${opts.caption}</div>` : ''}
     ${opts.hotspot ? '<div class="lightbox-hint">👆 Touche le détail que tu as trouvé</div>' : ''}`;
   document.body.appendChild(overlay);
@@ -6766,7 +6767,7 @@ function closeBadgesModal() {
 function openBadgeZoom(idx) {
   const b = _allScenarioBadges[idx];
   if (!b || !b.imageUrl) return;
-  openImageLightbox(b.imageUrl, { caption: b.label });
+  openImageLightbox(b.imageUrl, { caption: b.label, badge: true });
 }
 
 async function loadProfile() {
