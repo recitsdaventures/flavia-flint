@@ -5947,22 +5947,66 @@ function generateQRForStep() {
   generateQRCode(value);
 }
 
+// Impression QR code recto/verso (30/10) : une page A4 avec juste le QR
+// centré (recto, à coller/scotcher sur la boîte), et une deuxième page avec
+// le titre de l'aventure + la marque Récits d'Aventures (verso — permet au
+// joueur de vérifier que c'est bien le bon QR code, pas un remplacé par
+// quelqu'un d'autre). Le QR affiché à l'écran (200px) est régénéré ici en
+// plus haute résolution (600px) pour rester net une fois imprimé en grand.
 function printQRCode() {
   const canvas = document.querySelector('#panel-qr-display canvas');
   if (!canvas) return;
-  const advTitle = document.getElementById('f-title').value || 'Aventure';
+  const advTitle  = document.getElementById('f-title').value || 'Aventure';
   const stepLabel = document.getElementById('panel-id-label')?.textContent || '';
+  const qrText    = (document.getElementById('panel-answer')?.value || '').trim();
+
+  const hiResHolder = document.createElement('div');
+  hiResHolder.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+  document.body.appendChild(hiResHolder);
+  new QRCode(hiResHolder, {
+    text: qrText || canvas.toDataURL(), width: 600, height: 600,
+    colorDark: '#1A2A1A', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M
+  });
+  const hiResCanvas = hiResHolder.querySelector('canvas');
+  const qrDataUrl = hiResCanvas ? hiResCanvas.toDataURL() : canvas.toDataURL();
+  document.body.removeChild(hiResHolder);
+
   const win = window.open('');
   win.document.write(`
-    <html><body style="text-align:center;font-family:sans-serif;padding:40px;">
-      <h2>Les Aventures de Flavia Flint</h2>
-      <h3>${advTitle}${stepLabel ? ' — ' + stepLabel : ''}</h3>
-      <p style="color:#666;">Scanne ce QR code pour valider cette étape !</p>
-      <img src="${canvas.toDataURL()}" style="width:250px;height:250px;"/>
-      <p style="font-size:12px;color:#999;margin-top:20px;">Récits d'Aventures — recitsdaventures.com</p>
-    </body></html>
+    <html>
+    <head>
+      <title>QR — ${advTitle}</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Georgia, 'Times New Roman', serif; }
+        .page {
+          width: 210mm; height: 297mm;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          page-break-after: always;
+          text-align: center;
+        }
+        .page:last-child { page-break-after: auto; }
+        .qr-page img { width: 300px; height: 300px; }
+        .back-page h2 { font-size: 28px; color: #1A2A1A; margin: 0 0 10px; max-width: 160mm; }
+        .back-page .subtitle { font-size: 15px; color: #666; margin: 0 0 50px; }
+        .back-page .brand { font-size: 13px; color: #999; margin-top: 60px; letter-spacing: 0.5px; }
+      </style>
+    </head>
+    <body>
+      <div class="page qr-page">
+        <img src="${qrDataUrl}" />
+      </div>
+      <div class="page back-page">
+        <h2>${advTitle}</h2>
+        ${stepLabel ? `<div class="subtitle">${stepLabel}</div>` : ''}
+        <div class="brand">Récits d'Aventures — recitsdaventures.com</div>
+      </div>
+    </body>
+    </html>
   `);
-  win.print();
+  win.document.close();
+  setTimeout(() => { win.print(); }, 300);
 }
 
 // ══════════════════════════════════════════
