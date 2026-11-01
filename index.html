@@ -5739,10 +5739,10 @@ function enigmeBodyHtml(step) {
         <div id="hint-section"></div>
         <button type="button" id="btn-qr-lost-box" onclick="event.stopPropagation(); toggleLostBoxPanel();" style="width:100%;margin-top:10px;padding:12px;background:none;border:1.5px solid #DC2626;border-radius:12px;color:#DC2626;font-size:13px;font-weight:600;cursor:pointer;">🚨 Signaler la boîte perdue</button>
         <div id="qr-lost-box-panel" style="display:none;margin-top:10px;background:#FFF7F4;border:1px solid #FECACA;border-radius:12px;padding:12px 14px;">
-          <div style="font-size:13px;color:#991B1B;margin-bottom:10px;">📸 Prends en photo l'endroit où tu penses que la boîte aurait dû se trouver.</div>
-          <input type="file" accept="image/*" capture="environment" id="qr-lost-box-photo-input" style="display:none;" onchange="handleLostBoxPhoto(event)"/>
-          <button type="button" id="btn-qr-take-photo" onclick="event.stopPropagation(); document.getElementById('qr-lost-box-photo-input').click();" style="width:100%;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📷 Prendre la photo</button>
-          <button type="button" onclick="event.stopPropagation(); skipLostBoxReport();" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;color:#991B1B;font-size:12px;text-decoration:underline;cursor:pointer;">Pas de connexion / pas de photo possible — passer</button>
+          <div style="font-size:13px;color:#991B1B;margin-bottom:10px;">📍 ${escapeHtml(step.lost_box_text || 'Cherche bien tout autour du point indiqué sur la carte.')}</div>
+          <div id="qr-lost-box-status" style="font-size:12px;color:#991B1B;margin-bottom:8px;display:none;"></div>
+          <button type="button" id="btn-qr-confirm-lost" onclick="event.stopPropagation(); confirmLostBoxGPS();" style="width:100%;padding:12px;background:#DC2626;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">📍 Je suis à l'endroit indiqué, confirmer que la boîte n'y est pas</button>
+          <button type="button" onclick="event.stopPropagation(); skipLostBoxReport();" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;color:#991B1B;font-size:12px;text-decoration:underline;cursor:pointer;">GPS indisponible — passer</button>
         </div>
       </div>`;
   }
@@ -9107,66 +9107,83 @@ function scanInlineQRFrame(step) {
 }
 
 // ── SIGNALER LA BOÎTE PERDUE (étape "qr_scan") : repli quand le joueur ne
-// trouve pas/plus la boîte physique — une photo du lieu suffit à valider
-// l'étape (pas d'attente d'une validation admin), et le signalement (avec sa
-// photo) reste consultable dans admin.html pour que Firmin aille la réparer.
+// trouve pas/plus la boîte physique. Confirmation par géolocalisation (30/10,
+// remplace l'ancienne confirmation par photo) : le joueur doit être à moins de
+// LOST_BOX_RADIUS_M des coordonnées exactes de la boîte pour valider son
+// signalement — même principe que les caches virtuelles (openGeocache()). Le
+// signalement reste consultable dans admin.html pour que Firmin aille réparer.
 function toggleLostBoxPanel() {
   const panel = document.getElementById('qr-lost-box-panel');
   if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
-// Repli total si la photo ne peut pas être envoyée (pas de connexion sur le terrain,
-// cf. le bug d'autorisation Storage corrigé le 25/10) : aucun signalement n'est créé,
-// mais l'étape se valide quand même pour que le joueur termine l'aventure et garde son badge.
+// Repli total si le GPS n'est pas disponible sur le terrain : aucun signalement
+// précis n'est créé, mais l'étape se valide quand même pour que le joueur
+// termine l'aventure et garde son badge.
 function skipLostBoxReport() {
   stopInlineQRScan();
   renderRewardMode();
 }
 
-async function handleLostBoxPhoto(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+const LOST_BOX_RADIUS_M = 5;
+function confirmLostBoxGPS() {
   const step = currentStep();
   if (!step || !window._stepAnswerable) return;
+  if (step.lat == null || step.lng == null) {
+    // Étape sans GPS déclaré : aucune position de référence à vérifier.
+    reportLostBox(null);
+    return;
+  }
 
-  const btn = document.getElementById('btn-qr-take-photo');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi en cours...'; }
+  const btn      = document.getElementById('btn-qr-confirm-lost');
+  const statusEl = document.getElementById('qr-lost-box-status');
+  const label    = '📍 Je suis à l\'endroit indiqué, confirmer que la boîte n\'y est pas';
+  if (btn) { btn.disabled = true; btn.textContent = '📍 Localisation en cours…'; }
+  if (statusEl) statusEl.style.display = 'none';
 
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const dist = getDistance(pos.coords.latitude, pos.coords.longitude, step.lat, step.lng);
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+      if (dist <= LOST_BOX_RADIUS_M) {
+        reportLostBox(Math.round(dist));
+      } else if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = `Tu es encore à ${Math.round(dist)}m du point exact — rapproche-toi encore un peu avant de confirmer.`;
+      }
+    },
+    () => {
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = 'Impossible de récupérer ta position — vérifie que la géolocalisation est activée, ou utilise "GPS indisponible — passer" ci-dessous.';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+async function reportLostBox(distanceM) {
+  const step = currentStep();
   try {
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const filename = `box-reports/${currentAdv?.id || 'adv'}-${Date.now()}.${ext}`;
-    const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/aventures-images/${filename}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + (localStorage.getItem('ff_access_token') || SUPA_KEY),
-        'Content-Type': file.type,
-        'x-upsert': 'true'
-      },
-      body: file
-    });
-    if (!uploadRes.ok) throw new Error('Erreur upload photo signalement');
-    const photoUrl = `${SUPA_URL}/storage/v1/object/public/aventures-images/${filename}`;
-
     await supaFetch('box_reports', {
       method: 'POST',
       prefer: 'return=minimal',
       body: {
         adventure_id: currentAdv?.id || null,
         player_id: currentPlayer?.id || null,
-        photo_url: photoUrl,
-        comment: `Signalement avec photo — boîte introuvable (étape : ${step.title || 'scanner un QR code'})`
+        comment: distanceM != null
+          ? `Signalement confirmé par géolocalisation (${distanceM}m du point) — boîte introuvable (étape : ${step?.title || 'scanner un QR code'})`
+          : `Signalement — boîte introuvable, étape sans coordonnées GPS déclarées (étape : ${step?.title || 'scanner un QR code'})`
       }
     });
-
     showToast('Signalement envoyé — merci, on continue l\'aventure !');
-    stopInlineQRScan();
-    renderRewardMode();
   } catch (e) {
     console.error('Erreur signalement boîte perdue:', e);
-    alert('Erreur lors de l\'envoi de la photo. Réessaie, ou utilise le lien "pas de connexion" juste en dessous pour continuer sans envoyer de signalement.');
-    if (btn) { btn.disabled = false; btn.textContent = '📷 Prendre la photo'; }
+    // On ne bloque pas le joueur même si l'enregistrement du signalement échoue.
   }
+  stopInlineQRScan();
+  renderRewardMode();
 }
 
 // ── QR CODES LIVRES PROFESSEUR FLINT (format "FFBOOK:<id>:START" / "FFBOOK:<id>:END") ──

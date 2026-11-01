@@ -4752,6 +4752,7 @@ function openStepPanel(uid) {
   document.getElementById('panel-enigme').value = step.enigme || '';
   document.getElementById('panel-answer').value = step.answer || '';
   document.getElementById('panel-hint').value = step.hint || '';
+  document.getElementById('panel-lost-box-text').value = step.lost_box_text || '';
   document.getElementById('panel-has-timer').checked = !!step.has_step_timer;
   document.getElementById('panel-timer-options').style.display = step.has_step_timer ? 'block' : 'none';
   document.getElementById('panel-timer-minutes').value = step.step_timer_seconds ? Math.round(step.step_timer_seconds / 60) : '';
@@ -4868,6 +4869,11 @@ function renderPanelBody() {
           <div style="margin-top:12px;font-size:12px;color:#6B7280;">Ce QR code valide cette étape quand le joueur le scanne dans l'app</div>
           <button type="button" onclick="printQRCode()" style="margin-top:10px;" class="btn btn-secondary btn-sm">🖨️ Imprimer le QR code</button>
         </div>
+      </div>
+      <div style="margin:0 0 10px;">
+        <label style="font-size:12px;">Si la boîte est signalée perdue, dis au joueur précisément où elle devrait se trouver</label>
+        <textarea id="panel-lost-box-text" rows="2" placeholder="Ex : Elle est coincée entre deux pierres, sous le petit pont en pierre, côté rivière." oninput="syncPanelToStep()"></textarea>
+        <div style="font-size:11px;color:#999;margin-top:3px;">Affiché seulement si le joueur clique sur « Signaler la boîte perdue » après avoir déjà utilisé les indices. Il devra ensuite confirmer sa position GPS à moins de 5m du point exact pour valider sans la boîte.</div>
       </div>
       <div class="form-group" style="margin:0;">
         <label style="font-size:12px;">Indices <span style="font-weight:400;color:#888;">(sépare 3 niveaux avec |)</span></label>
@@ -5130,6 +5136,7 @@ function syncPanelToStep() {
   step.enigme = document.getElementById('panel-enigme').value;
   step.answer = document.getElementById('panel-answer').value;
   step.hint = document.getElementById('panel-hint').value;
+  step.lost_box_text = document.getElementById('panel-lost-box-text')?.value || '';
   const hotspotRadiusEl = document.getElementById('panel-hotspot-radius');
   if (hotspotRadiusEl) step.hotspot_radius = parseInt(hotspotRadiusEl.value) || 6;
   step.has_step_timer = document.getElementById('panel-has-timer').checked;
