@@ -9119,10 +9119,22 @@ function toggleLostBoxPanel() {
 
 // Repli total si le GPS n'est pas disponible sur le terrain : aucun signalement
 // précis n'est créé, mais l'étape se valide quand même pour que le joueur
-// termine l'aventure et garde son badge.
+// termine l'aventure et garde son badge. Les indices utilisés sur CETTE étape
+// sont remboursés (cf. refundLostBoxHintPenalty()) — ce n'est pas la faute du
+// joueur si la boîte a disparu, il ne doit pas perdre de XP pour ça.
 function skipLostBoxReport() {
+  refundLostBoxHintPenalty();
   stopInlineQRScan();
   renderRewardMode();
+}
+
+// Annule la pénalité XP des indices demandés sur l'étape en cours, avant de la
+// valider via le signalement boîte perdue (GPS ou repli sans GPS) — un joueur
+// qui a dû prendre des indices uniquement parce que la boîte n'était plus là
+// ne doit pas être pénalisé comme s'il avait mal cherché.
+function refundLostBoxHintPenalty() {
+  window._adventureHintPenalty = Math.max(0, (window._adventureHintPenalty || 0) - hintXpPenalty);
+  hintXpPenalty = 0;
 }
 
 const LOST_BOX_RADIUS_M = 5;
@@ -9165,6 +9177,7 @@ function confirmLostBoxGPS() {
 
 async function reportLostBox(distanceM) {
   const step = currentStep();
+  refundLostBoxHintPenalty();
   try {
     await supaFetch('box_reports', {
       method: 'POST',
