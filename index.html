@@ -4238,19 +4238,18 @@ function renderMapMarkers() {
     cacheClusterGroup = L.markerClusterGroup({
       maxClusterRadius: 55,
       // Centre historique de Draguignan : plusieurs dizaines de caches à
-      // quelques metres les unes des autres (immeubles voisins). Désactiver
-      // le regroupement avant le zoom maximum de la carte (19, cf.
-      // L.tileLayer plus haut) laissait les icônes se superposer sans
-      // jamais se séparer, car au-delà de ce seuil chaque pin est posé
-      // isolément à sa position réelle, indépendamment des autres — or une
-      // icône fait ~40px de large, soit bien plus que la distance réelle
-      // entre deux monuments voisins une fois convertie en pixels, même
-      // zoomé à fond. On aligne donc le seuil sur le zoom max de la carte :
-      // le regroupement reste actif jusqu'au bout, et c'est le clic sur la
-      // bulle (spiderfyOnMaxZoom) qui éclate les pins trop proches en
-      // éventail pour qu'elles redeviennent toutes individuellement
-      // visibles et cliquables.
-      disableClusteringAtZoom: 19,
+      // quelques metres les unes des autres (immeubles voisins). Pas de
+      // disableClusteringAtZoom ici (un premier essai l'avait aligné sur le
+      // zoom max 19 — mais "désactiver à 19" désactive justement AU zoom
+      // max, donc au moment précis où il n'y a plus moyen de zoomer
+      // davantage pour séparer les pins : elles restaient superposées sans
+      // jamais pouvoir se grouper). En ne fixant pas cette option, le
+      // regroupement par distance (maxClusterRadius) reste actif à tous les
+      // zooms, y compris le plus profond : deux pins à quelques mètres l'une
+      // de l'autre forment un badge numéroté, et spiderfyOnMaxZoom l'éclate
+      // en éventail au clic, au zoom max, pour que chaque pin redevienne
+      // individuellement visible et cliquable — la disposition dynamique
+      // demandée, sans jamais les faire se chevaucher.
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       iconCreateFunction: cluster => L.divIcon({
