@@ -4966,6 +4966,10 @@ const ENIGME_LABELS = {
 
 // Libellé + placeholder du champ "answer", réutilisé pour stocker soit une
 // réponse texte libre, soit le contenu exact du QR code attendu.
+// Code QR universel utilisé par Firmin sur toutes ses boîtes physiques —
+// pré-rempli automatiquement quand une étape passe en type "Scan QR code".
+const DEFAULT_QR_CODE = 'Flavia-validation';
+
 const ANSWER_LABELS = {
   free_text: { label: 'Réponse attendue', placeholder: 'La réponse correcte' },
   qr_scan:   { label: 'Code QR attendu',  placeholder: 'Le contenu exact du QR code à scanner' }
@@ -4996,6 +5000,14 @@ function onInteractionTypeChange() {
   if (!step) return;
   const type = document.getElementById('panel-interaction-type').value;
   step.interaction_type = type;
+  // Code QR par défaut : toutes les boîtes physiques utilisent le même QR
+  // code ("Flavia-validation"), la sécurité venant du GPS, pas du contenu
+  // du QR — on pré-remplit pour éviter d'avoir à s'en souvenir à chaque fois.
+  if (type === 'qr_scan' && !step.answer) {
+    step.answer = DEFAULT_QR_CODE;
+    const answerInp = document.getElementById('panel-answer');
+    if (answerInp) answerInp.value = DEFAULT_QR_CODE;
+  }
   applyInteractionTypeVisibility(type);
   if (type === 'hotspot') renderHotspotEditor(step);
   if (type === 'continue' || type === 'free_text' || type === 'hotspot' || type === 'qr_scan') {
