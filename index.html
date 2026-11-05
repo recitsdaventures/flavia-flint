@@ -4052,16 +4052,19 @@ function renderAdventureCards() {
           </div>
         </div>
 
-        <!-- Illustration croquis (miniature en priorité, perf) -->
-        ${(adv.sketch_thumb_url || adv.sketch_image_url) ? `
-          <img src="${adv.sketch_thumb_url || adv.sketch_image_url}" alt="" style="
-            height:80px;
-            width:auto;
-            max-width:90px;
-            object-fit:contain;
-            flex-shrink:0;
-            margin-right:2px;
-          "/>` : ''}
+        <!-- Pictogramme de catégorie (remplace le 05/11 l'ancienne illustration
+             croquis générée à la main — même symbole que sur la carte/les
+             filtres (FlaviaMarkers), pour que le joueur reconnaisse le type
+             de scénario d'un coup d'oeil, et pour ne plus avoir à produire
+             un croquis par aventure). -->
+        ${(() => {
+          const ffCat   = advMarkerCategory(adv);
+          const ffEntry = (FlaviaMarkers.CATEGORIES && FlaviaMarkers.CATEGORIES[ffCat]) || { color: '#C2700A', icon: 'boussole' };
+          return `
+            <div class="ff-mk ff-discover" style="--c:${ffEntry.color};width:58px;height:58px;flex-shrink:0;margin-right:2px;">
+              <svg class="ff-ic" style="width:32px;height:32px;" aria-hidden="true"><use href="#ff-ic-${ffEntry.icon}"/></svg>
+            </div>`;
+        })()}
 
         <!-- Chevron -->
         <span style="color:#C4622D;font-size:20px;font-weight:700;flex-shrink:0;">›</span>
