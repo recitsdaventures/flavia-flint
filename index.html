@@ -2843,6 +2843,14 @@ function getAuthHeaders() {
   };
 }
 
+// Échappe les caractères spéciaux de l'opérateur ILIKE (PostgREST) avant une
+// recherche "exacte, insensible à la casse" sur un pseudo/nom saisi par le
+// joueur — sans ça, un pseudo contenant % ou _ serait interprété comme un
+// joker SQL et fausserait la vérification de doublon.
+function escapeIlikePattern(s) {
+  return String(s || '').replace(/[%_\\]/g, m => '\\' + m);
+}
+
 async function supaFetch(endpoint, { method = 'GET', body, prefer } = {}) {
   const buildHeaders = () => {
     const h = getAuthHeaders();
@@ -3082,6 +3090,18 @@ function advMarkerCategory(adv) {
   }
   return 'chasses'; // chasse_tresor_flavia + non classé
 }
+// Croquis (05/11, fournis par Firmin) utilisés sur les cartes "Toutes les
+// aventures" — un par catégorie FlaviaMarkers ; clé = même valeur que
+// advMarkerCategory()/FlaviaMarkers.CATEGORIES.
+const CATEGORY_SKETCH_ICON = {
+  chasses:      'symbole-chasses-de-flavia.svg',
+  tresor:       'symbole-coffres-caches.svg',
+  patrimoine:   'symbole-enquetes-chateau.svg',
+  nature:       'symbole-enquetes-plante.svg',
+  savoir_faire: 'symbole-enquetes-outil.svg',
+  legende:      'symbole-enquetes-fantome.svg',
+  exploration:  'symbole-aventures-professeur-flint.svg'
+};
 // Couleur utilisée pour le texte "✓ Déjà découverte" côté fiche de cache —
 // indépendante de la catégorie de la cache (teinte caches virtuelles fixe).
 const CACHE_MARKER_COLOR = '#0F766E';
@@ -3291,6 +3311,23 @@ async function handleSignup() {
   btn.disabled         = true;
 
   try {
+    // Vérification d'unicité du pseudo (insensible à la casse) avant de
+    // créer le compte — la base a un filet de sécurité (index unique +
+    // trigger), mais sans ce contrôle ici l'inscription réussirait quand
+    // même (le pseudo n'est qu'une métadonnée à ce stade) et deux joueurs
+    // pourraient se retrouver avec exactement le même pseudo affiché.
+    const pseudoTaken = await supaFetch(
+      `players_public?pseudo=ilike.${encodeURIComponent(escapeIlikePattern(pseudo))}&select=id&limit=1`
+    ).catch(() => null); // réseau indispo : on ne bloque pas l'inscription pour ça
+    if (pseudoTaken && pseudoTaken.length > 0) {
+      btn.textContent      = 'Créer mon compte →';
+      btn.style.background = '#C4622D';
+      btn.disabled         = false;
+      errEl.textContent    = 'Ce pseudo est déjà pris, choisis-en un autre.';
+      errEl.style.display  = 'block';
+      return;
+    }
+
     const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
@@ -4052,21 +4089,20 @@ function renderAdventureCards() {
           </div>
         </div>
 
-        <!-- Pictogramme de catégorie (remplace le 05/11 l'ancienne illustration
-             croquis générée à la main — même symbole que sur la carte/les
-             filtres (FlaviaMarkers), pour que le joueur reconnaisse le type
-             de scénario d'un coup d'oeil, et pour ne plus avoir à produire
-             un croquis par aventure). Essai du 05/11 en style trait/encre
-             nu non concluant (retour Firmin) — revenu au badge rond plein ;
-             un rendu "croquis" reviendra plus tard sous forme d'images
-             dessinées par Firmin lui-même, pas de rendu SVG généré ici. -->
+        <!-- Pictogramme de catégorie, version finale (05/11) : vrais croquis
+             fournis par Firmin (symbole-*.svg à la racine), un par
+             catégorie — remplace l'ancienne illustration générée à la main
+             (plus besoin d'en produire une par aventure) et les essais
+             précédents (badge rond FlaviaMarkers, puis rendu trait/encre
+             généré en SVG, tous deux abandonnés). -->
         ${(() => {
-          const ffCat   = advMarkerCategory(adv);
-          const ffEntry = (FlaviaMarkers.CATEGORIES && FlaviaMarkers.CATEGORIES[ffCat]) || { color: '#C2700A', icon: 'boussole' };
-          return `
-            <div class="ff-mk ff-discover" style="--c:${ffEntry.color};width:58px;height:58px;flex-shrink:0;margin-right:2px;">
-              <svg class="ff-ic" style="width:32px;height:32px;" aria-hidden="true"><use href="#ff-ic-${ffEntry.icon}"/></svg>
-            </div>`;
+          const sketchFile = CATEGORY_SKETCH_ICON[advMarkerCategory(adv)] || CATEGORY_SKETCH_ICON.chasses;
+          return `<img src="${sketchFile}" alt="" style="
+            width:64px;height:64px;
+            object-fit:contain;
+            flex-shrink:0;
+            margin-right:2px;
+          "/>`;
         })()}
 
         <!-- Chevron -->
@@ -6153,16 +6189,30 @@ async function renderRewardMode() {
     }
   }
 
-  // Sauvegarde en arrière-plan (XP réel après déduction indices)
-  saveProgress(step, earnedXp);
-
   // Étape intermédiaire — avance directement à la suite, sans popup ni délai
   // (l'enchaînement doit rester immersif : nouvelle page du carnet qui
   // s'anime, pas d'interruption au-dessus de l'image — demandé par Firmin).
+  // saveProgress() reste en arrière-plan (non attendu) ici : aucune XP n'est
+  // attribuée à une étape intermédiaire (earnedXp vaut toujours 0 tant que
+  // isLast est faux), donc rien de critique ne dépend de sa fin.
   if (!isLast) {
+    saveProgress(step, earnedXp);
     goToNextStep();
     return;
   }
+
+  // Dernière étape : on ATTEND cette fois la sauvegarde avant de lire
+  // window._adventureTotalXp plus bas pour l'enregistrement de
+  // adventure_completions.total_xp_earned. Bug trouvé le 07/11 : cet appel
+  // n'était jamais attendu (y compris sur la dernière étape), donc
+  // total_xp_earned était systématiquement lu — et donc enregistré — à 0,
+  // avant même que saveProgress() ait eu le temps de créditer l'XP (son
+  // incrémentation de window._adventureTotalXp n'arrive qu'après deux
+  // appels réseau internes). Le total_xp réel du joueur, lui, était bien
+  // crédité (saveProgress() le réécrit directement en base), d'où le
+  // symptôme rapporté : le classement général était juste, mais chaque
+  // scénario terminé affichait "0 XP" dans l'historique/les fiches.
+  await saveProgress(step, earnedXp);
 
   // Chrono : calcul durée et sauvegarde adventure_completions si dernière étape
   let formattedTime = '0:00';
@@ -6239,8 +6289,13 @@ async function renderRewardMode() {
         <div class="reward-v2-spark" aria-hidden="true" style="left:78%;top:60%;width:9px;height:9px;background:#E8A020;transform:rotate(45deg);"></div>
         <div class="reward-v2-spark" aria-hidden="true" style="left:10%;top:40%;width:5px;height:9px;background:#F5EDD8;transform:rotate(40deg);"></div>
         <div class="reward-v2-spark" aria-hidden="true" style="left:88%;top:44%;width:6px;height:6px;border-radius:50%;background:#E8A020;"></div>
-        ${currentAdv?.badge_name ? '<div class="reward-v2-pill">Nouveau badge</div>' : ''}
-        <div class="reward-v2-badge">${badgeImg ? `<img src="${badgeImg}" alt="Badge ${escapeHtml(currentAdv?.badge_name || '')}"/>` : '🏆'}</div>
+        <!-- Corrigé le 07/11 : le pill "Nouveau badge" ne doit dépendre que de
+             la présence d'une IMAGE de badge, pas d'un badge_name renseigné
+             ou non côté admin — la plupart des scénarios ont une image mais
+             pas encore de nom de badge saisi, et perdaient entièrement ce
+             pill malgré un badge bien réel à l'écran juste en dessous. -->
+        ${badgeImg ? '<div class="reward-v2-pill">Nouveau badge</div>' : ''}
+        <div class="reward-v2-badge">${badgeImg ? `<img src="${badgeImg}" alt="Badge ${escapeHtml(currentAdv?.badge_name || currentAdv?.title || '')}"/>` : '🏆'}</div>
         <p class="reward-v2-sub">Aventure terminée</p>
         <h1 class="reward-v2-title">${escapeHtml(currentAdv?.title || '')}</h1>
       </div>
@@ -6363,9 +6418,13 @@ async function showFinalReward() {
     <div class="reward-title">Bravo, aventurier !</div>
     <div class="reward-sub">${currentAdv?.outro_text || 'Flavia est fière de toi !'}</div>
     ${currentAdv?.xp_reward ? `<div class="xp-pill">⭐ +${currentAdv.xp_reward} XP gagnés</div>` : ''}
-    ${currentAdv?.badge_name ? `
-      <div class="badge-hex">${(currentAdv.badge_thumb_url || currentAdv.badge_image_url) ? `<img src="${currentAdv.badge_thumb_url || currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/>` : '🏅'}</div>
-      <div class="badge-name">Badge : ${currentAdv.badge_name}</div>` : ''}
+    <!-- Corrigé le 07/11 : même correctif que sur l'écran de récompense
+         principal — on affiche le badge dès qu'il y a une image, avec un
+         repli sur le titre du scénario quand badge_name n'a pas été
+         renseigné dans l'admin, au lieu de masquer tout le bloc. -->
+    ${(currentAdv?.badge_thumb_url || currentAdv?.badge_image_url) ? `
+      <div class="badge-hex"><img src="${currentAdv.badge_thumb_url || currentAdv.badge_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;"/></div>
+      <div class="badge-name">Badge : ${currentAdv.badge_name || currentAdv.title || ''}</div>` : ''}
     <div style="background:#FFF7EE;border:2px solid #E8A020;border-radius:16px;padding:16px;margin:16px 0;text-align:center;">
       <div style="font-size:12px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:8px;">⏱ Ton temps</div>
       <div style="font-size:32px;font-weight:800;color:#1A2A1A;">${formattedTime}</div>
@@ -7779,6 +7838,16 @@ async function saveProfileEdits() {
   if (!pseudo) { alert('Le pseudo est obligatoire'); return; }
 
   try {
+    // Vérifier que le pseudo n'est pas déjà pris par un autre joueur
+    if (pseudo.toLowerCase() !== (currentPlayer.pseudo || '').toLowerCase()) {
+      const existingPseudo = await supaFetch(
+        `players_public?pseudo=ilike.${encodeURIComponent(escapeIlikePattern(pseudo))}&id=neq.${currentPlayer.id}&select=id`
+      );
+      if (existingPseudo.length > 0) {
+        alert('Ce pseudo est déjà pris ! Choisis-en un autre.');
+        return;
+      }
+    }
     // Vérifier que le nom d'équipe n'est pas déjà pris par un autre joueur
     if (teamName && teamName !== currentPlayer.team_name) {
       const existing = await supaFetch(
@@ -7813,13 +7882,20 @@ async function editPseudo() {
   if (!currentPlayer) return;
   const newPseudo = prompt('Nouveau pseudo :', currentPlayer.pseudo || '');
   if (!newPseudo || !newPseudo.trim()) return;
+  const trimmedPseudo = newPseudo.trim();
   try {
+    if (trimmedPseudo.toLowerCase() !== (currentPlayer.pseudo || '').toLowerCase()) {
+      const existingPseudo = await supaFetch(
+        `players_public?pseudo=ilike.${encodeURIComponent(escapeIlikePattern(trimmedPseudo))}&id=neq.${currentPlayer.id}&select=id`
+      );
+      if (existingPseudo.length > 0) { alert('Ce pseudo est déjà pris ! Choisis-en un autre.'); return; }
+    }
     await supaFetch(`players?id=eq.${currentPlayer.id}`, {
       method: 'PATCH',
       prefer: 'return=minimal',
-      body: { pseudo: newPseudo.trim() }
+      body: { pseudo: trimmedPseudo }
     });
-    currentPlayer.pseudo = newPseudo.trim();
+    currentPlayer.pseudo = trimmedPseudo;
     loadProfile();
   } catch (e) {
     console.error('Erreur modification pseudo:', e);
