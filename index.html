@@ -3035,6 +3035,11 @@ let _distFlushTimer  = null;
 let virtualCaches        = [];
 let cacheDiscoveries     = [];
 let playerCollections    = [];
+// Aventures "Trésors oubliés" terminées par le joueur courant (08/11) — même
+// rôle que cacheDiscoveries, mais pour les aventures rattachées à une
+// collection (adventures.collection_id), afin qu'elles comptent elles aussi
+// dans la progression X/Y de leur collection, à côté des caches virtuelles.
+let completedAdventureIds = [];
 let _cacheAmbientRadiusM = 2000;
 let _cacheNearRadiusM    = 100;
 let gpsAutoUnlocked  = false;
@@ -3826,7 +3831,7 @@ async function loadAdventures() {
     window._professorBooks = (books || []).map(b => ({ ...b, type: 'professor' }));
     virtualCaches = caches || [];
     playerCollections = collections || [];
-    await Promise.all([loadCacheDiscoveries(), loadCacheRadiusSettings()]);
+    await Promise.all([loadCacheDiscoveries(), loadCompletedAdventures(), loadCacheRadiusSettings()]);
     renderAdventureCards();
     renderProfessorBooksSection();
     renderMapMarkers();
@@ -3849,6 +3854,33 @@ async function loadCacheDiscoveries() {
     console.error('Erreur chargement découvertes caches:', e);
     cacheDiscoveries = [];
   }
+}
+
+// Même principe que loadCacheDiscoveries(), pour les aventures terminées
+// (sert au calcul de progression des collections — cf. getCollectionProgress()).
+async function loadCompletedAdventures() {
+  const userId = JSON.parse(localStorage.getItem('ff_user') || '{}').id;
+  if (!userId) { completedAdventureIds = []; return; }
+  try {
+    completedAdventureIds = await supaFetch(`adventure_completions?player_id=eq.${userId}&select=adventure_id`);
+  } catch (e) {
+    console.error('Erreur chargement aventures terminées:', e);
+    completedAdventureIds = [];
+  }
+}
+
+// Progression X/Y d'une collection : additionne les caches virtuelles ET les
+// aventures "Trésors oubliés" qui lui sont rattachées (adventures.collection_id),
+// chacune comptant pour 1 dans le total comme dans le nombre déjà fait.
+function getCollectionProgress(col) {
+  const discoveredIds   = new Set(cacheDiscoveries.map(d => d.cache_id));
+  const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
+  const completedIds     = new Set(completedAdventureIds.map(a => a.adventure_id));
+  const collectionAdventures = adventures.filter(a => a.collection_id === col.id);
+  const total = collectionCaches.length + collectionAdventures.length;
+  const done  = collectionCaches.filter(c => discoveredIds.has(c.id)).length
+              + collectionAdventures.filter(a => completedIds.has(a.id)).length;
+  return { total, done };
 }
 
 // Réglages globaux rayon ambiant / rayon de proximité (table app_settings,
@@ -4399,10 +4431,7 @@ function renderCachePopupCard() {
   }
 
   if (flaviaKey) {
-    const discoveredIds = new Set(cacheDiscoveries.map(d => d.cache_id));
-    const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
-    const total = collectionCaches.length;
-    const done  = collectionCaches.filter(c => discoveredIds.has(c.id)).length;
+    const { total, done } = getCollectionProgress(col);
     const level = Math.max(1, FlaviaCollections.levelFor(done, total));
     content.innerHTML = FlaviaCollections.card({
       collection: flaviaKey, level, done, total,
@@ -4509,6 +4538,46 @@ const COLLECTION_ICON_EMOJI = {
 // ecrits ici (player_collection_badges, logique inchangee) - ce systeme est
 // independant du niveau 1-5 du nouveau popup, donc un palier nouvellement
 // debloque est signale par un toast pour ne pas perdre l'info.
+// Même logique de paliers bronze/argent/or que showCacheDiscoverySuccess(),
+// déclenchée ici par la complétion d'une aventure "Trésors oubliés" rattachée
+// à une collection plutôt que par la découverte d'une cache virtuelle.
+async function checkAdventureCollectionProgress(adv, userId) {
+  if (!adv?.collection_id || !userId) return;
+  const col = playerCollections.find(c => c.id === adv.collection_id);
+  if (!col) return;
+  try {
+    const comps = await supaFetch(`adventure_completions?player_id=eq.${userId}&select=adventure_id`);
+    completedAdventureIds = comps || [];
+    const { total, done } = getCollectionProgress(col);
+    if (!total) return;
+
+    const tiers = [
+      { key: 'or',     threshold: col.badge_or_threshold,     label: '🥇 Palier Or' },
+      { key: 'argent', threshold: col.badge_argent_threshold, label: '🥈 Palier Argent' },
+      { key: 'bronze', threshold: col.badge_bronze_threshold, label: '🥉 Palier Bronze' }
+    ];
+    let newlyEarned = null;
+    for (const tier of tiers) {
+      if (!tier.threshold || done < tier.threshold) continue;
+      const already = await supaFetch(
+        `player_collection_badges?player_id=eq.${userId}&collection_id=eq.${col.id}&tier=eq.${tier.key}&select=id`
+      );
+      if (already.length) continue;
+      await supaFetch('player_collection_badges', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates',
+        body: { player_id: userId, collection_id: col.id, tier: tier.key }
+      });
+      if (!newlyEarned) newlyEarned = tier;
+    }
+    showToast(newlyEarned
+      ? `${newlyEarned.label} débloqué ! Collection ${col.name} : ${done}/${total}`
+      : `Collection ${col.name} : ${done}/${total}`);
+  } catch (e) {
+    console.error('Erreur progression collection (aventure):', e);
+  }
+}
+
 async function showCacheDiscoverySuccess(cache) {
   const col = playerCollections.find(c => c.id === cache.collection_id);
   const flaviaKey = col ? FLAVIA_COLLECTION_KEY_BY_NAME[col.name] : null;
@@ -4523,10 +4592,7 @@ async function showCacheDiscoverySuccess(cache) {
     // du même joueur découvrent des caches en parallèle.
     const discoveries = await supaFetch(`cache_discoveries?player_id=eq.${userId}&select=cache_id`);
     cacheDiscoveries = discoveries || [];
-    const discoveredIds = new Set(cacheDiscoveries.map(d => d.cache_id));
-    const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
-    const total = collectionCaches.length;
-    const after = collectionCaches.filter(c => discoveredIds.has(c.id)).length;
+    const { total, done: after } = getCollectionProgress(col);
     if (!total) { fallback(); return; }
 
     const tiers = [
@@ -6285,6 +6351,11 @@ async function renderRewardMode() {
       // Vérifier si ce scénario terminé débloque un nouveau titre
       // (déjà protégé en interne contre les doublons de titres)
       checkAndAwardTitles();
+
+      // Si cette aventure "Trésors oubliés" est rattachée à une collection
+      // (08/11), elle doit aussi compter dans sa progression — fire-and-forget
+      // pour ne pas retarder l'affichage de l'écran de récompense.
+      checkAdventureCollectionProgress(currentAdv, userId);
     }
   }
 
