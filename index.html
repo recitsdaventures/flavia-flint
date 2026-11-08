@@ -2394,6 +2394,7 @@
       <div class="popup-tags">
         <span class="tag tag-diff"   id="popup-diff">Facile</span>
         <span class="tag tag-type"   id="popup-type">Famille</span>
+        <span class="tag tag-xp" id="popup-xp" style="background:#FEF3C7;color:#92400E;display:none;">🏅 50 XP</span>
       </div>
       <div class="popup-meta">
         <span>⏱ <span id="popup-dur">75 min</span></span>
@@ -4085,6 +4086,15 @@ function renderAdventureCards() {
                 font-size:11px;
                 font-weight:600;
               ">${adv.difficulty}</span>` : ''}
+            ${adv.xp_reward ? `
+              <span style="
+                background:#FEF3C7;
+                color:#92400E;
+                border-radius:20px;
+                padding:3px 10px;
+                font-size:11px;
+                font-weight:600;
+              ">🏅 ${adv.xp_reward} XP</span>` : ''}
           </div>
         </div>
 
@@ -4153,8 +4163,18 @@ function selectAdventureFromCard(id) {
   document.getElementById('popup-title').textContent = adv.title;
   document.getElementById('popup-diff').textContent  = adv.difficulty || '';
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
+  const xpElCard = document.getElementById('popup-xp');
+  if (xpElCard) {
+    if (adv.xp_reward) { xpElCard.textContent = `🏅 ${adv.xp_reward} XP`; xpElCard.style.display = 'inline-block'; }
+    else { xpElCard.style.display = 'none'; }
+  }
   document.getElementById('popup-dur').textContent   = adv.duration   || '';
   document.getElementById('popup-loc').textContent   = adv.location   || '';
+  const descElCard = document.getElementById('popup-desc');
+  if (descElCard) {
+    if (adv.description) { descElCard.textContent = adv.description; descElCard.style.display = 'block'; }
+    else { descElCard.textContent = ''; descElCard.style.display = 'none'; }
+  }
   const coverUrl = adv.cover_image_url || '';
   const coverWrap = document.getElementById('popup-cover-wrap');
   const coverImg  = document.getElementById('popup-cover-img');
@@ -4547,6 +4567,11 @@ function showPopup(adv) {
   document.getElementById('popup-title').textContent = adv.title      || '';
   document.getElementById('popup-diff').textContent  = adv.difficulty || '';
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
+  const xpEl = document.getElementById('popup-xp');
+  if (xpEl) {
+    if (adv.xp_reward) { xpEl.textContent = `🏅 ${adv.xp_reward} XP`; xpEl.style.display = 'inline-block'; }
+    else { xpEl.style.display = 'none'; }
+  }
   document.getElementById('popup-dur').textContent   = adv.duration   || '';
   document.getElementById('popup-loc').textContent   = adv.location   || '';
   const descEl = document.getElementById('popup-desc');
