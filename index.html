@@ -45,6 +45,11 @@
      Enquetes de Flavia / Les Chasses de Flavia), reutilise les pictos
      #ff-ic-* deja injectes par flavia-markers.js. -->
 <script defer src="flavia-legend.js"></script>
+<!-- Bouton "Collections" carte (08/11) - fourni par Firmin, affiche la
+     progression du joueur dans les 10 collections (caches virtuelles +
+     aventures "Tresors oublies" rattachees), rendu Eclaireur a Legende. -->
+<link rel="stylesheet" href="collections.css">
+<script defer src="collections.js"></script>
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json"/>
 <meta name="theme-color" content="#2D4A2D"/>
@@ -3151,6 +3156,20 @@ window.addEventListener('DOMContentLoaded', () => {
   FlaviaMarkers.ensure(); // injecte le sprite SVG + styles (nécessaire pour les <use> des puces de filtre)
   FlaviaCollections.mount(); // injecte styles + symboles des médailles/bandeaux de collection
   FlaviaLegend.mount(document.getElementById('screen-map')); // bouton Légende (bas gauche de la carte)
+  // Bouton "Collections" (08/11) - branché sur les tables réelles de l'app
+  // via les overrides ci-dessous (voir collections.js pour le détail du
+  // schéma lu : collections, virtual_caches, adventures, cache_discoveries,
+  // adventure_completions).
+  if (window.RDACollections) {
+    RDACollections.init({
+      url:   () => SUPA_URL,
+      key:   () => SUPA_KEY,
+      token: () => localStorage.getItem('ff_access_token'),
+      userId:() => JSON.parse(localStorage.getItem('ff_user') || '{}').id || null,
+      mapContainer: () => document.getElementById('screen-map'),
+      leaflet: () => map
+    });
+  }
   if (!checkRecoveryHash()) {
     checkOAuthHash().then(handled => { if (!handled) checkExistingSession(); });
   }
