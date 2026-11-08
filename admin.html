@@ -4968,7 +4968,15 @@ const ENIGME_LABELS = {
 // réponse texte libre, soit le contenu exact du QR code attendu.
 // Code QR universel utilisé par Firmin sur toutes ses boîtes physiques —
 // pré-rempli automatiquement quand une étape passe en type "Scan QR code".
-const DEFAULT_QR_CODE = 'Flavia-validation';
+// Passé le 08/11 du texte fixe "Flavia-validation" au lien direct de l'app
+// (app.recitsdaventures.com, sans tiret — domaine confirmé par Firmin) :
+// un passant qui tombe sur une boîte et la scanne avec son appareil photo
+// classique (donc hors du jeu) arrive directement sur l'app plutôt que sur
+// un texte sans action. Le scanner interne du jeu (scanInlineQRFrame) ne
+// fait qu'une comparaison de texte, donc ce changement ne casse rien côté
+// validation — seules les 5 étapes déjà imprimées hier gardent
+// "Flavia-validation" (Firmin les laisse telles quelles pour l'instant).
+const DEFAULT_QR_CODE = 'https://app.recitsdaventures.com';
 
 const ANSWER_LABELS = {
   free_text: { label: 'Réponse attendue', placeholder: 'La réponse correcte' },
@@ -6017,7 +6025,10 @@ function printQRCode() {
     // Miroir horizontal pour le verso : on inverse l'ordre des colonnes de cette ligne.
     for (let c = QR_GRID_COLS - 1; c >= 0; c--) {
       const i = r * QR_GRID_COLS + c;
-      versoRow.push(i < copies ? `<div class="cell"><img class="logo" src="${logoUrl}" alt=""/></div>` : '<div class="cell cell-empty"></div>');
+      // Logo + texte de contexte (08/11, demande Firmin) plutôt que le logo
+      // seul : quelqu'un qui tombe sur la boîte sans connaître le jeu doit
+      // comprendre de quoi il s'agit même avant de scanner.
+      versoRow.push(i < copies ? `<div class="cell cell-verso"><img class="logo" src="${logoUrl}" alt=""/><div class="verso-caption">Boîte cachée du jeu<br/>Récits d'Aventures</div></div>` : '<div class="cell cell-empty"></div>');
     }
     rectoCells.push(`<div class="row">${rectoRow.join('')}</div>`);
     versoCells.push(`<div class="row">${versoRow.join('')}</div>`);
@@ -6044,7 +6055,9 @@ function printQRCode() {
         }
         .cell-empty { border: none; }
         .cell img { width: 100%; height: 100%; object-fit: contain; }
-        .cell img.logo { width: 80%; height: 80%; filter: brightness(0); }
+        .cell-verso { flex-direction: column; gap: 1.5mm; }
+        .cell-verso img.logo { width: auto; height: 40%; object-fit: contain; filter: brightness(0); }
+        .verso-caption { font-size: 2.3mm; line-height: 1.3; text-align: center; color: #1A2A1A; }
         .no-print { text-align: center; font-size: 13px; color: #666; margin-bottom: 8mm; }
         @media print { .no-print { display: none; } }
       </style>
