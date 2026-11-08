@@ -50,7 +50,14 @@ body { font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI'
   display: flex; align-items: center; gap: 10px;
 }
 
-.sidebar-nav { padding: 12px 8px; flex: 1; }
+/* Corrigé le 08/11 : .sidebar est en position:fixed (hauteur = 100vh),
+   donc ne défile jamais avec la page. Sans overflow ici, les derniers
+   éléments du menu (Avis joueurs, Partenaires, Paramètres...) étaient
+   simplement poussés hors de l'écran sur les petites hauteurs de fenêtre,
+   sans aucun moyen de les atteindre. min-height:0 est nécessaire pour que
+   overflow-y fonctionne sur un enfant flex (sinon il refuse de se réduire
+   sous la taille de son contenu et le scroll ne se déclenche jamais). */
+.sidebar-nav { padding: 12px 8px; flex: 1; overflow-y: auto; min-height: 0; }
 .nav-item {
   position: relative;
   display: flex; align-items: center; gap: 10px;
