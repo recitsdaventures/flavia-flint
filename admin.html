@@ -1040,6 +1040,12 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
             <option value="legendes">👻 Légendes locales</option>
           </select>
         </div>
+        <div class="form-group" id="content-collection-wrap" style="display:none;">
+          <label>Collection <span class="label-hint">(rattache cette aventure à une collection de caches virtuelles — même badge, même progression)</span></label>
+          <select id="f-collection">
+            <option value="">— Aucune —</option>
+          </select>
+        </div>
         <div class="form-group">
           <label>Nombre de lieux <span class="label-hint">(1 = un seul endroit, pas de navigation GPS entre étapes)</span></label>
           <select id="f-locations-count" onchange="onLocationsCountChange()">
@@ -1398,6 +1404,24 @@ function onContentTypeChange() {
   const type = document.getElementById('f-content-type')?.value;
   const wrap = document.getElementById('content-subtheme-wrap');
   if (wrap) wrap.style.display = type === 'balade_decouverte' ? 'block' : 'none';
+
+  const collectionWrap = document.getElementById('content-collection-wrap');
+  if (collectionWrap) collectionWrap.style.display = type === 'tresors_oublies' ? 'block' : 'none';
+  if (type === 'tresors_oublies') loadCollectionOptions();
+}
+
+// Peuple le <select> Collection depuis allCollections (chargé à la demande,
+// comme déjà fait pour l'éditeur de caches virtuelles — voir editCache()).
+async function loadCollectionOptions() {
+  const sel = document.getElementById('f-collection');
+  if (!sel) return;
+  const currentValue = sel.value;
+  if (!allCollections.length) {
+    allCollections = await supa('GET', 'collections', null, '?order=name.asc');
+  }
+  sel.innerHTML = '<option value="">— Aucune —</option>' +
+    allCollections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.value = currentValue;
 }
 // Icône affichée dans la liste admin : priorité au symbole de sous-thème (balade découverte),
 // sinon le symbole du type de contenu, sinon rien (aventure pas encore classée).
@@ -4285,7 +4309,7 @@ function buildTable(data) {
 }
 
 // ── MODAL OPEN/CLOSE ──
-function openModal(id) {
+async function openModal(id) {
   editingId = id || null;
   scenarioSteps = [];
   rootUid = null;
@@ -4308,6 +4332,13 @@ function openModal(id) {
     document.getElementById('f-content-type').value = adv.content_type || '';
     document.getElementById('f-sub-theme').value = adv.sub_theme || '';
     onContentTypeChange();
+    if (adv.content_type === 'tresors_oublies') {
+      // onContentTypeChange() a déjà déclenché le chargement de la liste ;
+      // on attend qu'elle soit prête avant de positionner la bonne valeur,
+      // sinon le <select> n'a que l'option "Aucune" au moment du set.
+      await loadCollectionOptions();
+      document.getElementById('f-collection').value = adv.collection_id || '';
+    }
     document.getElementById('f-age').value = adv.age_range || '5–12 ans';
     document.getElementById('f-status').value = adv.status || 'draft';
     document.getElementById('f-box-hint').value = adv.box_hint || '';
@@ -5786,6 +5817,9 @@ async function saveAdventure(asDraft, keepModalOpen) {
     content_type:    document.getElementById('f-content-type')?.value || null,
     sub_theme:       document.getElementById('f-content-type')?.value === 'balade_decouverte'
                         ? (document.getElementById('f-sub-theme')?.value || null)
+                        : null,
+    collection_id:   document.getElementById('f-content-type')?.value === 'tresors_oublies'
+                        ? (document.getElementById('f-collection')?.value || null)
                         : null,
     age_range:       document.getElementById('f-age').value,
     status:          asDraft ? 'draft' : document.getElementById('f-status').value,
