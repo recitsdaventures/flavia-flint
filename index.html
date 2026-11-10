@@ -3893,7 +3893,7 @@ async function loadCompletedAdventures() {
 // chacune comptant pour 1 dans le total comme dans le nombre déjà fait.
 function getCollectionProgress(col) {
   const discoveredIds   = new Set(cacheDiscoveries.map(d => d.cache_id));
-  const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id);
+  const collectionCaches = virtualCaches.filter(c => c.collection_id === col.id && c.status === 'published');
   const completedIds     = new Set(completedAdventureIds.map(a => a.adventure_id));
   const collectionAdventures = adventures.filter(a => a.collection_id === col.id);
   const total = collectionCaches.length + collectionAdventures.length;
