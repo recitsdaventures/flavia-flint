@@ -2928,6 +2928,109 @@ async function refreshToken() {
   }
 }
 
+// ══════════════════════════════════════════
+// MODE HORS LIGNE — snapshot local + file d'attente des écritures (11/11)
+// ══════════════════════════════════════════
+// Demande Firmin : un joueur qui perd le réseau en pleine aventure (musée,
+// sous les arbres...) doit pouvoir continuer et terminer son scénario.
+// Deux mécanismes complémentaires :
+// 1) SNAPSHOT : les données déjà chargées (joueur, aventures, caches,
+//    collections, découvertes...) sont dupliquées en localStorage à chaque
+//    chargement réussi, et relues si le réseau est indisponible — sans ça,
+//    une coupure AU LANCEMENT de l'app remettait tout à zéro (XP, liste des
+//    aventures) au lieu de garder le dernier état connu.
+// 2) OUTBOX : les écritures de progression (étape complétée, XP, cache
+//    découverte, aventure terminée) sont mises en file au lieu d'être
+//    perdues en silence, puis rejouées dès que le réseau revient.
+const OFFLINE_SNAPSHOT_KEY = 'ff_offline_snapshot';
+const OFFLINE_OUTBOX_KEY   = 'ff_offline_outbox';
+
+function saveOfflineSnapshot(partial) {
+  try {
+    const current = JSON.parse(localStorage.getItem(OFFLINE_SNAPSHOT_KEY) || '{}');
+    localStorage.setItem(OFFLINE_SNAPSHOT_KEY, JSON.stringify({ ...current, ...partial, savedAt: Date.now() }));
+  } catch (e) { console.error('Erreur sauvegarde snapshot hors ligne:', e); }
+}
+
+function loadOfflineSnapshot() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_SNAPSHOT_KEY) || 'null'); }
+  catch (e) { return null; }
+}
+
+// Une vraie coupure réseau lève un TypeError générique côté fetch() — à
+// distinguer d'une réponse HTTP d'erreur (4xx/5xx), qui doit continuer à
+// être traitée normalement (session expirée, droits refusés, donnée
+// invalide...) plutôt que d'être mise en file pour rien.
+function isOfflineError(e) {
+  return !navigator.onLine || (e instanceof TypeError) || /failed to fetch|networkerror|load failed/i.test(e?.message || '');
+}
+
+function getOutbox() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_OUTBOX_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function setOutbox(list) {
+  try { localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(list)); }
+  catch (e) { console.error('Erreur écriture file hors ligne:', e); }
+}
+
+function queueOfflineWrite(endpoint, opts) {
+  const outbox = getOutbox();
+  outbox.push({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, endpoint, opts, ts: Date.now() });
+  setOutbox(outbox);
+}
+
+// Tente une écriture (POST/PATCH) ; si le réseau est indisponible, elle est
+// mise en file au lieu de remonter une erreur, pour que l'appelant puisse
+// continuer (étape suivante, écran de récompense...) comme si elle avait
+// réussi. Ne jamais utiliser pour une lecture (GET) : rien à "rejouer" plus
+// tard pour une lecture.
+async function trySupaWrite(endpoint, opts) {
+  try {
+    return await supaFetch(endpoint, opts);
+  } catch (e) {
+    if (isOfflineError(e)) {
+      queueOfflineWrite(endpoint, opts);
+      return null;
+    }
+    throw e;
+  }
+}
+
+let _syncingOutbox = false;
+async function syncOfflineOutbox() {
+  if (_syncingOutbox) return;
+  if (!getOutbox().length) return;
+  _syncingOutbox = true;
+  let synced = 0;
+  try {
+    while (true) {
+      const list = getOutbox();
+      if (!list.length) break;
+      const [item, ...rest] = list;
+      try {
+        await supaFetch(item.endpoint, item.opts);
+        setOutbox(rest);
+        synced++;
+      } catch (e) {
+        if (isOfflineError(e)) break; // toujours hors ligne, on réessaiera plus tard
+        // Erreur serveur définitive (donnée invalide, droits...) : on
+        // abandonne cette entrée précise pour ne pas bloquer les suivantes.
+        console.error('Erreur synchro hors ligne, entrée abandonnée:', item, e);
+        setOutbox(rest);
+      }
+    }
+  } finally {
+    _syncingOutbox = false;
+  }
+  if (synced > 0) {
+    showToast(`Connexion retrouvée — ${synced} action${synced > 1 ? 's' : ''} synchronisée${synced > 1 ? 's' : ''}`);
+  }
+}
+
+window.addEventListener('online', syncOfflineOutbox);
+
 // Chapitre 0 en attente : chargé depuis Supabase au tout premier lancement,
 // puis déclenché (notification + vibration + son) au tout premier tap du
 // joueur sur la page d'inscription (cf. armFlaviaIntroOnFirstTouch) — jamais
@@ -3185,9 +3288,15 @@ async function loadCurrentPlayer(user) {
       avatar_emoji: user.user_metadata?.avatar_emoji || 'avatar1',
       total_xp:     0
     };
+    saveOfflineSnapshot({ currentPlayer });
   } catch (e) {
     console.error('Erreur chargement joueur:', e);
-    currentPlayer = {
+    // Hors ligne : on reprend le dernier total_xp connu plutôt que de le
+    // remettre à 0 (sinon une simple coupure réseau au lancement faisait
+    // perdre l'affichage de toute la progression du joueur).
+    const snap = loadOfflineSnapshot();
+    const cached = snap?.currentPlayer?.id === user.id ? snap.currentPlayer : null;
+    currentPlayer = cached || {
       id:           user.id,
       email:        user.email,
       pseudo:       user.user_metadata?.pseudo || 'Aventurier',
@@ -3855,9 +3964,24 @@ async function loadAdventures() {
     renderProfessorBooksSection();
     renderMapMarkers();
     checkAdventureNotif();
+    saveOfflineSnapshot({ adventures, virtualCaches, playerCollections, professorBooks: window._professorBooks, cacheDiscoveries, completedAdventureIds });
   } catch(e) {
     console.error('Erreur chargement:', e);
-    document.getElementById('adventure-cards-list').innerHTML = '<div style="color:rgba(255,255,255,0.5);text-align:center;padding:20px;">Impossible de charger les aventures.</div>';
+    const snap = loadOfflineSnapshot();
+    if (snap?.adventures?.length) {
+      adventures            = snap.adventures;
+      virtualCaches          = snap.virtualCaches || [];
+      playerCollections      = snap.playerCollections || [];
+      window._professorBooks = snap.professorBooks || [];
+      cacheDiscoveries       = snap.cacheDiscoveries || [];
+      completedAdventureIds  = snap.completedAdventureIds || [];
+      renderAdventureCards();
+      renderProfessorBooksSection();
+      renderMapMarkers();
+      showToast('Mode hors ligne — dernières données enregistrées');
+    } else {
+      document.getElementById('adventure-cards-list').innerHTML = '<div style="color:rgba(255,255,255,0.5);text-align:center;padding:20px;">Impossible de charger les aventures.</div>';
+    }
   }
 }
 
@@ -4207,10 +4331,29 @@ function renderProfessorBooksSection() {
     </div>`;
 }
 
+// Précharge en arrière-plan la couverture + les images de chaque étape d'un
+// scénario dès que le joueur ouvre sa fiche (avant même de jouer) — le
+// service worker (sw.js) les met alors en cache, et elles restent
+// disponibles si le réseau tombe une fois sur place (musée, sous les
+// arbres...). Pas de blocage ni d'attente : un simple fetch() suffit à
+// déclencher la mise en cache côté service worker (cf. SUPABASE_STORAGE_RE).
+function prefetchAdventureImages(adv) {
+  if (!adv || !('serviceWorker' in navigator)) return;
+  const urls = new Set();
+  if (adv.cover_image_url) urls.add(adv.cover_image_url);
+  if (adv.badge_image_url) urls.add(adv.badge_image_url);
+  (adv.steps || []).forEach(s => {
+    if (s.image_url)       urls.add(s.image_url);
+    if (s.image_thumb_url) urls.add(s.image_thumb_url);
+  });
+  urls.forEach(url => { fetch(url, { mode: 'no-cors' }).catch(() => {}); });
+}
+
 function selectAdventureFromCard(id) {
   const adv = adventures.find(a => a.id === id);
   if (!adv) return;
   currentAdv = adv;
+  prefetchAdventureImages(adv);
   document.getElementById('popup-title').textContent = adv.title;
   document.getElementById('popup-diff').textContent  = adv.difficulty || '';
   document.getElementById('popup-type').textContent  = adv.age_range  || '';
@@ -4517,7 +4660,11 @@ async function attemptCacheValidation() {
     // supaFetch() : un POST réussi mais à corps vide faisait planter
     // res.json(), ce qui faisait croire à un échec de validation alors que
     // la découverte était bien enregistrée en base).
-    await supaFetch('cache_discoveries', {
+    // trySupaWrite() met la requête en file au lieu d'échouer si le réseau
+    // est coupé (musée, sous les arbres...) — le joueur voit quand même
+    // l'écran de réussite, et la découverte est synchronisée dès le retour
+    // du réseau (cf. syncOfflineOutbox()).
+    await trySupaWrite('cache_discoveries', {
       method: 'POST',
       prefer: 'resolution=merge-duplicates,return=minimal',
       body: { player_id: userId, cache_id: cache.id, xp_earned: cache.xp_reward || 0 }
@@ -4525,12 +4672,19 @@ async function attemptCacheValidation() {
     if (!isCacheDiscovered(cache.id)) cacheDiscoveries.push({ cache_id: cache.id });
 
     if (cache.xp_reward) {
-      const fresh = await supaFetch(`players?id=eq.${userId}&select=total_xp`);
-      const newXp = (fresh?.[0]?.total_xp || 0) + cache.xp_reward;
-      await supaFetch(`players?id=eq.${userId}`, {
+      let baseXp = currentPlayer.total_xp || 0;
+      try {
+        const fresh = await supaFetch(`players?id=eq.${userId}&select=total_xp`);
+        baseXp = fresh?.[0]?.total_xp ?? baseXp;
+      } catch (e) {
+        if (!isOfflineError(e)) throw e;
+      }
+      const newXp = baseXp + cache.xp_reward;
+      await trySupaWrite(`players?id=eq.${userId}`, {
         method: 'PATCH', prefer: 'return=minimal', body: { total_xp: newXp }
       });
       currentPlayer.total_xp = newXp;
+      saveOfflineSnapshot({ currentPlayer, cacheDiscoveries });
     }
 
     closeCachePopup();
@@ -4669,6 +4823,7 @@ function showPopup(adv) {
   else { coverWrap.style.display = 'none'; coverImg.src = ''; }
   document.getElementById('adventure-popup').classList.add('show');
   currentAdv = adv;
+  prefetchAdventureImages(adv);
 }
 function closePopup()  { document.getElementById('adventure-popup').classList.remove('show'); }
 function locateMe()    { if (map && playerPos) map.setView([playerPos.lat, playerPos.lng], 14); }
@@ -6346,7 +6501,7 @@ async function renderRewardMode() {
         console.error('Erreur vérification complétion existante:', e);
         isFirstCompletion = false; // par prudence, en cas d'erreur réseau on n'attribue pas
       }
-      supaFetch('adventure_completions', {
+      trySupaWrite('adventure_completions', {
         method: 'POST',
         prefer: 'resolution=merge-duplicates',
         body: {
@@ -6650,16 +6805,25 @@ async function saveProgress(step, xpOverride) {
   console.log('[saveProgress] step:', step.id, '| xpOverride:', xpOverride, '| xpToAdd:', xpToAdd, '| player:', currentPlayer.id);
 
   try {
-    // Évite les doublons
-    const existing = await supaFetch(
-      `player_progress?player_id=eq.${currentPlayer.id}&step_id=eq.${step.id}&select=id`
-    );
-    if (existing.length) {
+    // Évite les doublons — si la vérification échoue faute de réseau, on
+    // part du principe qu'il n'y en a pas plutôt que d'abandonner toute la
+    // sauvegarde (trySupaWrite ci-dessous prendra le relais via la file).
+    let alreadyDone = false;
+    try {
+      const existing = await supaFetch(
+        `player_progress?player_id=eq.${currentPlayer.id}&step_id=eq.${step.id}&select=id`
+      );
+      alreadyDone = existing.length > 0;
+    } catch (e) {
+      if (!isOfflineError(e)) throw e;
+      console.log('[saveProgress] Vérification anti-doublon impossible (hors ligne) — on continue quand même', step.id);
+    }
+    if (alreadyDone) {
       console.log('[saveProgress] Étape déjà marquée complétée pour ce joueur — XP non réattribué (anti-doublon)', step.id);
       return;
     }
 
-    await supaFetch('player_progress', {
+    await trySupaWrite('player_progress', {
       method: 'POST',
       prefer: 'return=minimal',
       body: {
@@ -6672,18 +6836,26 @@ async function saveProgress(step, xpOverride) {
     });
 
     if (xpToAdd > 0) {
-      // Repartir du XP réellement en base (évite un total_xp figé/désynchronisé)
-      const playerData = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
-      const currentXp  = playerData[0]?.total_xp || 0;
-      const newXp      = currentXp + xpToAdd;
+      // Repartir du XP réellement en base (évite un total_xp figé/désynchronisé) ;
+      // hors ligne, on repart du dernier total connu localement.
+      let currentXp = currentPlayer.total_xp || 0;
+      try {
+        const playerData = await supaFetch(`players?id=eq.${currentPlayer.id}&select=total_xp`);
+        currentXp = playerData[0]?.total_xp ?? currentXp;
+      } catch (e) {
+        if (!isOfflineError(e)) throw e;
+        console.log('[saveProgress] Lecture XP serveur impossible (hors ligne) — repart du total local', currentXp);
+      }
+      const newXp = currentXp + xpToAdd;
       console.log('[saveProgress] XP en base:', currentXp, '→ nouveau total:', newXp);
 
-      await supaFetch(`players?id=eq.${currentPlayer.id}`, {
+      await trySupaWrite(`players?id=eq.${currentPlayer.id}`, {
         method: 'PATCH',
         prefer: 'return=minimal',
         body: { total_xp: newXp }
       });
       currentPlayer.total_xp = newXp;
+      saveOfflineSnapshot({ currentPlayer });
       window._adventureTotalXp = (window._adventureTotalXp || 0) + xpToAdd;
       console.log('[saveProgress] XP sauvegardé avec succès pour', currentPlayer.id);
     } else {
