@@ -50,6 +50,11 @@
      aventures "Tresors oublies" rattachees), rendu Eclaireur a Legende. -->
 <link rel="stylesheet" href="collections.css">
 <script defer src="collections.js"></script>
+<!-- Carnet de notes (11/11) - pages débloquées au fil du scénario pour les
+     étapes marquées add_to_notebook dans l'admin (indices/notes trouvés par
+     Flavia), feuilletables à tout moment pendant l'aventure sans perdre sa
+     place. Autonome (styles injectés en JS, pas de fichier CSS séparé). -->
+<script defer src="flavia-carnet.js"></script>
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json"/>
 <meta name="theme-color" content="#2D4A2D"/>
@@ -373,7 +378,7 @@
     border: 1px solid rgba(120,74,28,0.18);
     border-radius: var(--radius-lg);
     padding: 14px 16px; box-shadow: 0 8px 28px rgba(0,0,0,0.25);
-    z-index: 500; display: none; animation: slideUp 0.2s ease;
+    z-index: 1100; display: none; animation: slideUp 0.2s ease;
   }
   .adventure-popup.show { display: block; }
   /* Badge de regroupement des caches virtuelles (29/10, Leaflet.markercluster) */
@@ -3259,6 +3264,7 @@ window.addEventListener('DOMContentLoaded', () => {
   FlaviaMarkers.ensure(); // injecte le sprite SVG + styles (nécessaire pour les <use> des puces de filtre)
   FlaviaCollections.mount(); // injecte styles + symboles des médailles/bandeaux de collection
   FlaviaLegend.mount(document.getElementById('screen-map')); // bouton Légende (bas gauche de la carte)
+  if (window.FlaviaCarnet) FlaviaCarnet.mount(document.getElementById('screen-adventure')); // bouton Carnet (bas droite, pendant une aventure)
   // Bouton "Collections" (08/11) - branché sur les tables réelles de l'app
   // via les overrides ci-dessous (voir collections.js pour le détail du
   // schéma lu : collections, virtual_caches, adventures, cache_discoveries,
@@ -5305,6 +5311,7 @@ async function startAdventure() {
   } else {
     // 'restart' (ou aucune progression existante) : toujours depuis la 1ère étape.
     localStorage.removeItem('ff_current_adventure');
+    if (window.FlaviaCarnet) FlaviaCarnet.reset(currentAdv.id);
     currentStepIndex = 0;
     window._adventureStartTime = Date.now();
     window._adventureAttempts  = 0;
@@ -5326,6 +5333,7 @@ async function startAdventure() {
   if (adminJumpBtn) adminJumpBtn.style.display = (currentPlayer?.role === 'admin') ? '' : 'none';
   buildStepDots(currentAdv.steps.length, currentStepIndex + 1);
   saveCurrentProgress();
+  if (window.FlaviaCarnet) FlaviaCarnet.setAdventure(currentAdv.id);
   renderStepEntry();
   goToScreen('adventure', null);
   window._adventureInProgress = true;
@@ -6798,6 +6806,10 @@ async function markAsShared(xpAmount) {
 
 // ── SAUVEGARDE PROGRESSION ──
 async function saveProgress(step, xpOverride) {
+  // Carnet de notes : entièrement local (localStorage), donc indépendant du
+  // joueur/compte et du réseau — placé avant les premiers "return" pour ne
+  // jamais dépendre d'eux.
+  if (step?.add_to_notebook && window.FlaviaCarnet && currentAdv) FlaviaCarnet.unlock(currentAdv.id, step);
   if (!currentPlayer) { console.log('[saveProgress] Pas de currentPlayer — XP non sauvegardé'); return; }
   if (!step?.id)      { console.log('[saveProgress] Pas de step.id — XP non sauvegardé', step); return; }
 

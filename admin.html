@@ -4508,6 +4508,8 @@ function loadStepsFromAdventure(dbSteps) {
     obj.hint = s.hint || '';
     obj.image_url = s.image_url || '';
     obj.image_thumb_url = s.image_thumb_url || '';
+    obj.add_to_notebook = !!s.add_to_notebook;
+    obj.notebook_label = s.notebook_label || '';
     obj.hotspot_x = s.hotspot_x ?? null;
     obj.hotspot_y = s.hotspot_y ?? null;
     obj.hotspot_radius = s.hotspot_radius ?? 6;
@@ -4796,6 +4798,9 @@ function openStepPanel(uid) {
   document.getElementById('panel-timer-minutes').value = step.step_timer_seconds ? Math.round(step.step_timer_seconds / 60) : '';
   document.getElementById('panel-timer-visible').value = step.step_timer_visible !== false ? 'true' : 'false';
   populateStepTargetSelect(document.getElementById('panel-timer-fail'), step.timer_fail_target_uid, uid);
+  document.getElementById('panel-add-notebook').checked = !!step.add_to_notebook;
+  document.getElementById('panel-notebook-section').style.display = step.add_to_notebook ? 'block' : 'none';
+  document.getElementById('panel-notebook-label').value = step.notebook_label || '';
 
   if (step.image_url) {
     document.getElementById('panel-img-tag').src = step.image_url;
@@ -4886,6 +4891,18 @@ function renderPanelBody() {
       <div class="form-group" style="margin:0 0 10px;">
         <label style="font-size:12px;" id="panel-enigme-sublabel">Texte de l'énigme</label>
         <textarea id="panel-enigme" rows="3" placeholder="Le texte affiché au joueur (anime en écriture manuscrite)…" oninput="syncPanelToStep()"></textarea>
+      </div>
+    </div>
+    <div style="margin:10px 0;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;background:#F9F7F4;border:1px solid #E5D9C0;border-radius:10px;padding:10px 12px;">
+        <input type="checkbox" id="panel-add-notebook" onchange="toggleStepNotebook()"/>
+        📖 Ajouter au carnet de notes du joueur une fois cette étape passée
+      </label>
+    </div>
+    <div id="panel-notebook-section" style="display:none;margin:0 0 10px;">
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Titre de la page dans le carnet (optionnel)</label>
+        <input type="text" id="panel-notebook-label" placeholder="Ex : Note mystérieuse" oninput="syncPanelToStep()"/>
       </div>
     </div>
     <div id="panel-type-continue">
@@ -4989,6 +5006,12 @@ function toggleStepGps() {
   document.getElementById('panel-gps-section').style.display = checked ? 'block' : 'none';
   const titleLabel = document.getElementById('panel-title-label');
   if (titleLabel) titleLabel.textContent = checked ? 'Nom du lieu' : 'Titre de l\'étape (optionnel)';
+  syncPanelToStep();
+}
+
+function toggleStepNotebook() {
+  const checked = document.getElementById('panel-add-notebook').checked;
+  document.getElementById('panel-notebook-section').style.display = checked ? 'block' : 'none';
   syncPanelToStep();
 }
 
@@ -5206,6 +5229,8 @@ function syncPanelToStep() {
   step.step_timer_visible = document.getElementById('panel-timer-visible').value === 'true';
   const failSel = document.getElementById('panel-timer-fail');
   step.timer_fail_target_uid = failSel && failSel.value ? failSel.value : null;
+  step.add_to_notebook = document.getElementById('panel-add-notebook')?.checked || false;
+  step.notebook_label = document.getElementById('panel-notebook-label')?.value || '';
   renderOutline();
 }
 
@@ -5392,6 +5417,8 @@ function computeFinalSteps() {
       timer_fail_step_order: step.timer_fail_target_uid ? (uidToOrder[step.timer_fail_target_uid] || null) : null,
       image_url: step.image_url || '',
       image_thumb_url: step.image_thumb_url || '',
+      add_to_notebook: !!step.add_to_notebook,
+      notebook_label: step.notebook_label || '',
       _uid: step.uid,
       _pendingImgFile: step._pendingImgFile || null
     };
