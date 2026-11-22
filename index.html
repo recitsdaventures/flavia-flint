@@ -6243,11 +6243,24 @@ function revealHint(level, penalty) {
 }
 
 // ── VÉRIFICATION RÉPONSE ──
+// Normalise une réponse en texte libre avant comparaison : enlève les accents,
+// met en minuscules, remplace toute ponctuation/symbole par un espace puis
+// réduit les espaces multiples — pour laisser une marge d'erreur au joueur sur
+// la casse, les accents et la ponctuation (ex: "A. Dumas" === "a dumas").
+function normalizeAnswer(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function checkAnswer() {
   const step = currentStep();
   if (!step) return;
-  const val      = document.getElementById('answer-input').value.trim().toLowerCase();
-  const expected = (step.answer || '').toLowerCase().trim();
+  const val      = normalizeAnswer(document.getElementById('answer-input').value);
+  const expected = normalizeAnswer(step.answer || '');
   if (val && (val === expected || expected.includes(val) || val.includes(expected))) {
     vibrateFeedback(200);
     soundSuccess();
