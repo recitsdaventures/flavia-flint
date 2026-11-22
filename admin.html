@@ -4575,22 +4575,45 @@ function computeTree() {
   const visited = new Set();
   let mainCounter = 1;
 
-  function walk(uid, label, depth) {
-    if (!uid || visited.has(uid) || !byUid[uid]) return;
-    visited.add(uid);
+  // Étend une étape déjà réservée (déjà visitée + déjà ajoutée à `ordered`) :
+  // réserve d'abord un label pour CHACUNE de ses transitions directes avant
+  // de redescendre dans l'une d'elles. C'est essentiel aux embranchements :
+  // sans ça, la branche la plus longue (explorée en premier jusqu'au bout)
+  // pouvait "consommer" une étape de convergence avant que l'autre branche,
+  // plus courte, ait pu réserver son propre numéro (E8'') — elle se
+  // retrouvait alors avec un numéro lointain et imprévisible (ex. E35) au
+  // lieu de rester juste sous son point d'embranchement (bug remonté par
+  // Firmin le 22/11/2026 : un embranchement à une seule slide qui rejoint
+  // ensuite le fil principal).
+  function expand(uid, label, depth) {
     const step = byUid[uid];
-    ordered.push({ step, label, depth });
     const targets = step.transitions.filter(t => t.target_uid && byUid[t.target_uid]);
-    if (targets.length <= 1) {
-      if (targets.length === 1) {
+    if (targets.length === 0) return;
+    const isBranch = targets.length >= 2;
+    const children = [];
+    targets.forEach((t, i) => {
+      const childUid = t.target_uid;
+      if (visited.has(childUid) || !byUid[childUid]) return;
+      visited.add(childUid);
+      let childLabel, childDepth;
+      if (isBranch) {
+        childLabel = label + "'".repeat(i + 1);
+        childDepth = depth + 1;
+      } else {
         mainCounter++;
-        walk(targets[0].target_uid, 'E' + mainCounter, depth);
+        childLabel = 'E' + mainCounter;
+        childDepth = depth;
       }
-    } else {
-      targets.forEach((t, i) => walk(t.target_uid, label + "'".repeat(i + 1), depth + 1));
-    }
+      ordered.push({ step: byUid[childUid], label: childLabel, depth: childDepth });
+      children.push({ uid: childUid, label: childLabel, depth: childDepth });
+    });
+    children.forEach(c => expand(c.uid, c.label, c.depth));
   }
-  if (rootUid && byUid[rootUid]) walk(rootUid, 'E1', 0);
+  if (rootUid && byUid[rootUid]) {
+    visited.add(rootUid);
+    ordered.push({ step: byUid[rootUid], label: 'E1', depth: 0 });
+    expand(rootUid, 'E1', 0);
+  }
 
   const orphans = scenarioSteps.filter(s => !visited.has(s.uid)).map((s, i) => ({ step: s, label: '⚠️' + (i + 1), depth: 0 }));
   return { ordered, orphans, byUid };
@@ -5245,12 +5268,17 @@ function renderTransitionsInPanel(step) {
   }
   // Types quiz/décision : les réponses s'affichent toujours comme des boutons dans
   // l'app, le texte du choix est donc toujours obligatoire (pas de repli linéaire).
+  const lastIdx = step.transitions.length - 1;
   list.innerHTML = step.transitions.map((t, i) => `
     <div class="transition-row">
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
         <input type="text" id="transition-label-${i}" placeholder="Texte de la réponse (obligatoire) ex: Fouiller les ruines"
           value="${(t.label||'').replace(/"/g,'&quot;')}" class="${!t.label ? 'req-missing' : ''}"
           oninput="updateTransition(${i}, 'label', this.value)"/>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <button type="button" onclick="moveTransition(${i}, -1)" title="Monter" style="background:#F3F4F6;border:none;border-radius:4px;color:#374151;padding:2px 6px;font-size:10px;line-height:1.2;cursor:pointer;${i === 0 ? 'visibility:hidden;' : ''}">▲</button>
+          <button type="button" onclick="moveTransition(${i}, 1)" title="Descendre" style="background:#F3F4F6;border:none;border-radius:4px;color:#374151;padding:2px 6px;font-size:10px;line-height:1.2;cursor:pointer;${i === lastIdx ? 'visibility:hidden;' : ''}">▼</button>
+        </div>
         <button type="button" onclick="removeTransition(${i})" style="background:#FEF2F2;border:none;border-radius:6px;color:#DC2626;padding:8px;cursor:pointer;">🗑️</button>
       </div>
       <div style="margin-top:6px;">
@@ -5305,6 +5333,20 @@ function updateTransition(index, field, value) {
     renderOutline();
     openStepPanel(openStepUid);
   }
+}
+
+function moveTransition(index, delta) {
+  const step = scenarioSteps.find(s => s.uid === openStepUid);
+  if (!step) return;
+  const j = index + delta;
+  if (j < 0 || j >= step.transitions.length) return;
+  const tmp = step.transitions[index];
+  step.transitions[index] = step.transitions[j];
+  step.transitions[j] = tmp;
+  // L'ordre des réponses d'un embranchement determine leur label (E8', E8''…)
+  // et leur order_num a l'enregistrement — il faut donc rafraichir les deux.
+  renderOutline();
+  renderTransitionsInPanel(step);
 }
 
 function removeTransition(index) {
