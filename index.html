@@ -6523,9 +6523,14 @@ async function renderRewardMode() {
 
       if (isFirstCompletion) {
         // Récompense en boussoles (monnaie de l'Histoire de Flavia Flint)
-        // — uniquement à la première complétion, pas de gain infini au replay.
-        awardCompasses(userId, COMPASS_PER_ADVENTURE);
-        compassesEarned = COMPASS_PER_ADVENTURE;
+        // — uniquement à la première complétion, pas de gain infini au replay,
+        // et uniquement pour les aventures narratives de Flavia : les Trésors
+        // oubliés (boîtes physiques) ont déjà leur propre récompense (XP +
+        // progression de collection) et ne touchent pas à cette monnaie.
+        if (currentAdv.content_type !== 'tresors_oublies') {
+          awardCompasses(userId, COMPASS_PER_ADVENTURE);
+          compassesEarned = COMPASS_PER_ADVENTURE;
+        }
       } else {
         console.log('[finishAdventure] Scénario déjà complété par ce joueur — boussoles non réattribuées (anti-doublon)');
       }
