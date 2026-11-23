@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Les Aventures de Flavia Flint — Admin</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap">
 <script src="admin-icons.js"></script>
 <style>
@@ -1196,6 +1197,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
       <div class="steps-section">
         <div class="steps-header">
           <div class="steps-label">📍 Étapes du scénario</div>
+          <button type="button" id="btn-export-pdf" class="btn btn-secondary btn-sm" onclick="exportAdventurePdf()">📄 Exporter en PDF</button>
         </div>
         <div id="steps-outline" class="outline-list">
           <div class="empty-state" id="steps-empty" style="padding:32px 24px;">
@@ -1393,6 +1395,16 @@ const CONTENT_TYPES = {
   tresors_oublies:      { label: 'Trésors oubliés',            icon: '📦' },
   balade_decouverte:    { label: 'Balade découverte',          icon: '🚶' },
   chasse_tresor_flavia: { label: 'Chasse au trésor de Flavia', icon: '🧭' },
+};
+// XP par défaut à la création d'un nouveau scénario, selon la catégorie — valeurs
+// confirmées par Firmin le 22/11/2026 (effort/durée moyenne de chaque catégorie :
+// 200 pour les Chasses/Enquêtes de Flavia (40-80 slides), 30 pour les Trésors
+// oubliés/géocaches physiques, 15 pour les Échos du Patrimoine/caches virtuelles —
+// voir editCache() pour ces dernières, qui ne passent pas par ce formulaire).
+const DEFAULT_XP_BY_CONTENT_TYPE = {
+  chasse_tresor_flavia: 200,
+  balade_decouverte: 200,
+  tresors_oublies: 30,
 };
 const SUB_THEMES = {
   patrimoine:   { label: 'Patrimoine',      icon: '🏰' },
@@ -3281,7 +3293,7 @@ function openCacheModal(data) {
             </select>
           </div>
           <div class="form-group"><label>XP à la découverte</label>
-            <input type="number" id="cache-xp" value="${c.xp_reward ?? 20}" min="0"/>
+            <input type="number" id="cache-xp" value="${c.xp_reward ?? 15}" min="0"/>
           </div>
           <div class="form-group"><label>Commune</label>
             <input type="text" id="cache-commune" value="${c.commune ? escapeHtml(c.commune) : ''}" placeholder="Ex : Draguignan"/>
@@ -4398,7 +4410,8 @@ async function openModal(id) {
     // cette taxonomie le 25/10, donc le defaut historique plutot que 'non classee'
     // (demande de Firmin du 27/10, suite aux 10 aventures existantes restees
     // non classees faute de ce defaut).
-    document.getElementById('f-content-type').value = Object.prototype.hasOwnProperty.call(CONTENT_TYPES, _advCategoryFilter) ? _advCategoryFilter : 'chasse_tresor_flavia';
+    const newAdvContentType = Object.prototype.hasOwnProperty.call(CONTENT_TYPES, _advCategoryFilter) ? _advCategoryFilter : 'chasse_tresor_flavia';
+    document.getElementById('f-content-type').value = newAdvContentType;
     document.getElementById('f-sub-theme').value = '';
     onContentTypeChange();
     document.getElementById('f-age').value = '5–12 ans';
@@ -4407,7 +4420,7 @@ async function openModal(id) {
     document.getElementById('f-box-hint').value = '';
     document.getElementById('f-box-solution').value = '';
     document.getElementById('f-badge-name').value = '';
-    document.getElementById('f-xp-reward').value = 50;
+    document.getElementById('f-xp-reward').value = DEFAULT_XP_BY_CONTENT_TYPE[newAdvContentType] ?? 50;
     document.getElementById('f-locations-count').value = '1';
     document.getElementById('f-main-lat').value = '';
     document.getElementById('f-main-lng').value = '';
@@ -5465,6 +5478,131 @@ function computeFinalSteps() {
       _pendingImgFile: step._pendingImgFile || null
     };
   });
+}
+
+// ── EXPORT PDF DU SCÉNARIO (texte narratif + photos, dans l'ordre de jeu) ──
+// Charge une image en <img crossOrigin="anonymous"> puis la redessine sur un canvas
+// pour obtenir un dataURL exploitable par jsPDF (addImage n'accepte pas directement
+// une URL distante). Redimensionne au passage pour garder le PDF léger.
+function loadImageAsDataURLForPdf(url, maxDim = 1000) {
+  return new Promise((resolve) => {
+    if (!url) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) { resolve(null); return; }
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      try {
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), w, h });
+      } catch (e) {
+        // Canvas "entaché" (CORS refusé par le bucket) : on continue sans image
+        // plutôt que de bloquer tout l'export pour une seule photo.
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+// Écrit un bloc de texte avec retour à la ligne automatique, en ajoutant des pages
+// quand le texte dépasse la hauteur restante. Retourne la position Y après écriture.
+function pdfAddWrappedText(doc, text, x, y, maxWidth, lineHeight, pageH, topMargin) {
+  const lines = doc.splitTextToSize(text, maxWidth);
+  for (const line of lines) {
+    if (y > pageH - topMargin) {
+      doc.addPage();
+      y = topMargin;
+    }
+    doc.text(line, x, y);
+    y += lineHeight;
+  }
+  return y;
+}
+
+async function exportAdventurePdf() {
+  if (!scenarioSteps.length) { alert('Aucune étape à exporter pour l\'instant.'); return; }
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert('La librairie PDF n\'a pas pu se charger (vérifie ta connexion internet) — réessaie dans un instant.'); return; }
+  const btn = document.getElementById('btn-export-pdf');
+  const title = document.getElementById('f-title')?.value?.trim() || 'Scénario';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Génération en cours…'; }
+  try {
+    const { ordered } = computeTree();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const maxTextW = pageW - margin * 2;
+    const maxImgH = 110;
+
+    // Page de garde
+    const coverUrl = document.getElementById('cover-img-tag')?.src || '';
+    let coverY = pageH / 2 - 30;
+    if (coverUrl) {
+      const cover = await loadImageAsDataURLForPdf(coverUrl, 1000);
+      if (cover) {
+        const ratio = cover.w / cover.h;
+        let w = Math.min(maxTextW, 120), h = w / ratio;
+        if (h > 90) { h = 90; w = h * ratio; }
+        doc.addImage(cover.dataUrl, 'JPEG', (pageW - w) / 2, margin, w, h);
+        coverY = margin + h + 16;
+      }
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text(title, pageW / 2, coverY, { align: 'center', maxWidth: maxTextW });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text(`${ordered.length} étape${ordered.length > 1 ? 's' : ''}`, pageW / 2, coverY + 10, { align: 'center' });
+
+    // Une page par étape, dans l'ordre de jeu (branches comprises)
+    for (const entry of ordered) {
+      const step = entry.step;
+      doc.addPage();
+      let y = margin;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      const heading = `Étape ${entry.label}` + (step.title ? ' — ' + step.title : '');
+      y = pdfAddWrappedText(doc, heading, margin, y, maxTextW, 7, pageH, margin) + 2;
+
+      if (step.image_url) {
+        const img = await loadImageAsDataURLForPdf(step.image_url, 1000);
+        if (img) {
+          const ratio = img.w / img.h;
+          let drawW = maxTextW, drawH = maxTextW / ratio;
+          if (drawH > maxImgH) { drawH = maxImgH; drawW = maxImgH * ratio; }
+          if (y + drawH > pageH - margin) { doc.addPage(); y = margin; }
+          doc.addImage(img.dataUrl, 'JPEG', margin, y, drawW, drawH);
+          y += drawH + 6;
+        }
+      }
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      if ((step.enigme || '').trim()) {
+        pdfAddWrappedText(doc, step.enigme.trim(), margin, y, maxTextW, 6, pageH, margin);
+      } else {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(10);
+        doc.text('(étape sans texte)', margin, y);
+      }
+    }
+
+    const safeName = title.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '') || 'scenario';
+    doc.save(`${safeName}.pdf`);
+  } catch (e) {
+    alert('Erreur pendant la génération du PDF : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📄 Exporter en PDF'; }
+  }
 }
 
 // ── UPLOAD IMAGE VERS SUPABASE STORAGE ──
