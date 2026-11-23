@@ -5481,35 +5481,48 @@ function computeFinalSteps() {
 }
 
 // ── EXPORT PDF DU SCÉNARIO (texte narratif + photos, dans l'ordre de jeu) ──
-// Charge une image en <img crossOrigin="anonymous"> puis la redessine sur un canvas
-// pour obtenir un dataURL exploitable par jsPDF (addImage n'accepte pas directement
-// une URL distante). Redimensionne au passage pour garder le PDF léger.
-function loadImageAsDataURLForPdf(url, maxDim = 1000) {
-  return new Promise((resolve) => {
-    if (!url) { resolve(null); return; }
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      let w = img.naturalWidth, h = img.naturalHeight;
-      if (!w || !h) { resolve(null); return; }
-      if (w > maxDim || h > maxDim) {
-        if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
-        else { w = Math.round(w * maxDim / h); h = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      try {
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), w, h });
-      } catch (e) {
-        // Canvas "entaché" (CORS refusé par le bucket) : on continue sans image
-        // plutôt que de bloquer tout l'export pour une seule photo.
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+// Télécharge l'image (fetch + blob), la charge depuis un blob: URL (toujours
+// même origine, donc jamais de canvas "entaché") puis la redessine sur un canvas
+// pour obtenir un dataURL exploitable par jsPDF. Redimensionne au passage pour
+// garder le PDF léger.
+// NB : une 1ère version chargeait l'image via <img crossOrigin="anonymous">
+// directement sur l'URL Supabase — ça échouait silencieusement sur presque
+// toutes les photos (seule une image déjà en cache autrement passait), à cause
+// d'un comportement capricieux du cache navigateur avec ce mode de chargement
+// (bug remonté par Firmin le 23/11/2026 sur un export à 65 photos sur 69 étapes
+// en base, dont une seule s'affichait dans le PDF généré). fetch()+blob est
+// un chemin de chargement différent, non affecté par ce problème.
+async function loadImageAsDataURLForPdf(url, maxDim = 1000) {
+  if (!url) return null;
+  let objUrl = null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    objUrl = URL.createObjectURL(blob);
+    const img = await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('image illisible'));
+      im.src = objUrl;
+    });
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return null;
+    if (w > maxDim || h > maxDim) {
+      if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+      else { w = Math.round(w * maxDim / h); h = maxDim; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.85), w, h };
+  } catch (e) {
+    // Photo injoignable ou illisible : on continue sans elle plutôt que de
+    // bloquer tout l'export pour une seule image en défaut.
+    return null;
+  } finally {
+    if (objUrl) URL.revokeObjectURL(objUrl);
+  }
 }
 
 // Écrit un bloc de texte avec retour à la ligne automatique, en ajoutant des pages
